@@ -11,7 +11,9 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/directory_copy.dart';
 import '../../../core/motion/motion_tokens.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/feed_row.dart';
 import '../../../shared/widgets/icon_tile.dart';
@@ -31,6 +33,9 @@ import '../domain/home_content.dart';
 enum HomeStatusKind { none, guest, notSent, pending, rejected, unknown }
 
 /// What the status card says for each [HomeStatusKind].
+///
+/// The English words, kept for tests and as the no-context fallback. The card
+/// draws the same sentences from [AppStrings] (`home…`).
 abstract final class HomeStatusCopy {
   static const String guestTitle = 'Browsing as guest';
   static const String guest = 'Sign up to message offices.';
@@ -205,6 +210,7 @@ class _HomeCanvasState extends State<HomeCanvas> {
   @override
   Widget build(BuildContext context) {
     final HomeHotline? hotline = widget.hotline;
+    final AppStrings strings = AppStrings.of(context);
     final List<Widget> body = <Widget>[
       if (!widget.refreshing && widget.status != HomeStatusKind.none)
         _StatusCard(
@@ -213,10 +219,10 @@ class _HomeCanvasState extends State<HomeCanvas> {
           onVerify: widget.onVerify,
         ),
       if (widget.refreshing || widget.slides.isEmpty)
-        const LoadingSkeleton(
+        LoadingSkeleton(
           layout: SkeletonLayout.cards,
           count: 1,
-          semanticLabel: 'Loading featured stories',
+          semanticLabel: strings.homeLoadingStories,
         )
       else
         Column(
@@ -243,21 +249,21 @@ class _HomeCanvasState extends State<HomeCanvas> {
       ),
       if (widget.refreshing || widget.news.isNotEmpty)
         _Section(
-          title: 'Latest Balita',
-          action: widget.refreshing ? null : 'See all',
+          title: strings.homeLatestBalita,
+          action: widget.refreshing ? null : strings.homeSeeAll,
           onAction: widget.onSeeAllNews,
           child: widget.refreshing
-              ? const LoadingSkeleton(
+              ? LoadingSkeleton(
                   layout: SkeletonLayout.feed,
                   count: 2,
-                  semanticLabel: 'Loading Balita',
+                  semanticLabel: strings.homeLoadingBalita,
                 )
               : _NewsCard(items: widget.news, onTap: widget.onNews),
         ),
       if (!widget.refreshing && hotline != null)
         _Section(
-          title: 'Emergency',
-          action: 'All hotlines',
+          title: strings.homeEmergency,
+          action: strings.homeAllHotlines,
           onAction: widget.onAllHotlines,
           child: _EmergencyCard(hotline: hotline, onCall: widget.onCall),
         ),
@@ -334,6 +340,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return BlueHeader(
       overlap: true,
       leading: const HeaderSeal(),
@@ -366,8 +373,8 @@ class _Header extends StatelessWidget {
         HeaderIconButton(
           icon: TaytayIcons.bell,
           semanticLabel: bellCount > 0
-              ? 'Notifications, $bellCount unread'
-              : 'Notifications',
+              ? strings.homeNotificationsUnread(bellCount)
+              : strings.dirNotifications,
           badgeCount: bellCount > 0 ? bellCount : null,
           onPressed: onBell,
           visualKey: const Key('home-bell'),
@@ -414,7 +421,7 @@ class _Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Tap(
-      label: 'My Account',
+      label: AppStrings.of(context).navProfile,
       onTap: onTap,
       child: Container(
         key: const Key('home-avatar'),
@@ -456,16 +463,20 @@ class _SignInPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // At large text the worded pill would push the brand off a 360 dp
-    // header, so the same action becomes the round header button.
-    if (MediaQuery.textScalerOf(context).scale(1) > 1.3) {
+    // header, so the same action becomes the round header button. So does a
+    // phone narrower than that header: "Mag-sign in" ran 4 px past a 320 dp
+    // one (D-237).
+    final AppStrings strings = AppStrings.of(context);
+    if (MediaQuery.textScalerOf(context).scale(1) > 1.3 ||
+        MediaQuery.sizeOf(context).width < 360) {
       return HeaderIconButton(
         icon: TaytayIcons.logIn,
-        semanticLabel: 'Sign in',
+        semanticLabel: strings.actionSignIn,
         onPressed: onTap,
       );
     }
     return _Tap(
-      label: 'Sign in',
+      label: strings.actionSignIn,
       onTap: onTap,
       child: Container(
         constraints: const BoxConstraints(
@@ -478,7 +489,7 @@ class _SignInPill extends StatelessWidget {
           borderRadius: BorderRadius.circular(Radii.pill),
         ),
         child: Text(
-          'Sign in',
+          strings.actionSignIn,
           maxLines: 1,
           style: AppTypography.button.copyWith(color: BrandColors.white),
         ),
@@ -504,7 +515,7 @@ class _UpdatingLine extends StatelessWidget {
         const SizedBox(width: Spacing.sm),
         Flexible(
           child: Text(
-            'Updating Balita and advisories…',
+            AppStrings.of(context).homeUpdating,
             style: AppTypography.bodyStyle.copyWith(
               color: BrandColors.onHeaderLede,
             ),
@@ -527,31 +538,32 @@ class _StatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool guest = kind == HomeStatusKind.guest;
+    final AppStrings strings = AppStrings.of(context);
     final (String title, String body, String? action) = switch (kind) {
       HomeStatusKind.guest => (
-        HomeStatusCopy.guestTitle,
-        HomeStatusCopy.guest,
+        strings.homeGuestTitle,
+        strings.homeGuestBody,
         null,
       ),
       HomeStatusKind.notSent => (
-        HomeStatusCopy.notSentTitle,
-        HomeStatusCopy.notSent,
-        HomeStatusCopy.verifyAction,
+        strings.homeNotVerifiedTitle,
+        strings.homeNotSentBody,
+        strings.gateActionVerify,
       ),
       HomeStatusKind.pending => (
-        HomeStatusCopy.pendingTitle,
-        HomeStatusCopy.pending,
+        strings.homePendingTitle,
+        strings.homePendingBody,
         null,
       ),
       HomeStatusKind.rejected => (
-        HomeStatusCopy.rejectedTitle,
-        HomeStatusCopy.rejected,
-        HomeStatusCopy.fixAction,
+        strings.homeRejectedTitle,
+        strings.homeRejectedBody,
+        strings.homeFixAction,
       ),
       HomeStatusKind.unknown || HomeStatusKind.none => (
-        HomeStatusCopy.unknownTitle,
-        HomeStatusCopy.unknown,
-        HomeStatusCopy.statusAction,
+        strings.homeNotVerifiedTitle,
+        strings.homeUnlocksOnceVerified,
+        strings.homeStatusAction,
       ),
     };
     final VoidCallback? verify = onVerify;
@@ -603,7 +615,11 @@ class _StatusCard extends StatelessWidget {
             const SizedBox(height: Spacing.md),
             FilledButton(
               onPressed: onCreateAccount,
-              child: const Text('Create account', maxLines: 1, softWrap: false),
+              child: Text(
+                strings.homeCreateAccount,
+                maxLines: 1,
+                softWrap: false,
+              ),
             ),
           ] else if (action != null && verify != null) ...<Widget>[
             const SizedBox(height: Spacing.md),
@@ -791,7 +807,10 @@ class _Slide extends StatelessWidget {
                                   vertical: Spacing.xs,
                                 ),
                                 child: Text(
-                                  slide.eyebrow.toUpperCase(),
+                                  homeSlideEyebrow(
+                                    AppStrings.of(context),
+                                    slide,
+                                  ).toUpperCase(),
                                   style: AppTypography.category.copyWith(
                                     color: BrandColors.navy,
                                   ),
@@ -827,7 +846,7 @@ class _Slide extends StatelessWidget {
                   ),
                   const SizedBox(height: Spacing.sm),
                   _Tap(
-                    label: slide.action,
+                    label: homeSlideAction(AppStrings.of(context), slide),
                     onTap: () => onOpen?.call(slide),
                     child: Container(
                       key: const Key('home-hero-cta'),
@@ -845,7 +864,7 @@ class _Slide extends StatelessWidget {
                         children: <Widget>[
                           Flexible(
                             child: Text(
-                              slide.action,
+                              homeSlideAction(AppStrings.of(context), slide),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: AppTypography.label.copyWith(
@@ -1039,6 +1058,16 @@ class _Launcher extends StatelessWidget {
 
   final ValueChanged<String>? onTap;
 
+  /// A tile's words in the resident's language, keyed on its action.
+  static String _label(AppStrings strings, String action, String english) =>
+      switch (action) {
+        'services' => strings.navServices,
+        'programs' => strings.navTulong,
+        'news' => strings.navNews,
+        'hotlines' => strings.homeHotlines,
+        _ => english,
+      };
+
   static const List<(String, String, TaytayGlyph, TileTone)> _tiles =
       <(String, String, TaytayGlyph, TileTone)>[
         ('Directory', 'services', TaytayGlyph.directory, TileTone.blue),
@@ -1050,10 +1079,12 @@ class _Launcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool largeText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    final AppStrings strings = AppStrings.of(context);
     Widget tile((String, String, TaytayGlyph, TileTone) t) {
       final BrandGradient gradient = BrandGradients.tile(t.$4);
+      final String label = _label(strings, t.$2, t.$1);
       return _Tap(
-        label: t.$1,
+        label: label,
         onTap: () => onTap?.call(t.$2),
         child: Column(
           key: Key('home-quick-${t.$2}'),
@@ -1071,7 +1102,7 @@ class _Launcher extends StatelessWidget {
             ),
             const SizedBox(height: Spacing.sm),
             Text(
-              t.$1,
+              label,
               textAlign: TextAlign.center,
               maxLines: 2,
               style: AppTypography.label.copyWith(
@@ -1176,7 +1207,7 @@ class _EmergencyCard extends StatelessWidget {
           ),
           const SizedBox(width: Spacing.sm),
           _Tap(
-            label: 'Call ${hotline.name}',
+            label: AppStrings.of(context).dirCallName(hotline.name),
             onTap: onCall,
             child: Container(
               key: const Key('home-call'),

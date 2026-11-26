@@ -4,6 +4,12 @@
 /// width and at 200% text by a test (`test/shared/dialog_callers_test.dart`,
 /// D-202), and so the three screens that sign a resident out say it the same
 /// way.
+///
+/// These are the English sentences. The screens draw the same sentences from
+/// `AppStrings` (`acctSignOutTitle`, `acctRevokeOneBody`, …), so a phone set to
+/// Filipino reads them in Filipino; the constants here are the English
+/// reference the dialog tests open, and must say what the `acct…` English
+/// says.
 abstract final class AccountCopy {
   // Signing out of this device: My Account, Account home and Security.
   static const String signOutTitle = 'Sign out of this device?';

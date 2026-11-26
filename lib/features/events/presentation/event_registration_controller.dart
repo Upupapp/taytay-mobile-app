@@ -5,6 +5,7 @@ import '../../../core/forms/field_error.dart';
 import '../../../core/forms/validation_message.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/access_level.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/event_repository.dart';
 import '../domain/event_send_failure.dart';
 
@@ -28,12 +29,24 @@ enum RegistrationStep {
   bool get isInputStep =>
       this != RegistrationStep.submitting && this != RegistrationStep.outcome;
 
+  /// English, the no-context fallback. A screen says [titleIn].
   String get title => switch (this) {
     RegistrationStep.confirm => 'Confirm your registration',
     RegistrationStep.questions => 'Questions from the office',
     RegistrationStep.consent => 'Before you register',
     RegistrationStep.submitting => 'Registering',
     RegistrationStep.outcome => 'Your registration',
+  };
+
+  /// [title] in the resident's language. Takes [AppStrings] rather than a
+  /// `BuildContext` for the reason `InboxGroup.labelIn` does: the enum lives
+  /// in a presentation file, which `core/l10n` must not import.
+  String titleIn(AppStrings strings) => switch (this) {
+    RegistrationStep.confirm => strings.eventsStepConfirm,
+    RegistrationStep.questions => strings.eventsStepQuestions,
+    RegistrationStep.consent => strings.eventsStepConsent,
+    RegistrationStep.submitting => strings.eventsStepSubmitting,
+    RegistrationStep.outcome => strings.eventsStepOutcome,
   };
 }
 

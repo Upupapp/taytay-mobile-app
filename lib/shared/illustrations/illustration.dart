@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/assets/asset_manifest.dart';
+import '../../core/l10n/shared_copy.dart';
 
 /// The palette an illustration paints with.
 ///
@@ -80,9 +81,14 @@ class Illustration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The prefix is said in the reader's language: a Filipino label opens
+    // with the Filipino word, and is announced as a drawing all the same.
     assert(
       decorative ||
-          semanticLabel.startsWith(AssetPolicy.illustrationLabelPrefix),
+          semanticLabel.startsWith(AssetPolicy.illustrationLabelPrefix) ||
+          semanticLabel.startsWith(
+            sharedStrings(context).sharedIllustrationLabelPrefix,
+          ),
       'A non-decorative illustration must be announced as one: '
       '"$semanticLabel" should start with '
       '"${AssetPolicy.illustrationLabelPrefix}".',

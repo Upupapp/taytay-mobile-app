@@ -11,11 +11,14 @@ import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
+import '../../../core/l10n/app_locales.dart';
+import '../../../core/l10n/core_copy.dart';
+import '../../../core/l10n/verification_copy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../core/session/biometric_consent_controller.dart';
-import '../../../core/time/manila_time.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/barangay_picker.dart';
 import '../../../shared/widgets/biometric_consent_dialog.dart';
@@ -31,7 +34,6 @@ import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/upload_slot.dart';
 import '../../platform/domain/app_bootstrap.dart';
 import '../../platform/domain/privacy_notice.dart';
-import '../../profile/domain/name_lock.dart';
 import '../../registration/domain/registration_domain.dart';
 import '../../verification/domain/verification_id_type.dart';
 import '../../verification/domain/verification_submit_outcome.dart';
@@ -45,7 +47,8 @@ import 'auth_bits.dart';
 /// directory's (`GET /offices/{slug}`).
 const String wizardInPersonOfficeSlug = 'mswdo';
 
-/// Ends the wizard when no selfie can be sent: the account is kept.
+/// Ends the wizard when no selfie can be sent: the account is kept. The
+/// English default; the button reads `authWizardFinishForNow`.
 const String wizardFinishForNow = 'Finish for now';
 const Key wizardFinishForNowKey = Key('wizard-finish-for-now');
 const Key wizardSelfieUnavailableKey = Key('wizard-selfie-unavailable');
@@ -57,6 +60,7 @@ const Key wizardChosenInPersonKey = Key('wizard-chosen-in-person');
 const Key wizardUndoInPersonKey = Key('wizard-undo-in-person');
 
 /// The ID step's offer and its answer, said in the wizard's words (D-228).
+/// The English defaults; the screen reads the `authWizardInPerson*` strings.
 abstract final class WizardInPersonCopy {
   static const String offerHeading = 'Rather verify in person?';
   static const String offer =
@@ -150,7 +154,12 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   final _street = TextEditingController();
   final _password = TextEditingController();
   final _code = TextEditingController();
+
+  /// The ID type's English label: what [AccountApplication.idTypeLabel]
+  /// sends, which the repository maps back to its wire code. The screen shows
+  /// [_idTypeWire] in the reader's language instead.
   final _idType = TextEditingController(text: 'PhilSys National ID');
+  String _idTypeWire = 'philid';
   final _summary = FocusNode();
 
   /// The email code's field, so an empty Confirm opens the keyboard on it.
@@ -167,6 +176,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   CodeAttemptView _attempt = const CodeAttemptView();
   Map<String, String> _errors = <String, String>{};
   bool _codeExpired = false;
+
+  /// A design frame's notes wait for [didChangeDependencies]: they are worded
+  /// from the app's strings, which [initState] cannot read.
+  bool _fixtureCopyPending = false;
 
   /// Redraws the resend countdown once a second on the code step.
   Timer? _clock;
@@ -278,7 +291,16 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   @override
   void didUpdateWidget(AccountWizardScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.fixture != widget.fixture) _applyFixture();
+    if (oldWidget.fixture != widget.fixture) {
+      _applyFixture();
+      _applyFixtureCopy();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_fixtureCopyPending) _applyFixtureCopy();
   }
 
   void _applyFixture() {
@@ -323,6 +345,12 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     _codeSent = sample && _step.index >= _Step.code.index;
     _emailVerified = sample && _step.index >= _Step.terms.index;
     _consented = sample && _step.index > _Step.terms.index;
+    _fixtureCopyPending = true;
+  }
+
+  /// The frame's status note and field errors, in the device's language.
+  void _applyFixtureCopy() {
+    _fixtureCopyPending = false;
     _status = widget.fixture == AccountFixture.codeNotSent
         ? _codeNotSentCopy(const ServerFailure(isTemporary: true))
         : null;
@@ -360,15 +388,16 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   int get _dot => _step.index + 1;
 
   Map<String, String> _personalErrors() {
+    final AppStrings strings = AppStrings.of(context);
     final errors = <String, String>{};
-    if (_first.text.trim().isEmpty) errors['first'] = 'Required';
-    if (_last.text.trim().isEmpty) errors['last'] = 'Required';
+    if (_first.text.trim().isEmpty) errors['first'] = strings.a11yRequired;
+    if (_last.text.trim().isEmpty) errors['last'] = strings.a11yRequired;
     final mobile = _mobile.text.replaceAll(' ', '');
     if (!RegExp(r'^09\d{9}$').hasMatch(mobile)) {
-      errors['mobile'] = 'Enter an 11-digit mobile number starting with 09.';
+      errors['mobile'] = strings.authMobileShape;
     }
     if (_barangayId == null || _barangay.text.trim().isEmpty) {
-      errors['barangay'] = 'Choose your barangay.';
+      errors['barangay'] = strings.authWizardChooseBarangay;
     }
     return errors;
   }
@@ -376,12 +405,13 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   Map<String, String> _accountErrors() {
     final errors = <String, String>{};
     if (_accountCreated) return errors;
+    final AppStrings strings = AppStrings.of(context);
     final email = _email.text.trim();
     if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      errors['email'] = 'Enter a valid email, e.g. name@example.com';
+      errors['email'] = strings.authWizardEmailInvalid;
     }
     if (_password.text.length < 8) {
-      errors['password'] = 'Use at least 8 characters.';
+      errors['password'] = strings.authWizardPasswordShort;
     }
     return errors;
   }
@@ -395,6 +425,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   }
 
   Future<void> _continue() async {
+    final AppStrings strings = AppStrings.of(context);
     switch (_step) {
       case _Step.personal:
         final errors = _personalErrors();
@@ -446,7 +477,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           return;
         }
         if (!RegExp(r'^\d{6}$').hasMatch(code)) {
-          setState(() => _status = 'Enter the 6-digit code.');
+          setState(() => _status = strings.authWizardEnterCode);
           return;
         }
         // `000000` is the expired stand-in. It does not spend an attempt and
@@ -492,16 +523,20 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                 _code.clear();
                 _status = null;
               } else if (next.unavailable) {
-                _status = CodeAttemptView.unavailableCopy;
+                _status = strings.authWizardServiceUnavailable;
               } else if (next.limited) {
                 _status = null;
                 unawaited(_openHold(now, next.resendAt));
               } else if (next.wrong && next.attemptsRemaining != null) {
-                _status =
-                    'Mali ang code. ${next.attemptsRemaining} sa '
-                    '${CodeExchangeRules.attempts} subok na lang ang natitira.';
+                _status = strings.authWizardWrongCode(
+                  next.attemptsRemaining ?? 0,
+                  CodeExchangeRules.attempts,
+                );
               } else {
-                _status = SignInFeedback.forFailure(failure).text;
+                _status = localisedSignInMessage(
+                  context,
+                  SignInFeedback.forFailure(failure),
+                );
               }
             });
         }
@@ -509,11 +544,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         if (!_terms || !_privacy) {
           setState(
             () => _status = !_terms && !_privacy
-                ? 'Agree to the Terms of Use and acknowledge the Privacy '
-                      'Notice: tick each one.'
+                ? strings.authWizardTermsBoth
                 : !_terms
-                ? 'Agree to the Terms of Use to continue.'
-                : 'Acknowledge the Privacy Notice to continue.',
+                ? strings.authWizardTermsOnly
+                : strings.authWizardPrivacyOnly,
           );
           return;
         }
@@ -533,9 +567,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
               // safe. After a timeout the server may already have it, and
               // "not recorded" would be a guess.
               _status = failure.outcomeUnknown
-                  ? 'We could not confirm that your consent was recorded. '
-                        'Agreeing again is safe: it is recorded only once.'
-                  : 'Your consent was not recorded. ${failure.residentMessage}';
+                  ? strings.authWizardConsentUnknown
+                  : strings.authWizardConsentNotRecorded(
+                      localisedResidentMessage(context, failure),
+                    );
             });
             return;
           }
@@ -557,7 +592,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           return;
         }
         if (_front == null && widget.fixture == AccountFixture.live) {
-          setState(() => _status = 'Add a photo of the front of your ID.');
+          setState(() => _status = strings.authWizardAddIdFront);
           return;
         }
         setState(() {
@@ -570,7 +605,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           return;
         }
         if (_selfieShot == null && widget.fixture == AccountFixture.live) {
-          setState(() => _status = 'Take a selfie to continue.');
+          setState(() => _status = strings.authWizardTakeSelfieFirst);
           return;
         }
         setState(() {
@@ -610,32 +645,32 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         setState(() => _accountCreated = true);
         return true;
       case Err<AuthOutcome>(:final failure):
+        final AppStrings strings = AppStrings.of(context);
         setState(() {
           _busy = false;
           switch (failure) {
             case ConflictFailure():
-              _errors = <String, String>{
-                'email': 'This email already has a Taytay account.',
-              };
-              _status =
-                  'An account with this email already exists. Sign in '
-                  'instead, or use another email.';
+              _errors = <String, String>{'email': strings.authWizardEmailTaken};
+              _status = strings.authWizardEmailExists;
             case final ValidationFailure weak
                 when weak.fieldErrors.containsKey('password'):
-              // Firebase's weak-password refusal, worded by this app.
+              // Firebase's weak-password refusal, worded by this app: the
+              // same sentence `firebase_identity.dart` carries, in the
+              // device's language.
               _errors = <String, String>{
-                'password':
-                    weak.firstErrorFor('password') ??
-                    'Use at least 8 characters.',
+                'password': strings.authWizardPasswordWeak,
               };
               _status = null;
             case UnauthenticatedFailure():
               _errors = <String, String>{
-                'email': 'Enter a valid email, e.g. name@example.com',
+                'email': strings.authWizardEmailInvalid,
               };
               _status = null;
             default:
-              _status = SignInFeedback.forFailure(failure).text;
+              _status = localisedSignInMessage(
+                context,
+                SignInFeedback.forFailure(failure),
+              );
           }
         });
         return false;
@@ -738,33 +773,30 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   }
 
   String _codeNotSentCopy(AppFailure failure) {
+    final AppStrings strings = AppStrings.of(context);
     final String email = _email.text.trim().isEmpty
-        ? 'your email'
+        ? strings.authYourEmail
         : _email.text.trim();
     final String next = switch (failure) {
-      NetworkFailure() || TimeoutFailure() =>
-        'Check your connection, then press Continue to try again.',
-      _ => 'Press Continue to try again in a moment.',
+      NetworkFailure() ||
+      TimeoutFailure() => strings.authWizardCodeNotSentOffline,
+      _ => strings.authWizardCodeNotSentLater,
     };
-    return 'Your account is saved, but we could not send a code to $email. '
-        '$next';
+    return strings.authWizardCodeNotSent(email, next);
   }
 
   String _profileNotSavedCopy(AppFailure failure) {
     // `PATCH /me` sets each value outright, so sending it again is safe. After
     // a timeout the server may already hold them, and "not saved" would be a
     // guess.
-    if (failure.outcomeUnknown) {
-      return 'We could not confirm that your details were saved. Press '
-          'Continue to send them again: it is safe to repeat.';
-    }
-    const String lead = 'Your details were not saved.';
+    final AppStrings strings = AppStrings.of(context);
+    if (failure.outcomeUnknown) return strings.authWizardDetailsUnknown;
+    final String lead = strings.authWizardDetailsNotSaved;
     return switch (failure) {
-      ValidationFailure() => '$lead Please check the highlighted details.',
-      ConflictFailure() =>
-        '$lead This email is already on another Taytay account. Please ask '
-            'the municipal hall for help.',
-      _ => '$lead ${failure.residentMessage}',
+      ValidationFailure() =>
+        '$lead ${strings.authWizardDetailsCheckHighlighted}',
+      ConflictFailure() => '$lead ${strings.authWizardDetailsEmailConflict}',
+      _ => '$lead ${localisedResidentMessage(context, failure)}',
     };
   }
 
@@ -877,7 +909,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           }
           setState(() {
             _busy = false;
-            if (!home) _status = failure.residentMessage;
+            if (!home) _status = localisedResidentMessage(context, failure);
           });
           if (home) context.goNamed(AppRoute.home.routeName);
           return;
@@ -885,7 +917,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         case VerificationSubmitOutcome.failed:
           setState(() {
             _busy = false;
-            _status = failure.residentMessage;
+            _status = localisedResidentMessage(context, failure);
           });
           return;
       }
@@ -998,13 +1030,16 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   Future<void> _chooseIdType() async {
     final String? picked = await AppSheet.show<String>(
       context: context,
-      title: _IdTypeSheet.title,
+      title: AppStrings.of(context).verifIdType,
       builder: (BuildContext sheet) =>
           _IdTypeSheet(selectedLabel: _idType.text.trim()),
     );
     if (picked == null || !mounted) return;
     if (!verificationIdTypes.contains(picked)) return;
-    setState(() => _idType.text = idTypeLabel(picked));
+    setState(() {
+      _idTypeWire = picked;
+      _idType.text = idTypeLabel(picked);
+    });
   }
 
   /// `terms.body_markdown` from `GET /app/config` (backend `77da0b2`), once a
@@ -1021,7 +1056,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       context,
       title: 'Terms of Use',
       markdown: markdown,
-      pending: termsNotPublishedYet,
+      pending: AppStrings.of(context).sharedTermsNotPublishedYet,
     );
   }
 
@@ -1049,7 +1084,8 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       title: 'Privacy Notice',
       markdown: markdown,
       pending:
-          '$privacyNoticeNotPublishedYet The summary on this step is a draft.',
+          '${AppStrings.of(context).sharedPrivacyNoticeNotPublishedYet} '
+          '${AppStrings.of(context).authWizardSummaryIsDraft}',
     );
   }
 
@@ -1068,95 +1104,90 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   @override
   Widget build(BuildContext context) {
     if (_step == _Step.submitted) return _pending();
-    final (String title, String? subtitle) = _heading;
+    final AppStrings strings = AppStrings.of(context);
+    final (String title, String? subtitle) = _heading(strings);
     return AuthFormPage(
       title: title,
       subtitle: subtitle,
-      stepLabel: 'Step $_dot of $_stepCount',
+      stepLabel: strings.welcomeStep(_dot, _stepCount),
       progress: _dot / _stepCount,
-      progressSemanticLabel: 'Create account progress',
+      progressSemanticLabel: strings.authWizardProgressLabel,
       onBack: _back,
       backEnabled: !_busy,
-      footer: _footer(),
+      footer: _footer(strings),
       child: switch (_step) {
-        _Step.personal => _personal(),
-        _Step.account => _accountBody(),
-        _Step.code => _emailCode(),
+        _Step.personal => _personal(strings),
+        _Step.account => _accountBody(strings),
+        _Step.code => _emailCode(strings),
         _Step.terms => _termsBody(),
-        _Step.idCard => _idBody(),
-        _Step.selfie => _selfieBody(),
-        _Step.review => _review(),
+        _Step.idCard => _idBody(strings),
+        _Step.selfie => _selfieBody(strings),
+        _Step.review => _review(strings),
         _Step.submitted => const SizedBox.shrink(),
       },
     );
   }
 
   /// The wave header's title and supporting line for the step.
-  (String, String?) get _heading {
+  (String, String?) _heading(AppStrings strings) {
     final String address = _email.text.trim().isEmpty
-        ? 'your email'
+        ? strings.authYourEmail
         : _email.text.trim();
     return switch (_step) {
       _Step.personal => (
-        'Tungkol sa iyo',
-        'Basic details only. You can complete your Resident Profile once '
-            'your account is verified.',
+        strings.authWizardPersonalTitle,
+        strings.authWizardPersonalSubtitle,
       ),
       _Step.account =>
         _accountCreated
             ? (
-                'Account created',
-                'You sign in with this email. Next we send a 6-digit code '
-                    'to it.',
+                strings.authWizardAccountCreatedTitle,
+                strings.authWizardAccountCreatedSubtitle,
               )
             : (
-                'Create your account',
-                'You sign in with this email and password. Next we send a '
-                    '6-digit code to the email.',
+                strings.authWizardAccountTitle,
+                strings.authWizardAccountSubtitle,
               ),
       _Step.code =>
         _codeExpired
             ? (
-                'Nag-expire na ang code',
-                'Valid lang ang code nang 10 minuto. Magpadala ng bago sa '
-                    '$address.',
+                strings.authWizardCodeExpiredTitle,
+                strings.authWizardCodeExpiredSubtitle(address),
               )
             : (
-                'Enter the 6-digit code',
-                'We sent a code to $address. It expires in 10 minutes.',
+                strings.authWizardCodeTitle,
+                strings.authWizardCodeSubtitle(address),
               ),
-      _Step.terms => ('Your data, protected', 'Terms at Privacy'),
+      _Step.terms => (
+        strings.authWizardTermsTitle,
+        strings.authWizardTermsSubtitle,
+      ),
       _Step.idCard when _chosenInPerson => (
-        WizardInPersonCopy.stepTitle,
-        WizardInPersonCopy.stepSubtitle,
+        strings.authWizardInPersonStepTitle,
+        strings.authWizardInPersonStepSubtitle,
       ),
-      _Step.idCard => (
-        'Upload a valid government ID',
-        'The LGU uses it to confirm who you are. Make sure all four corners '
-            'and your name are clear.',
-      ),
+      _Step.idCard => (strings.authWizardIdTitle, strings.authWizardIdSubtitle),
       _Step.selfie => (
-        'Take a quick selfie',
-        'LGU staff compare it with your ID. It is not used as your profile '
-            'photo.',
+        strings.authWizardSelfieTitle,
+        strings.authWizardSelfieSubtitle,
       ),
-      _Step.review => ('Check your details', null),
+      _Step.review => (strings.authWizardReviewTitle, null),
       _Step.submitted => ('', null),
     };
   }
 
-  Widget _footer() {
+  Widget _footer(AppStrings strings) {
     if (_step == _Step.code && _codeExpired) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           PrimaryButton(
-            label: 'Magpadala ng bagong code',
+            label: strings.authWizardSendNewCode,
             onPressed: _busy ? null : _resendEmailCode,
           ),
           if (!_accountCreated)
             AuthLink(
-              'Palitan ang email address',
+              strings.authWizardChangeEmail,
               onPressed: () => setState(() {
                 _codeExpired = false;
                 _step = _Step.account;
@@ -1170,14 +1201,14 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           PrimaryButton(
-            label: 'Confirm email',
+            label: strings.authWizardConfirmEmail,
             onPressed: _busy ? null : _continue,
           ),
           // Once the Firebase account exists its email is fixed, so the link
           // that sent the resident back to retype it is not offered.
           if (!_accountCreated)
             AuthLink(
-              'Change email address',
+              strings.authWizardChangeEmail,
               onPressed: () => setState(() => _step = _Step.account),
             ),
         ],
@@ -1186,14 +1217,14 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     if ((_step == _Step.idCard || _step == _Step.selfie) && _selfieWayClosed) {
       return PrimaryButton(
         key: wizardFinishForNowKey,
-        label: wizardFinishForNow,
+        label: strings.authWizardFinishForNow,
         onPressed: _busy ? null : _finishForNow,
       );
     }
     final primary = switch (_step) {
-      _Step.review => 'Submit for verification',
-      _Step.account when !_accountCreated => 'Create my account',
-      _ => 'Continue',
+      _Step.review => strings.authWizardSubmit,
+      _Step.account when !_accountCreated => strings.authWizardCreateAccount,
+      _ => strings.gateActionContinue,
     };
     return PrimaryButton(label: primary, onPressed: _busy ? null : _continue);
   }
@@ -1216,10 +1247,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     );
   }
 
-  String _fixCount(int count) =>
-      'Please fix $count ${count == 1 ? 'field' : 'fields'} to continue.';
-
-  Widget _personal() {
+  Widget _personal(AppStrings strings) {
     final count = _errors.keys.where(_personalKeys.contains).length;
     final String? status = _status;
     final bool showAddress =
@@ -1230,9 +1258,9 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         if (status != null)
           _alert(status)
         else if (count > 0)
-          _alert(_fixCount(count)),
+          _alert(strings.authWizardFixFields(count)),
         _box(
-          'First name',
+          strings.fieldFirstName,
           _first,
           icon: TaytayIcons.user,
           error: _errors['first'],
@@ -1241,7 +1269,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         ),
         const SizedBox(height: Spacing.formGap),
         _box(
-          'Last name',
+          strings.fieldLastName,
           _last,
           icon: TaytayIcons.user,
           error: _errors['last'],
@@ -1250,12 +1278,12 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         ),
         const SizedBox(height: Spacing.sm),
         Text(
-          NameCheckCopy.asPrinted,
+          strings.profNameAsPrinted,
           style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
         ),
         const SizedBox(height: Spacing.formGap),
         _box(
-          'Mobile number',
+          strings.fieldMobileNumber,
           _mobile,
           icon: TaytayIcons.phone,
           error: _errors['mobile'],
@@ -1265,24 +1293,27 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         ),
         const SizedBox(height: Spacing.formGap),
         _picker(
-          'Barangay',
+          strings,
+          strings.fieldBarangay,
           _barangay,
           icon: TaytayIcons.mapPin,
           error: _errors['barangay'],
           requiredField: true,
-          placeholder: 'Choose',
+          placeholder: strings.authWizardChoose,
           tapKey: const Key('barangay-picker'),
           onTap: _busy ? null : _chooseBarangay,
         ),
         const SizedBox(height: Spacing.formGap),
         _box(
-          'Street / Purok',
+          strings.authWizardStreetLabel,
           _street,
           icon: TaytayIcons.house,
           error: _errors['street'],
           hint: showAddress
-              ? 'Address: ${_street.text.trim()}, Brgy. '
-                    '${_barangay.text.trim()}, Taytay, Rizal'
+              ? strings.authWizardAddressHint(
+                  _street.text.trim(),
+                  _barangay.text.trim(),
+                )
               : null,
         ),
       ],
@@ -1291,7 +1322,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
 
   /// Email and password: the Firebase account. Once it exists the email is
   /// fixed and the password is not shown again.
-  Widget _accountBody() {
+  Widget _accountBody(AppStrings strings) {
     final count = _errors.keys.where((k) => !_personalKeys.contains(k)).length;
     final String? status = _status;
     final String password = _password.text;
@@ -1301,9 +1332,9 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         if (status != null)
           _alert(status)
         else if (count > 0)
-          _alert(_fixCount(count)),
+          _alert(strings.authWizardFixFields(count)),
         _box(
-          'Email address',
+          strings.fieldEmail,
           _email,
           icon: TaytayIcons.mail,
           error: _errors['email'],
@@ -1314,7 +1345,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         ),
         const SizedBox(height: Spacing.formGap),
         _box(
-          'Password',
+          strings.authPasswordLabel,
           _password,
           icon: TaytayIcons.lock,
           error: _errors['password'],
@@ -1327,8 +1358,8 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
               ? null
               : ShowPasswordToggle(
                   shown: !_obscure,
-                  showLabel: 'Show',
-                  hideLabel: 'Hide',
+                  showLabel: strings.authPasswordShow,
+                  hideLabel: strings.authPasswordHide,
                   onPressed: () => setState(() => _obscure = !_obscure),
                 ),
         ),
@@ -1339,7 +1370,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
             runSpacing: Spacing.xs,
             children: <Widget>[
               for (final rule in <(String, bool)>[
-                ('8+ characters', password.length >= 8),
+                (strings.authWizardRuleLength, password.length >= 8),
                 (
                   'Aa',
                   RegExp('[A-Z]').hasMatch(password) &&
@@ -1402,12 +1433,15 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           case Err<CodeAcceptance>(:final failure):
             _attempt = _attempt.applyFailure(failure, now);
             if (_attempt.unavailable) {
-              _status = CodeAttemptView.unavailableCopy;
+              _status = AppStrings.of(context).authWizardServiceUnavailable;
             } else if (_attempt.limited) {
               _status = null;
               unawaited(_openHold(now, _attempt.resendAt));
             } else {
-              _status = SignInFeedback.forFailure(failure).text;
+              _status = localisedSignInMessage(
+                context,
+                SignInFeedback.forFailure(failure),
+              );
             }
         }
       });
@@ -1420,8 +1454,8 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     });
   }
 
-  Widget _emailCode() {
-    if (_codeExpired) return _emailCodeExpired();
+  Widget _emailCode(AppStrings strings) {
+    if (_codeExpired) return _emailCodeExpired(strings);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -1451,7 +1485,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           ],
         ),
         const SizedBox(height: Spacing.md),
-        _resendRow(),
+        _resendRow(strings),
         _statusNote(),
       ],
     );
@@ -1460,16 +1494,16 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   /// "Didn't get it?" and a real button, 48 dp. During the wait from the
   /// last `retry_after` the button is off and says how long is left. The
   /// server enforces that wait whatever this shows.
-  Widget _resendRow() {
+  Widget _resendRow(AppStrings strings) {
     final bool live = widget.fixture == AccountFixture.live;
     final DateTime now = DateTime.now();
     final bool ready = live && _attempt.canResendAt(now);
     final Duration left = _attempt.resendAt?.difference(now) ?? Duration.zero;
     final String label = ready
-        ? 'Resend code'
-        : live
-        ? 'Resend in ${CodeExchangeRules.countdown(left)}'
-        : 'Resend in 0:45';
+        ? strings.authWizardResendCode
+        : strings.authWizardResendIn(
+            live ? CodeExchangeRules.countdown(left) : '0:45',
+          );
     final TextStyle note = AppTypography.listDetail.copyWith(
       color: BrandColors.muted,
     );
@@ -1477,31 +1511,31 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       alignment: WrapAlignment.center,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: <Widget>[
-        Text("Didn't get it?", style: note),
+        Text(strings.authWizardDidntGetIt, style: note),
         CodeResendButton(
           buttonKey: const Key('email-code-resend'),
           label: label,
           onPressed: ready && !_busy ? _resendEmailCode : null,
         ),
-        Text('Check your spam folder too.', style: note),
+        Text(strings.authWizardCheckSpam, style: note),
       ],
     );
   }
 
-  Widget _emailCodeExpired() {
+  Widget _emailCodeExpired(AppStrings strings) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const SoftNote(
+        SoftNote(
           tone: NoteTone.warning,
-          title: 'Hindi na magagamit ang lumang code. ',
-          message: 'Sa bagong code, may 5 subok ka ulit.',
+          title: strings.authWizardOldCodeTitle,
+          message: strings.authWizardNewCodeTries,
         ),
         const SizedBox(height: Spacing.formGap),
         const SixDigitRow(digits: '', dim: true),
         const SizedBox(height: Spacing.md),
         Text(
-          'Puwede nang magpadala muli · Tingnan din ang spam folder',
+          strings.authWizardCanResendNow,
           textAlign: TextAlign.center,
           style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
         ),
@@ -1510,6 +1544,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   }
 
   Widget _termsBody() {
+    final AppStrings strings = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -1524,13 +1559,13 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         ConsentCheckCard(
           value: _terms,
           onChanged: (value) => setState(() => _terms = value),
-          label: termsConsentLabel,
+          label: strings.sharedTermsConsentLabel,
         ),
         const SizedBox(height: Spacing.sm + Spacing.xxs),
         ConsentCheckCard(
           value: _privacy,
           onChanged: (value) => setState(() => _privacy = value),
-          label: privacyConsentLabel,
+          label: strings.sharedPrivacyConsentLabel,
         ),
         _statusNote(),
       ],
@@ -1541,6 +1576,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   /// before any photo is taken: nothing while it can be asked for, otherwise
   /// why no selfie can be sent and the in-person way (D-209, D-210).
   Widget _consentNotes() {
+    final AppStrings strings = AppStrings.of(context);
     final BiometricConsentController? controller = _biometric;
     if (_chosenInPerson) {
       return Padding(
@@ -1548,10 +1584,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            const SoftNote(
+            SoftNote(
               key: wizardChosenInPersonKey,
-              heading: WizardInPersonCopy.chosenHeading,
-              message: WizardInPersonCopy.chosen,
+              heading: strings.authWizardInPersonChosenHeading,
+              message: strings.authWizardInPersonChosen,
             ),
             const SizedBox(height: Spacing.md),
             InPersonVerificationNote(office: controller?.inPersonOffice),
@@ -1562,31 +1598,31 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     if (controller == null) return const SizedBox.shrink();
     final BiometricConsentStatus status = controller.status;
     final List<Widget> notes = switch (status) {
-      BiometricConsentChecking() => const <Widget>[
+      BiometricConsentChecking() => <Widget>[
         LoadingSkeleton(
           layout: SkeletonLayout.text,
           count: 1,
-          semanticLabel: 'Checking the selfie consent',
+          semanticLabel: strings.authWizardCheckingConsent,
         ),
       ],
       BiometricConsentFailed() => <Widget>[
         SoftNote(
           key: wizardConsentFailedKey,
           tone: NoteTone.error,
-          heading: BiometricConsentCopy.failedHeading,
-          message: BiometricConsentCopy.failed,
+          heading: strings.sharedBiometricFailedHeading,
+          message: strings.sharedBiometricFailed,
           action: AuthLink(
-            'Try again',
+            strings.actionTryAgain,
             onPressed: () => unawaited(controller.load()),
           ),
         ),
       ],
       BiometricConsentUnavailable() => <Widget>[
-        const SoftNote(
+        SoftNote(
           key: wizardSelfieUnavailableKey,
           tone: NoteTone.warning,
-          heading: BiometricConsentCopy.unavailableHeading,
-          message: BiometricConsentCopy.unavailable,
+          heading: strings.sharedBiometricUnavailableHeading,
+          message: strings.sharedBiometricUnavailable,
         ),
         const SizedBox(height: Spacing.md),
         InPersonVerificationNote(office: controller.inPersonOffice),
@@ -1594,9 +1630,9 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       BiometricConsentOwed() || BiometricConsentGiven() =>
         _declinedSelfie
             ? <Widget>[
-                const SoftNote(
-                  heading: BiometricConsentCopy.declinedHeading,
-                  message: BiometricConsentCopy.declined,
+                SoftNote(
+                  heading: strings.sharedBiometricDeclinedHeading,
+                  message: strings.sharedBiometricDeclined,
                 ),
                 const SizedBox(height: Spacing.md),
                 InPersonVerificationNote(office: controller.inPersonOffice),
@@ -1613,7 +1649,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     );
   }
 
-  Widget _idBody() {
+  Widget _idBody(AppStrings strings) {
     final attached = _front != null || widget.fixture == AccountFixture.idCard;
     final String name = '${_first.text.trim()} ${_last.text.trim()}'.trim();
     if (_biometric?.status is BiometricConsentUnavailable) {
@@ -1627,7 +1663,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         children: <Widget>[
           _consentNotes(),
           AuthLink(
-            WizardInPersonCopy.undo,
+            strings.authWizardInPersonUndo,
             key: wizardUndoInPersonKey,
             alignment: AlignmentDirectional.centerStart,
             onPressed: _busy
@@ -1644,11 +1680,11 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         // The other way, offered before any photo is asked for: a resident
         // may verify in person without uploading anything (D-210, D-228).
         SoftNote(
-          heading: WizardInPersonCopy.offerHeading,
-          message: WizardInPersonCopy.offer,
+          heading: strings.authWizardInPersonOfferHeading,
+          message: strings.authWizardInPersonOffer,
           live: false,
           action: AuthLink(
-            WizardInPersonCopy.offerAction,
+            strings.authWizardInPersonOfferAction,
             key: wizardChooseInPersonKey,
             onPressed: _busy ? null : _chooseInPerson,
           ),
@@ -1657,37 +1693,40 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         _NameCheckCard(name: name),
         const SizedBox(height: Spacing.formGap),
         _picker(
-          'Type of ID',
+          strings,
+          strings.verifIdType,
           _idType,
+          shown: localisedIdTypeLabel(strings, _idTypeWire),
           icon: TaytayIcons.idCard,
           requiredField: true,
-          placeholder: 'Choose',
+          placeholder: strings.authWizardChoose,
           tapKey: const Key('id-type-picker'),
           onTap: _busy ? null : _chooseIdType,
         ),
         const SizedBox(height: Spacing.formGap),
-        const AuthFieldLabel('Front of ID', requiredField: true),
+        AuthFieldLabel(strings.authWizardIdFront, requiredField: true),
         const SizedBox(height: Spacing.sm),
         if (attached)
           _attached(
+            strings,
             name: _front?.fileName ?? 'id_front.jpg',
             onChange: _pickFront,
           )
         else
           UploadSlot(
             key: const Key('id-front-pick'),
-            label: _addPhoto,
+            label: strings.authWizardAddPhoto,
             onPressed: _pickFront,
           ),
         const SizedBox(height: Spacing.formGap),
-        const AuthFieldLabel('Back of ID (optional)'),
+        AuthFieldLabel(strings.authWizardIdBack),
         const SizedBox(height: Spacing.sm),
         if (_idBack case final CapturedDocument back)
-          _attached(name: back.fileName, onChange: _pickBack)
+          _attached(strings, name: back.fileName, onChange: _pickBack)
         else
           UploadSlot(
             key: const Key('id-back-pick'),
-            label: _addPhoto,
+            label: strings.authWizardAddPhoto,
             onPressed: widget.fixture == AccountFixture.live ? _pickBack : null,
           ),
         _statusNote(),
@@ -1697,7 +1736,11 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
 
   /// A picked file (CSS `.file`): its name, "Attached", and Change. The
   /// photo itself is not drawn back on this screen.
-  Widget _attached({required String name, required VoidCallback onChange}) {
+  Widget _attached(
+    AppStrings strings, {
+    required String name,
+    required VoidCallback onChange,
+  }) {
     return SoftCard(
       filled: true,
       padding: const EdgeInsets.fromLTRB(
@@ -1733,7 +1776,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                     const SizedBox(width: Spacing.xs),
                     Flexible(
                       child: Text(
-                        'Attached',
+                        strings.authWizardAttached,
                         style: AppTypography.small.copyWith(
                           fontWeight: AppTypography.strong,
                           color: BrandColors.green,
@@ -1745,13 +1788,13 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
               ],
             ),
           ),
-          AuthLink('Change', onPressed: onChange),
+          AuthLink(strings.applyEdit, onPressed: onChange),
         ],
       ),
     );
   }
 
-  Widget _selfieBody() {
+  Widget _selfieBody(AppStrings strings) {
     final BiometricConsentStatus? consent = _biometric?.status;
     final bool canAsk =
         consent == null ||
@@ -1763,17 +1806,14 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         _consentNotes(),
         _SelfieGuide(taken: _selfie),
         const SizedBox(height: Spacing.formGap),
-        const _SelfieTip(TaytayIcons.sun, 'Good light, facing the camera'),
+        _SelfieTip(TaytayIcons.sun, strings.authWizardSelfieTipLight),
         const SizedBox(height: Spacing.md),
-        const _SelfieTip(
-          TaytayIcons.scanFace,
-          'Whole face visible: no sunglasses, mask or cap',
-        ),
+        _SelfieTip(TaytayIcons.scanFace, strings.authWizardSelfieTipFace),
         const SizedBox(height: Spacing.md),
-        const _SelfieTip(TaytayIcons.user, 'Only you in the photo'),
+        _SelfieTip(TaytayIcons.user, strings.authWizardSelfieTipAlone),
         const SizedBox(height: Spacing.formGap),
         SecondaryButton(
-          label: 'Take selfie',
+          label: strings.authWizardTakeSelfie,
           icon: const TaytayIcon(
             icon: TaytayIcons.camera,
             semanticLabel: '',
@@ -1803,39 +1843,63 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     return parts.join(', ');
   }
 
-  String get _idSummary {
-    final type = _idType.text.trim();
+  String _idSummary(AppStrings strings) {
+    final type = _idType.text.trim().isEmpty
+        ? ''
+        : localisedIdTypeLabel(strings, _idTypeWire);
     final captured =
         _front != null ||
         widget.fixture == AccountFixture.idCard ||
         widget.fixture == AccountFixture.selfie ||
         widget.fixture == AccountFixture.review ||
         widget.fixture == AccountFixture.submitted;
-    final String sides = _idBack != null ? 'front and back' : 'front';
-    if (type.isEmpty) return captured ? 'Captured: $sides' : 'Not added';
+    final String sides = _idBack != null
+        ? strings.authWizardIdSidesBoth
+        : strings.authWizardIdSidesFront;
+    if (type.isEmpty) {
+      return captured
+          ? strings.authWizardIdCaptured(sides)
+          : strings.authWizardNotAdded;
+    }
     return captured ? '$type · $sides' : type;
   }
 
-  Widget _review() {
+  Widget _review(AppStrings strings) {
     final name = '${_first.text.trim()} ${_last.text.trim()}'.trim();
     final List<Widget> rows = <Widget>[
-      _row('Name', name, _Step.personal),
+      _row(strings, strings.authWizardRowName, name, _Step.personal),
       // The email is fixed with the account, so it has no Edit link.
       _row(
-        'Email',
+        strings,
+        strings.authWizardRowEmail,
         _email.text.trim(),
         null,
-        badge: _emailVerified ? 'Verified' : null,
+        badge: _emailVerified ? strings.verifyStageVerifiedLabel : null,
       ),
-      _row('Mobile', _mobile.text.trim(), _Step.personal),
-      _row('Address', _addressLine, _Step.personal),
       _row(
-        'Terms & Privacy Notice',
-        _consented ? 'Agreed · consent given' : 'Not yet agreed',
+        strings,
+        strings.authWizardRowMobile,
+        _mobile.text.trim(),
+        _Step.personal,
+      ),
+      _row(strings, strings.authWizardRowAddress, _addressLine, _Step.personal),
+      _row(
+        strings,
+        strings.authWizardRowTerms,
+        _consented
+            ? strings.authWizardTermsAgreed
+            : strings.authWizardTermsNotAgreed,
         _Step.terms,
       ),
-      _row('Valid ID', _idSummary, _Step.idCard),
-      _row('Selfie', _selfie ? 'Taken' : 'Not taken', _Step.selfie),
+      _row(strings, strings.authWizardRowId, _idSummary(strings), _Step.idCard),
+      _row(
+        strings,
+        strings.authWizardRowSelfie,
+        _selfie
+            ? strings.authWizardSelfieTaken
+            : strings.authWizardSelfieNotTaken,
+        _Step.selfie,
+      ),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1864,20 +1928,21 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
 
   /// `RegDone`: the medal, "You're all set", and the verification status.
   Widget _pending() {
+    final AppStrings strings = AppStrings.of(context);
     final String first = _first.text.trim();
     return Scaffold(
       backgroundColor: BrandColors.white,
       body: SuccessScreen(
         mark: SuccessMarkStyle.medal,
-        stepLabel: 'Step $_stepCount of $_stepCount',
+        stepLabel: strings.welcomeStep(_stepCount, _stepCount),
         progress: 1,
-        progressSemanticLabel: 'Create account progress',
+        progressSemanticLabel: strings.authWizardProgressLabel,
         showBack: true,
         onBack: _back,
-        title: first.isEmpty ? "You're all set!" : "You're all set, $first!",
-        message:
-            'Your account is created and your details were sent to Taytay '
-            'LGU for verification.',
+        title: first.isEmpty
+            ? strings.authWizardDoneTitle
+            : strings.authWizardDoneTitleNamed(first),
+        message: strings.authWizardDoneMessage,
         body: SoftCard(
           filled: true,
           child: Column(
@@ -1890,21 +1955,18 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                 runSpacing: Spacing.sm,
                 children: <Widget>[
                   Text(
-                    'Account verification',
+                    strings.authWizardDoneVerification,
                     style: AppTypography.listTitle.copyWith(
                       fontWeight: AppTypography.strong,
                       color: BrandColors.ink,
                     ),
                   ),
-                  const _StatusPill('Pending review'),
+                  _StatusPill(strings.authWizardPendingReview),
                 ],
               ),
               const SizedBox(height: Spacing.sm),
               Text(
-                'Taytay LGU staff check your ID and selfie at the municipal '
-                "office, in the office's own system. You'll get a "
-                'notification in this app when they decide. Meanwhile you '
-                'can browse services and news.',
+                strings.authWizardDoneBody,
                 style: AppTypography.bodyStyle.copyWith(
                   color: BrandColors.text,
                 ),
@@ -1912,13 +1974,19 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
             ],
           ),
         ),
-        primaryLabel: 'Continue to app',
+        primaryLabel: strings.authWizardContinueToApp,
         onPrimary: _busy ? null : _continue,
       ),
     );
   }
 
-  Widget _row(String label, String value, _Step? edit, {String? badge}) {
+  Widget _row(
+    AppStrings strings,
+    String label,
+    String value,
+    _Step? edit, {
+    String? badge,
+  }) {
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: ComponentSizes.listRow),
       child: Padding(
@@ -1956,7 +2024,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
             ),
             if (edit != null)
               AuthLink(
-                'Edit',
+                strings.authWizardEdit,
                 onPressed: () => setState(() {
                   _returnToReview = true;
                   _status = null;
@@ -2003,6 +2071,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   /// A picker drawn as a filled field: its value as text, one 48 dp button,
   /// rather than a text field a resident could type a barangay name into.
   Widget _picker(
+    AppStrings strings,
     String label,
     TextEditingController controller, {
     required String placeholder,
@@ -2011,8 +2080,9 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     IconData? icon,
     String? error,
     bool requiredField = false,
+    String? shown,
   }) {
-    final String value = controller.text;
+    final String value = shown ?? controller.text;
     final bool bad = error != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2022,8 +2092,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         Semantics(
           button: true,
           enabled: onTap != null,
-          label: requiredField ? '$label, required' : label,
-          value: value.isEmpty ? 'Not chosen' : value,
+          label: requiredField
+              ? strings.authWizardPickerRequired(label)
+              : label,
+          value: value.isEmpty ? strings.authWizardNotChosen : value,
           // The children are excluded, so the action is given here or a
           // screen reader could not open the list.
           onTap: onTap,
@@ -2176,10 +2248,6 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-/// The words of RegID's empty slot (CSS `.add`), drawn by the shared
-/// [UploadSlot].
-const String _addPhoto = 'Add a photo · JPG or PNG';
-
 /// RegID `.namechk`: the name on the account, and the sentence that the ID
 /// must show it, before any photo is sent (D-195).
 class _NameCheckCard extends StatelessWidget {
@@ -2189,6 +2257,7 @@ class _NameCheckCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final String initials = name
         .split(RegExp(r'\s+'))
         .where((part) => part.isNotEmpty)
@@ -2234,7 +2303,7 @@ class _NameCheckCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          'Name on your account',
+                          strings.authWizardNameOnAccount,
                           style: AppTypography.small.copyWith(
                             fontWeight: AppTypography.medium,
                             color: BrandColors.muted,
@@ -2266,7 +2335,7 @@ class _NameCheckCard extends StatelessWidget {
                 Semantics(
                   header: true,
                   child: Text(
-                    NameCheckCopy.beforeSendingTitle,
+                    strings.profNameBeforeSendingTitle,
                     style: AppTypography.listTitle.copyWith(
                       fontWeight: AppTypography.strong,
                       color: BrandColors.ink,
@@ -2275,7 +2344,7 @@ class _NameCheckCard extends StatelessWidget {
                 ),
                 const SizedBox(height: Spacing.sm - Spacing.xxs),
                 Text(
-                  NameCheckCopy.beforeSending,
+                  strings.profNameBeforeSending,
                   style: AppTypography.listDetail.copyWith(
                     color: BrandColors.muted,
                     height: 1.55,
@@ -2296,6 +2365,7 @@ const Key wizardNoticeDraftKey = Key('wizard-notice-draft');
 const Key wizardNoticeFailedKey = Key('wizard-notice-failed');
 
 /// What the Privacy Notice card says while Taytay LGU has published none.
+/// The English default; the card reads `authWizardNoticeDraftPill`.
 const String wizardNoticeDraftPill = 'DRAFT · Not yet published by Taytay LGU';
 
 /// RegTerms `.pn`: the Privacy Notice the resident acknowledges below it.
@@ -2352,27 +2422,31 @@ class _PrivacyNoticeCardState extends State<_PrivacyNoticeCard> {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final PrivacyNotice? notice = _notice;
     final Widget body;
     if (_loading) {
-      body = const LoadingSkeleton(
+      body = LoadingSkeleton(
         layout: SkeletonLayout.text,
         count: 4,
-        semanticLabel: 'Loading the Privacy Notice',
+        semanticLabel: strings.authWizardNoticeLoading,
       );
     } else if (_failed) {
       body = SoftNote(
         key: wizardNoticeFailedKey,
         tone: NoteTone.error,
-        heading: 'Could not load the Privacy Notice',
-        message:
-            'Check your connection and try again. Read it before you '
-            'acknowledge it below.',
-        action: AuthLink('Try again', onPressed: () => unawaited(_read())),
+        heading: strings.authWizardNoticeFailedHeading,
+        message: strings.authWizardNoticeFailedBody,
+        action: AuthLink(
+          strings.actionTryAgain,
+          onPressed: () => unawaited(_read()),
+        ),
       );
     } else if (notice != null && notice.isPublished) {
       final DateTime? updated = notice.updatedAt;
-      final String version = 'Version ${notice.version.trim()}';
+      final String version = strings.authWizardNoticeVersion(
+        notice.version.trim(),
+      );
       body = Column(
         key: wizardNoticePublishedKey,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2380,7 +2454,10 @@ class _PrivacyNoticeCardState extends State<_PrivacyNoticeCard> {
           _NoticePill(
             text: updated == null
                 ? version
-                : '$version · Updated ${ManilaTime.formatDate(updated)}',
+                : strings.authWizardNoticeUpdated(
+                    version,
+                    manilaDate(context, updated),
+                  ),
             published: true,
           ),
           const SizedBox(height: Spacing.section),
@@ -2498,15 +2575,14 @@ class _DraftSummary extends StatelessWidget {
       thickness: 1,
       color: BrandColors.divider,
     );
+    final AppStrings strings = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const _NoticePill(text: wizardNoticeDraftPill, published: false),
+        _NoticePill(text: strings.authWizardNoticeDraftPill, published: false),
         const SizedBox(height: Spacing.section),
         Text(
-          'The Municipality of Taytay collects your name, contact details, '
-          'address, valid ID and selfie to create and verify your resident '
-          'account and to deliver municipal services you request.',
+          strings.authWizardDraftIntro,
           style: AppTypography.bodyStyle.copyWith(
             color: BrandColors.text,
             height: 1.55,
@@ -2523,19 +2599,18 @@ class _DraftSummary extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               item(
-                'How we use it',
-                'Identity and residency verification, service requests, '
-                    'and notices from the LGU.',
+                strings.authWizardDraftUseTitle,
+                strings.authWizardDraftUseBody,
               ),
               divider,
-              item('Who can see it', 'Authorised Taytay LGU personnel only.'),
+              item(
+                strings.authWizardDraftWhoTitle,
+                strings.authWizardDraftWhoBody,
+              ),
               divider,
               item(
-                'Your rights',
-                'To be informed, to access, correct, object and erase, and '
-                    'to file a complaint with the National Privacy '
-                    'Commission. Contact the LGU Data Protection Officer '
-                    'for requests.',
+                strings.authWizardDraftRightsTitle,
+                strings.authWizardDraftRightsBody,
               ),
             ],
           ),
@@ -2554,9 +2629,10 @@ class _LegalLinks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return Semantics(
       container: true,
-      label: 'Full documents',
+      label: strings.authWizardFullDocuments,
       child: Material(
         color: BrandColors.background,
         shape: RoundedRectangleBorder(
@@ -2568,14 +2644,14 @@ class _LegalLinks extends StatelessWidget {
             _LegalLink(
               key: const Key('terms-read-full'),
               icon: TaytayIcons.fileText,
-              label: 'Read full Terms',
+              label: strings.authWizardReadTerms,
               onPressed: onTerms,
             ),
             const Divider(height: 1, thickness: 1, color: BrandColors.line),
             _LegalLink(
               key: const Key('privacy-read-full'),
               icon: TaytayIcons.shield,
-              label: 'Read full Privacy Notice',
+              label: strings.authWizardReadPrivacy,
               onPressed: onPrivacy,
             ),
           ],
@@ -2654,11 +2730,12 @@ class _SelfieGuide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return Semantics(
       image: true,
       label: taken
-          ? 'Selfie guide, selfie taken. Illustration, no real person.'
-          : 'Selfie guide. Illustration, no real person.',
+          ? strings.authWizardSelfieGuideTaken
+          : strings.authWizardSelfieGuide,
       excludeSemantics: true,
       child: SizedBox(
         height: _camHeight,
@@ -2723,7 +2800,7 @@ class _SelfieGuide extends StatelessWidget {
                         vertical: Spacing.xs,
                       ),
                       child: Text(
-                        'Illustration · no real person',
+                        strings.authWizardIllustration,
                         style: AppTypography.tiny.copyWith(
                           fontWeight: AppTypography.medium,
                           color: BrandColors.white,
@@ -2847,8 +2924,6 @@ class _SelfieTip extends StatelessWidget {
 class _IdTypeSheet extends StatelessWidget {
   const _IdTypeSheet({required this.selectedLabel});
 
-  static const String title = 'Type of ID';
-
   final String selectedLabel;
 
   @override
@@ -2860,7 +2935,7 @@ class _IdTypeSheet extends StatelessWidget {
         for (final String wire in verificationIdTypes)
           PickerChoiceRow(
             rowKey: Key('id-type-$wire'),
-            label: idTypeLabel(wire),
+            label: localisedIdTypeLabel(AppStrings.of(context), wire),
             selected: idTypeLabel(wire) == selectedLabel,
             onTap: () => Navigator.of(context).pop(wire),
           ),

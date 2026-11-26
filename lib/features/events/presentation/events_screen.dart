@@ -8,12 +8,14 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/events_copy.dart';
 import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/failure_view.dart';
@@ -107,7 +109,7 @@ class _EventsScreenState extends State<EventsScreen>
     final Widget header = BlueHeader(
       overlap: true,
       showBack: true,
-      title: 'Events',
+      title: AppStrings.of(context).eventsTitle,
       subtitle: 'Bayan ng Taytay · Rizal',
       bottom: controller == null
           ? null
@@ -176,6 +178,7 @@ class _ScopeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     Widget chip(String label, EventScope value) => HeaderChoiceChip(
       label: label,
       selected: scope == value,
@@ -183,13 +186,14 @@ class _ScopeSelector extends StatelessWidget {
     );
     return Semantics(
       container: true,
-      label: 'Show events',
+      label: strings.eventsScopeSemantics,
       child: Wrap(
         spacing: Spacing.sm,
         children: <Widget>[
-          chip('Upcoming', EventScope.upcoming),
-          if (showRegistered) chip('Registered', EventScope.registered),
-          chip('Past', EventScope.past),
+          chip(strings.eventsScopeUpcoming, EventScope.upcoming),
+          if (showRegistered)
+            chip(strings.eventsScopeRegistered, EventScope.registered),
+          chip(strings.eventsScopePast, EventScope.past),
         ],
       ),
     );
@@ -206,6 +210,7 @@ class _EventList extends StatelessWidget {
     if (controller.isLoadingFirstPage) {
       return const _EventsSkeleton();
     }
+    final strings = AppStrings.of(context);
 
     final AppFailure? failure = controller.failure;
     if (failure != null && !FailureView.isOffline(failure)) {
@@ -222,11 +227,8 @@ class _EventList extends StatelessWidget {
       // Distinct from an empty list. "Taytay LGU has scheduled nothing" and "we
       // could not reach Taytay LGU" are different statements.
       return ErrorState(
-        title: 'Events are not available right now',
-        message:
-            'We could not reach Taytay LGU. Check your connection and try '
-            'again. Event notices are also posted at the municipal hall and '
-            'barangay halls.',
+        title: strings.eventsUnavailableTitle,
+        message: strings.eventsUnavailableBody,
         onRetry: controller.refresh,
         offline: true,
         boxed: true,
@@ -236,16 +238,14 @@ class _EventList extends StatelessWidget {
     if (controller.isEmptyAndHealthy) {
       return EmptyState(
         title: switch (controller.scope) {
-          EventScope.upcoming => 'Nothing scheduled right now',
-          EventScope.registered => 'You have not registered for anything',
-          EventScope.past => 'No past events to show',
+          EventScope.upcoming => strings.eventsEmptyUpcomingTitle,
+          EventScope.registered => strings.eventsEmptyRegisteredTitle,
+          EventScope.past => strings.eventsEmptyPastTitle,
         },
         message: switch (controller.scope) {
-          EventScope.upcoming =>
-            'New Taytay LGU events will appear here when they are '
-                'announced.',
-          EventScope.registered => 'Events you register for will appear here.',
-          EventScope.past => 'Events that have finished will appear here.',
+          EventScope.upcoming => strings.eventsEmptyUpcomingBody,
+          EventScope.registered => strings.eventsEmptyRegisteredBody,
+          EventScope.past => strings.eventsEmptyPastBody,
         },
         boxed: true,
       );
@@ -279,22 +279,23 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     if (controller.pageFailure != null) {
       return Padding(
         padding: const EdgeInsets.only(top: Spacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            const SoftNote(
+            SoftNote(
               tone: NoteTone.warning,
-              title: 'Could not load more. ',
-              message: 'What you have already seen is still here.',
+              title: strings.eventsLoadMoreFailed,
+              message: strings.eventsSeenStillHere,
             ),
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton(
                 onPressed: controller.retryPage,
-                child: const Text('Try again'),
+                child: Text(strings.actionTryAgain),
               ),
             ),
           ],
@@ -303,12 +304,12 @@ class _Footer extends StatelessWidget {
     }
 
     if (controller.isLoadingMore) {
-      return const Padding(
-        padding: EdgeInsets.only(top: Spacing.lg),
+      return Padding(
+        padding: const EdgeInsets.only(top: Spacing.lg),
         child: LoadingSkeleton(
           layout: SkeletonLayout.feed,
           count: 1,
-          semanticLabel: 'Loading more events',
+          semanticLabel: strings.eventsLoadingMore,
         ),
       );
     }
@@ -319,7 +320,7 @@ class _Footer extends StatelessWidget {
         child: Center(
           child: TextButton(
             onPressed: controller.loadMore,
-            child: const Text('Load more'),
+            child: Text(strings.eventsLoadMore),
           ),
         ),
       );
@@ -328,7 +329,7 @@ class _Footer extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Spacing.xl),
       child: Text(
-        'That is everything Taytay LGU has listed here.',
+        strings.eventsListEnd,
         textAlign: TextAlign.center,
         style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
       ),
@@ -392,7 +393,8 @@ class EventCard extends StatelessWidget {
                       // overflow a narrow row at a large text scale otherwise.
                       Expanded(
                         child: Text(
-                          registrationStateLabel(
+                          eventRegistrationStateLabel(
+                            context,
                             event.registrationState?.known,
                           ),
                           style: AppTypography.small.copyWith(
@@ -421,7 +423,13 @@ class EventCard extends StatelessWidget {
                   // wrong day.
                   _IconLine(
                     icon: TaytayIcons.clock,
-                    text: ManilaTime.formatRange(startsAt, event.endsAt),
+                    text: ManilaTime.formatRange(
+                      startsAt,
+                      event.endsAt,
+                      languageCode: Localizations.localeOf(
+                        context,
+                      ).languageCode,
+                    ),
                   ),
                 ],
 
@@ -480,19 +488,19 @@ class _RegistrationSummary extends StatelessWidget {
     final state = event.registrationState?.known;
     final remaining = event.capacity.remaining;
 
+    final strings = AppStrings.of(context);
     final parts = <String>[
       // A called-off event stays listed until its date passes. Its row says
       // so in words, ahead of "Registration closed", which alone would read
       // as an event that is still going ahead.
       if (event.isCalledOff)
-        calledOffLabel
+        strings.eventsCalledOff
       else if (state != null)
-        registrationStateLabel(state),
+        eventRegistrationStateLabel(context, state),
       // Only when the server said so. The app never subtracts a registered
       // count from a capacity to produce this — a number computed from a stale
       // page tells a resident there is room when there is not.
-      if (remaining != null)
-        remaining == 1 ? '1 place left' : '$remaining places left',
+      if (remaining != null) strings.eventsPlacesLeft(remaining),
     ];
     if (parts.isEmpty) return const SizedBox.shrink();
 
@@ -667,17 +675,22 @@ class _EventsSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const LoadingSkeleton(
+    return LoadingSkeleton(
       layout: SkeletonLayout.feed,
-      semanticLabel: 'Loading events',
+      semanticLabel: AppStrings.of(context).eventsLoading,
     );
   }
 }
 
 /// What a called-off event is labelled, in its list row and on its page.
+///
+/// English, the no-context fallback: a screen says `eventsCalledOff`.
 const String calledOffLabel = 'Called off by Taytay LGU';
 
-/// Resident-facing wording for a registration state.
+/// Resident-facing wording for a registration state, in English.
+///
+/// The no-context fallback. A screen says it through
+/// `eventRegistrationStateLabel` (`core/l10n/events_copy.dart`).
 ///
 /// One switch for the card and the detail screen, for the same reason the
 /// request-status copy has one: two switches over an enum drift, and a resident

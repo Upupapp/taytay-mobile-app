@@ -56,8 +56,9 @@ enum NameLock {
   };
 }
 
-/// What a resident reads about the name check. Literal English, as the
-/// account and verification screens are (D-195).
+/// What a resident reads about the name check (D-195). The English, kept as
+/// the no-context fallback; a screen reads it in the resident's language
+/// through `core/l10n/profile_copy.dart` (D-237).
 abstract final class NameCheckCopy {
   static const String fieldLabel = 'Full name';
 

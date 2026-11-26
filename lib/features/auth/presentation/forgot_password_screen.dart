@@ -7,8 +7,10 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
@@ -64,7 +66,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _send() async {
-    final error = AccountIdentifier.validate(_identifier.text);
+    final error = AccountIdentifier.validate(
+      _identifier.text,
+      AppStrings.of(context),
+    );
     setState(() => _error = error);
     if (error != null) return;
     final controller = _controller;
@@ -118,13 +123,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final message = _controller?.message;
     final String? error = _error;
     return AuthFormPage(
-      title: 'Reset your password',
-      subtitle:
-          "Enter the email or mobile number on your account. We'll "
-          'send a 6-digit code to reset your password.',
+      title: strings.authResetTitle,
+      subtitle: strings.authResetSubtitle,
       onBack: () => context.canPop()
           ? context.pop()
           : context.goNamed(AppRoute.signIn.routeName),
@@ -132,18 +136,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           PrimaryButton(
-            label: 'Send reset code',
+            label: strings.authResetSendCode,
             onPressed: _controller?.busy == true ? null : _send,
           ),
           const SizedBox(height: Spacing.md),
           Text(
-            "For your security, we don't say whether an account exists "
-            'for this address.',
+            strings.authResetNoEnumeration,
             textAlign: TextAlign.center,
             style: AppTypography.small.copyWith(color: BrandColors.muted),
           ),
           AuthLink(
-            'Back to sign in',
+            strings.authBackToSignIn,
             onPressed: () => context.goNamed(AppRoute.signIn.routeName),
           ),
         ],
@@ -152,7 +155,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           AuthField(
-            label: 'Email or mobile number',
+            label: strings.authIdentifierLabel,
             controller: _identifier,
             icon: TaytayIcons.mail,
             error: error,
@@ -162,14 +165,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
           if (_sent) ...<Widget>[
             const SizedBox(height: Spacing.formGap),
-            const SoftNote(
-              tone: NoteTone.success,
-              message: 'If an account matches, a code is on its way.',
-            ),
+            SoftNote(tone: NoteTone.success, message: strings.authResetSent),
           ],
           if (message != null) ...<Widget>[
             const SizedBox(height: Spacing.formGap),
-            SoftNote(tone: NoteTone.error, message: message.text),
+            SoftNote(
+              tone: NoteTone.error,
+              message: localisedSignInMessage(context, message),
+            ),
           ],
         ],
       ),

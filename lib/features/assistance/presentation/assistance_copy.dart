@@ -59,8 +59,10 @@ abstract final class AssistanceCopy {
       request.programName ?? s.myRequestsUnnamedProgramme;
 
   /// `05 Aug 2026` in Manila, or null.
-  static String? date(DateTime? instant) =>
-      instant == null ? null : ManilaTime.formatDate(instant);
+  static String? date(DateTime? instant, [String languageCode = 'en']) =>
+      instant == null
+      ? null
+      : ManilaTime.formatDate(instant, languageCode: languageCode);
 
   /// "Applied in the app", "Filed at the office" (D-226) or "From the
   /// office's records" (D-227); null when the row does not say.

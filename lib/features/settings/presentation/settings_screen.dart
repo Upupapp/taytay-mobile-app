@@ -12,6 +12,7 @@ import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
 import '../../../core/telemetry/telemetry.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
 import '../../../shared/widgets/settings_list.dart';
@@ -43,6 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final dependencies = AppDependencies.of(context);
+    final AppStrings strings = AppStrings.of(context);
 
     return AnimatedBuilder(
       animation: dependencies.session,
@@ -57,29 +59,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 is AccessAllowed;
 
         return SoftPage(
-          title: 'Settings',
+          title: strings.settingsTitle,
           offlineBanner: true,
           children: <Widget>[
             if (signedIn) ...<Widget>[
-              const SettingsSectionTitle('Your account'),
-              const SettingsList(
+              SettingsSectionTitle(strings.settingsSectionYourAccount),
+              SettingsList(
                 children: <Widget>[
                   _Row(
                     icon: TaytayIcons.circleUser,
-                    title: 'Account',
-                    subtitle: 'Your details and how you sign in',
+                    title: strings.settingsRowAccountTitle,
+                    subtitle: strings.settingsRowAccountDetail,
                     route: AppRoute.account,
                   ),
                   _Row(
                     icon: TaytayIcons.lock,
-                    title: 'Sign-in and security',
-                    subtitle: 'App lock and devices',
+                    title: strings.settingsRowSecurityTitle,
+                    subtitle: strings.settingsRowSecurityDetail,
                     route: AppRoute.security,
                   ),
                   _Row(
                     icon: TaytayIcons.bell,
-                    title: 'Notifications',
-                    subtitle: 'What Taytay LGU tells you about',
+                    title: strings.settingsRowNotificationsTitle,
+                    subtitle: strings.settingsRowNotificationsDetail,
                     route: AppRoute.notificationSettings,
                   ),
                 ],
@@ -87,20 +89,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: Spacing.xl),
             ],
 
-            const SettingsSectionTitle('Privacy'),
+            SettingsSectionTitle(strings.settingsSectionPrivacy),
             SettingsList(
               children: <Widget>[
-                const _Row(
+                _Row(
                   icon: TaytayIcons.fileText,
-                  title: 'Privacy notice',
-                  subtitle: 'What Taytay LGU holds, and your rights',
+                  title: strings.settingsRowPrivacyNoticeTitle,
+                  subtitle: strings.settingsRowPrivacyNoticeDetail,
                   route: AppRoute.profilePrivacy,
                 ),
                 if (signedIn)
-                  const _Row(
+                  _Row(
                     icon: TaytayIcons.shieldCheck,
-                    title: 'Your consents and account requests',
-                    subtitle: 'What you agreed to, and asking for changes',
+                    title: strings.settingsRowConsentsTitle,
+                    subtitle: strings.settingsRowConsentsDetail,
                     route: AppRoute.privacyControls,
                   ),
               ],
@@ -109,22 +111,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const _TelemetrySection(),
 
             const SizedBox(height: Spacing.xl),
-            const SettingsSectionTitle('Accessibility'),
+            SettingsSectionTitle(strings.settingsSectionAccessibility),
             const _AccessibilitySection(),
 
             const SizedBox(height: Spacing.xl),
-            const SettingsSectionTitle('Help'),
-            const SettingsList(
+            SettingsSectionTitle(strings.settingsHelp),
+            SettingsList(
               children: <Widget>[
                 _Row(
                   icon: TaytayIcons.info,
-                  title: 'Help and contacting Taytay LGU',
-                  subtitle: 'Questions, and where to go in person',
+                  title: strings.settingsRowHelpTitle,
+                  subtitle: strings.settingsRowHelpDetail,
                   route: AppRoute.help,
                 ),
               ],
             ),
 
+            // Dev builds only, so its words stay English.
             if (dependencies.config.environment ==
                 AppEnvironment.dev) ...<Widget>[
               const SizedBox(height: Spacing.xl),
@@ -142,7 +145,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
 
             const SizedBox(height: Spacing.xl),
-            const SettingsSectionTitle('About'),
+            SettingsSectionTitle(strings.settingsSectionAbout),
             const _AboutSection(),
 
             const SizedBox(height: Spacing.xl),
@@ -150,7 +153,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const _SignOutButton()
             else
               AppButton(
-                label: 'Sign in',
+                label: strings.actionSignIn,
                 onPressed: () => context.goNamed(AppRoute.signIn.routeName),
               ),
           ],
@@ -176,6 +179,7 @@ class _AccessibilitySectionState extends State<_AccessibilitySection> {
   @override
   Widget build(BuildContext context) {
     final osReducesMotion = Motion.reducedFromPlatform;
+    final AppStrings strings = AppStrings.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -197,24 +201,23 @@ class _AccessibilitySectionState extends State<_AccessibilitySection> {
                       ),
                     ),
               icon: TaytayIcons.pause,
-              title: 'Reduce motion',
+              title: strings.settingsReduceMotionTitle,
               detail: osReducesMotion
-                  ? 'Already on, because your phone is set to reduce motion.'
-                  : 'Shortens or removes animations.',
+                  ? strings.settingsReduceMotionOsOn
+                  : strings.settingsReduceMotionDetail,
             ),
             SettingsSwitchRow(
               value: AppHaptics.isEnabled,
               onChanged: (on) => setState(() => AppHaptics.setEnabled(on)),
               icon: TaytayIcons.smartphone,
-              title: 'Vibration feedback',
-              detail: 'Short buzzes when something is confirmed.',
+              title: strings.settingsVibrationTitle,
+              detail: strings.settingsVibrationDetail,
             ),
           ],
         ),
         const SizedBox(height: Spacing.md),
         Text(
-          'Text size follows your phone. This app is built to stay readable at '
-          'the largest setting.',
+          strings.settingsTextSizeNote,
           style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
         ),
       ],
@@ -245,6 +248,7 @@ class _TelemetrySectionState extends State<_TelemetrySection> {
   @override
   Widget build(BuildContext context) {
     final telemetry = AppDependencies.of(context).telemetry;
+    final AppStrings strings = AppStrings.of(context);
 
     return AnimatedBuilder(
       animation: telemetry,
@@ -255,8 +259,7 @@ class _TelemetrySectionState extends State<_TelemetrySection> {
 
         if (!offerable) {
           return Text(
-            'This app sends no information about how you use it to anyone. It '
-            'contacts Taytay LGU only to show you what you asked for.',
+            strings.settingsTelemetryNone,
             style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
           );
         }
@@ -269,11 +272,8 @@ class _TelemetrySectionState extends State<_TelemetrySection> {
                 on ? TelemetryConsent.granted : TelemetryConsent.declined,
               ),
               icon: TaytayIcons.info,
-              title: 'Help improve this app',
-              detail:
-                  'Sends which screens are opened and whether things worked. '
-                  'Never your name, your documents, what you applied for, or '
-                  'anything you typed.',
+              title: strings.settingsTelemetryTitle,
+              detail: strings.settingsTelemetryDetail,
             ),
           ],
         );
@@ -289,20 +289,19 @@ class _AboutSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final environment = AppDependencies.of(context).config.environment;
+    final AppStrings strings = AppStrings.of(context);
 
     return SoftCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Text(
-            'Taytay LGU IDS is the resident app for the Municipality of Taytay, '
-            'Rizal. It is published by the municipal government.',
+            strings.settingsAboutBody,
             style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
           ),
           const SizedBox(height: Spacing.sm),
           Text(
-            'This app is one way to reach Taytay LGU. The municipal hall and '
-            'your barangay hall handle everything it does, and more.',
+            strings.settingsAboutReach,
             style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
           ),
 
@@ -311,7 +310,7 @@ class _AboutSection extends StatelessWidget {
           if (kAppVersion.isNotEmpty) ...<Widget>[
             const SizedBox(height: Spacing.sm),
             Text(
-              'Version $kAppVersion',
+              strings.settingsVersion(kAppVersion),
               style: AppTypography.small.copyWith(
                 fontWeight: AppTypography.medium,
                 color: BrandColors.muted,
@@ -325,10 +324,8 @@ class _AboutSection extends StatelessWidget {
             const SizedBox(height: Spacing.md),
             SoftNote(
               tone: NoteTone.warning,
-              title: 'Test build. ',
-              message:
-                  'This is a ${environment.badgeLabel} build, not the app '
-                  'published to residents.',
+              title: strings.settingsTestBuildTitle,
+              message: strings.settingsTestBuildBody(environment.badgeLabel),
             ),
           ],
         ],
@@ -342,19 +339,18 @@ class _SignOutButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return AppButton(
-      label: 'Sign out',
+      label: strings.actionSignOut,
       variant: AppButtonVariant.secondary,
       onPressed: () async {
         final dependencies = AppDependencies.of(context);
         final confirmed = await ConfirmSheet.show(
           context: context,
-          title: 'Sign out of this device?',
-          consequence:
-              'You will need your mobile number and a code to sign back in. '
-              'Nothing you have sent Taytay LGU is removed.',
-          confirmLabel: 'Sign out',
-          cancelLabel: 'Stay signed in',
+          title: strings.settingsSignOutTitle,
+          consequence: strings.settingsSignOutConsequence,
+          confirmLabel: strings.actionSignOut,
+          cancelLabel: strings.settingsStaySignedIn,
         );
         if (!confirmed) return;
 

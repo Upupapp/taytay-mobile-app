@@ -7,15 +7,16 @@ import '../../../core/api/request_context.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/settings_copy.dart';
 import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/biometric_consent_controller.dart';
 import '../../../core/session/resident_capability.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_dialog.dart';
-import '../../../shared/widgets/biometric_consent_dialog.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
 import '../../../shared/widgets/failure_view.dart';
@@ -115,25 +116,23 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
   Future<void> _withdrawBiometric(BiometricConsentController controller) async {
     final bool? confirmed = await AppDialog.confirm(
       context: context,
-      title: BiometricConsentCopy.withdrawTitle,
-      message: BiometricConsentCopy.withdrawEffects,
-      confirmLabel: BiometricConsentCopy.withdrawConfirm,
-      cancelLabel: BiometricConsentCopy.withdrawCancel,
+      title: AppStrings.of(context).sharedBiometricWithdrawTitle,
+      message: AppStrings.of(context).sharedBiometricWithdrawEffects,
+      confirmLabel: AppStrings.of(context).sharedBiometricWithdrawConfirm,
+      cancelLabel: AppStrings.of(context).sharedBiometricWithdrawCancel,
       destructive: true,
     );
     if (confirmed != true || !mounted) return;
     final bool done = await controller.withdraw();
     if (!mounted) return;
     final AppFailure? failure = controller.recordFailure;
+    final AppStrings strings = AppStrings.of(context);
     setState(() {
       _notice = done
-          ? 'Taytay LGU has recorded your withdrawal, and your selfies were '
-                'erased.'
+          ? strings.settingsBiometricWithdrawn
           : (failure?.outcomeUnknown ?? false)
-          ? 'We could not confirm that your withdrawal was recorded. Trying '
-                'again is safe: it is recorded only once.'
-          : 'That withdrawal was not recorded. Nothing has changed, and you '
-                'can try again.';
+          ? strings.settingsWithdrawalUnconfirmed
+          : strings.settingsWithdrawalNotRecorded;
     });
     if (done) unawaited(_load());
   }
@@ -143,25 +142,24 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
     final BiometricConsentController? controller = _biometric;
     if (controller == null) return const SizedBox.shrink();
     final BiometricConsentStatus status = controller.status;
+    final AppStrings strings = AppStrings.of(context);
     return switch (status) {
-      BiometricConsentChecking() => const LoadingSkeleton(
+      BiometricConsentChecking() => LoadingSkeleton(
         layout: SkeletonLayout.text,
         count: 2,
-        semanticLabel: 'Checking the selfie consent',
+        semanticLabel: strings.settingsCheckingSelfieConsent,
       ),
       BiometricConsentFailed() => SoftNote(
         key: privacyBiometricFailedKey,
         tone: NoteTone.error,
-        heading: BiometricConsentCopy.failedHeading,
-        message:
-            'Where your selfie consent stands could not be read. Check your '
-            'connection and try again.',
+        heading: strings.sharedBiometricFailedHeading,
+        message: strings.settingsSelfieConsentUnreadable,
         action: PillButtonRow(
           wrap: true,
           padding: EdgeInsets.zero,
           actions: <PillAction>[
             PillAction(
-              label: 'Try again',
+              label: strings.actionTryAgain,
               primary: true,
               onPressed: () => unawaited(controller.load()),
             ),
@@ -169,14 +167,12 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
         ),
       ),
       BiometricConsentUnavailable() => Text(
-        'Taytay LGU has not published a selfie consent yet, so the app takes '
-        'no selfie and holds no consent for one.',
+        strings.settingsSelfieConsentUnpublished,
         key: privacyBiometricUnavailableKey,
         style: body,
       ),
       BiometricConsentOwed() => Text(
-        'You have not agreed to the selfie consent. The app asks before it '
-        'takes any selfie, and you can verify in person instead.',
+        strings.settingsSelfieConsentOwed,
         key: privacyBiometricOwedKey,
         style: body,
       ),
@@ -192,27 +188,32 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
             children: <Widget>[
               Text(
                 acceptedAt == null
-                    ? 'You agreed that Taytay LGU may take and use your '
-                          'selfie (version $version).'
-                    : 'You agreed on ${ManilaTime.formatDate(acceptedAt)} '
-                          'that Taytay LGU may take and use your selfie '
-                          '(version $version).',
+                    ? strings.settingsSelfieConsentGiven(version)
+                    : strings.settingsSelfieConsentGivenOn(
+                        ManilaTime.formatDate(
+                          acceptedAt,
+                          languageCode: Localizations.localeOf(
+                            context,
+                          ).languageCode,
+                        ),
+                        version,
+                      ),
                 style: body,
               ),
               const SizedBox(height: Spacing.md),
               // What withdrawing does, before the button (NPC Circular
               // 2023-04: consequences explained).
-              const SoftNote(
+              SoftNote(
                 key: privacyBiometricEffectsKey,
                 tone: NoteTone.warning,
-                heading: 'What withdrawing does',
-                message: BiometricConsentCopy.withdrawEffects,
+                heading: strings.settingsWhatWithdrawingDoes,
+                message: strings.sharedBiometricWithdrawEffects,
                 live: false,
               ),
               const SizedBox(height: Spacing.md),
               AppButton(
                 key: privacyBiometricWithdrawKey,
-                label: BiometricConsentCopy.withdrawButton,
+                label: strings.sharedBiometricWithdrawButton,
                 variant: AppButtonVariant.danger,
                 loading: controller.isRecording,
                 onPressed: controller.isRecording
@@ -262,16 +263,14 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
 
   Future<void> _withdraw(ConsentRecord consent) async {
     if (!consent.isWithdrawable || consent.key.isEmpty) return;
+    final AppStrings strings = AppStrings.of(context);
     final confirmed = await ConfirmSheet.show(
       context: context,
-      title: 'Withdraw this consent?',
-      consequence:
-          'Taytay LGU will stop relying on this consent from the moment it is '
-          'recorded. Anything already done under it stays as it is — a '
-          'withdrawal is not backdated.',
-      detail: consent.statement,
-      confirmLabel: 'Withdraw it',
-      cancelLabel: 'Leave it in place',
+      title: strings.settingsWithdrawConsentTitle,
+      consequence: strings.settingsWithdrawConsentConsequence,
+      detail: consentRecordStatement(strings, consent),
+      confirmLabel: strings.settingsWithdrawIt,
+      cancelLabel: strings.settingsLeaveInPlace,
     );
     if (!confirmed || !mounted) return;
 
@@ -291,7 +290,7 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
 
     result.fold(
       onOk: (_) {
-        setState(() => _notice = 'Taytay LGU has recorded your withdrawal.');
+        setState(() => _notice = strings.settingsWithdrawalRecorded);
         _load();
       },
       // A withdrawal of the same version returns the same row, so trying
@@ -299,16 +298,15 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
       // "nothing has changed" would be a guess.
       onErr: (AppFailure failure) => setState(
         () => _notice = failure.outcomeUnknown
-            ? 'We could not confirm that your withdrawal was recorded. Trying '
-                  'again is safe: it is recorded only once.'
-            : 'That withdrawal was not recorded. Nothing has changed, and you '
-                  'can try again.',
+            ? strings.settingsWithdrawalUnconfirmed
+            : strings.settingsWithdrawalNotRecorded,
       ),
     );
   }
 
   Future<void> _accept(ConsentRecord consent) async {
     if (!consent.isWithdrawable || consent.key.isEmpty) return;
+    final AppStrings strings = AppStrings.of(context);
     final repository = AppDependencies.of(context).accountControlsRepository;
     _acting = true;
     _generation++;
@@ -320,16 +318,14 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
     if (!mounted) return;
     result.fold(
       onOk: (_) {
-        setState(() => _notice = 'Taytay LGU has recorded this consent again.');
+        setState(() => _notice = strings.settingsConsentRecordedAgain);
         _load();
       },
       // Recording a version is idempotent on the server, as above.
       onErr: (AppFailure failure) => setState(
         () => _notice = failure.outcomeUnknown
-            ? 'We could not confirm that your consent was recorded. Trying '
-                  'again is safe: it is recorded only once.'
-            : 'That consent was not recorded. Nothing has changed, and you '
-                  'can try again.',
+            ? strings.settingsConsentUnconfirmed
+            : strings.settingsConsentNotRecorded,
       ),
     );
   }
@@ -342,13 +338,14 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
   /// reviews it and nobody calls. The words used to say "the office will
   /// contact you", which was untrue.
   Future<void> _closeAccount() async {
+    final AppStrings strings = AppStrings.of(context);
     final confirmed = await ConfirmSheet.show(
       context: context,
-      title: AccountClosureCopy.confirmTitle,
-      consequence: AccountClosureCopy.confirm,
+      title: strings.settingsCloseConfirmTitle,
+      consequence: strings.settingsCloseConfirm,
       detail: _controls.deletionPolicyNote,
-      confirmLabel: AccountClosureCopy.action,
-      cancelLabel: 'Not now',
+      confirmLabel: strings.settingsCloseAction,
+      cancelLabel: strings.gateSheetNotNow,
     );
     if (!confirmed || !mounted) return;
 
@@ -362,28 +359,29 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
 
     setState(() {
       _notice = switch (result) {
-        Ok() => AccountClosureCopy.closed,
+        Ok() => strings.settingsClosed,
         // A second close is refused with 409: an earlier try, whose answer
         // was lost, already closed it.
-        Err(failure: ConflictFailure()) => AccountClosureCopy.alreadyClosed,
+        Err(failure: ConflictFailure()) => strings.settingsCloseAlreadyClosed,
         Err(:final failure) when failure.outcomeUnknown =>
-          AccountClosureCopy.notConfirmed,
-        Err() => AccountClosureCopy.notClosed,
+          strings.settingsCloseNotConfirmed,
+        Err() => strings.settingsCloseNotClosed,
       };
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return AuthFormPage(
-      title: 'Consents and account requests',
+      title: strings.settingsConsentsTitle,
       child: CapabilityGate(
         capability: ResidentCapability.manageAccount,
         child: _loading
-            ? const LoadingSkeleton(
+            ? LoadingSkeleton(
                 layout: SkeletonLayout.cards,
                 count: 2,
-                semanticLabel: 'Loading your consents',
+                semanticLabel: strings.settingsLoadingConsents,
               )
             : _body(context),
       ),
@@ -391,6 +389,7 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
   }
 
   Widget _body(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final consents = _consents;
     final notice = _notice;
     final TextStyle body = AppTypography.bodyStyle.copyWith(
@@ -406,11 +405,11 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
           const SizedBox(height: Spacing.lg),
         ],
 
-        const SettingsSectionTitle('Selfie consent'),
+        SettingsSectionTitle(strings.settingsSelfieConsent),
         _biometricSection(body),
         const SizedBox(height: Spacing.xl),
 
-        const SettingsSectionTitle('What you agreed to'),
+        SettingsSectionTitle(strings.settingsSectionAgreed),
 
         // `GET me/consents` is served: a failed read is said as itself, with
         // Try again, never as history the LGU has "not switched on"
@@ -422,7 +421,7 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
             onRetry: _retry,
           )
         else if (consents == null || consents.isEmpty)
-          Text('Taytay LGU has no consents recorded for you.', style: body)
+          Text(strings.settingsNoConsents, style: body)
         else
           for (final consent in consents)
             Padding(
@@ -436,26 +435,17 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
             ),
 
         const SizedBox(height: Spacing.xl),
-        const SettingsSectionTitle('Asking Taytay LGU for changes'),
+        SettingsSectionTitle(strings.settingsSectionAskingChanges),
 
         if (!_controls.hasAnyAccountRequest)
-          Text(
-            'These requests are not switched on in this app yet. The municipal '
-            'hall can take them in person, and your barangay hall can tell you '
-            'where to go.',
-            style: body,
-          )
+          Text(strings.settingsRequestsNotOn, style: body)
         else ...<Widget>[
           if (_controls.canRequestDataCorrection) ...<Widget>[
             AppButton(
-              label: 'Ask for a correction',
+              label: strings.settingsAskCorrection,
               variant: AppButtonVariant.secondary,
-              onPressed: () => setState(
-                () => _notice =
-                    'Corrections to your resident record are made by Taytay '
-                    'LGU. Use the correction path on your household or profile '
-                    'screen so the office knows which record you mean.',
-              ),
+              onPressed: () =>
+                  setState(() => _notice = strings.settingsCorrectionNotice),
             ),
             const SizedBox(height: Spacing.sm),
           ],
@@ -466,13 +456,13 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
               _controls.canRequestDeletion) ...<Widget>[
             const SizedBox(height: Spacing.sm),
             Text(
-              AccountClosureCopy.effects,
+              strings.settingsCloseEffects,
               key: privacyCloseEffectsKey,
               style: body,
             ),
             const SizedBox(height: Spacing.md),
             AppButton(
-              label: AccountClosureCopy.action,
+              label: strings.settingsCloseAction,
               variant: AppButtonVariant.danger,
               onPressed: _closeAccount,
             ),
@@ -481,11 +471,9 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
 
         if (_controls.requiresReauthentication) ...<Widget>[
           const SizedBox(height: Spacing.lg),
-          const SoftNote(
-            title: 'You may be asked to sign in again. ',
-            message:
-                'Taytay LGU asks residents to confirm who they are before '
-                'changes like these.',
+          SoftNote(
+            title: strings.settingsReauthTitle,
+            message: strings.settingsReauthBody,
           ),
         ],
       ],
@@ -519,9 +507,16 @@ class _ConsentCard extends StatelessWidget {
     final String? withheld = consent.withheldReason;
     final DateTime? granted = consent.grantedAt;
     final DateTime? withdrawn = consent.withdrawnAt;
+    final AppStrings strings = AppStrings.of(context);
     final String dates = <String>[
-      if (granted != null) 'Agreed ${ManilaTime.formatDate(granted)}',
-      if (withdrawn != null) 'Withdrawn ${ManilaTime.formatDate(withdrawn)}',
+      if (granted != null)
+        strings.settingsConsentAgreedOn(
+          ManilaTime.formatDate(granted, languageCode: strings.localeName),
+        ),
+      if (withdrawn != null)
+        strings.settingsConsentWithdrawnOn(
+          ManilaTime.formatDate(withdrawn, languageCode: strings.localeName),
+        ),
     ].join(' · ');
 
     return SoftCard(
@@ -532,7 +527,9 @@ class _ConsentCard extends StatelessWidget {
           Row(
             children: <Widget>[
               Semantics(
-                label: consent.isActive ? 'In force' : 'Withdrawn',
+                label: consent.isActive
+                    ? strings.settingsConsentInForce
+                    : strings.settingsConsentWithdrawn,
                 child: SettingsIcon(
                   icon: consent.isActive
                       ? TaytayIcons.check
@@ -545,7 +542,7 @@ class _ConsentCard extends StatelessWidget {
               const SizedBox(width: Spacing.md),
               Expanded(
                 child: Text(
-                  consent.label,
+                  consentRecordLabel(strings, consent),
                   style: AppTypography.listTitle.copyWith(
                     color: BrandColors.ink,
                   ),
@@ -554,9 +551,11 @@ class _ConsentCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Spacing.md),
-          // The office's own sentence, never a paraphrase.
+          // The office's own sentence, never a paraphrase. A sentence the
+          // app composed for the row's kind is said in the resident's
+          // language.
           Text(
-            consent.statement,
+            consentRecordStatement(strings, consent),
             style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
           ),
           if (dates.isNotEmpty) ...<Widget>[
@@ -579,7 +578,7 @@ class _ConsentCard extends StatelessWidget {
               consent.key.isNotEmpty) ...[
             const SizedBox(height: Spacing.md),
             AppButton(
-              label: 'Withdraw this consent',
+              label: strings.settingsWithdrawConsent,
               variant: AppButtonVariant.text,
               onPressed: onWithdraw,
             ),
@@ -589,7 +588,7 @@ class _ConsentCard extends StatelessWidget {
               consent.key.isNotEmpty) ...[
             const SizedBox(height: Spacing.md),
             AppButton(
-              label: 'Accept again',
+              label: strings.settingsAcceptAgain,
               variant: AppButtonVariant.primary,
               onPressed: onAccept,
             ),
@@ -617,56 +616,39 @@ class HelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return SoftPage(
-      title: 'Help',
+      title: strings.settingsHelp,
       children: <Widget>[
-        const SettingsSectionTitle('Getting help'),
+        SettingsSectionTitle(strings.settingsHelpGettingHelp),
         Text(
-          'Everything in this app is also handled at the Taytay municipal '
-          'hall and at your barangay hall. If something here will not work, '
-          'going in person is never the wrong answer.',
+          strings.settingsHelpIntro,
           style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
         ),
         const SizedBox(height: Spacing.lg),
-        const SoftCard(
-          padding: EdgeInsets.symmetric(horizontal: Spacing.lg),
+        SoftCard(
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
           child: Column(
             children: <Widget>[
               _Faq(
-                question: 'Do I need an account to use this app?',
-                answer:
-                    'No. Announcements, events and the list of municipal '
-                    'services are open to everyone. You only need an account '
-                    'for things about you — your applications, your documents, '
-                    'your ID.',
+                question: strings.settingsFaqAccountQuestion,
+                answer: strings.settingsFaqAccountAnswer,
               ),
               _Faq(
-                question: 'Why does it ask me to verify my identity?',
-                answer:
-                    'Some services act on your resident record with Taytay '
-                    'LGU, so the office has to know it is you. Verifying is '
-                    'done once and unlocks those services.',
+                question: strings.settingsFaqVerifyQuestion,
+                answer: strings.settingsFaqVerifyAnswer,
               ),
               _Faq(
-                question: 'How long will my application take?',
-                answer:
-                    'Taytay LGU decides that, and it depends on the service and '
-                    'the documents. This app shows you where your application '
-                    'is and what is needed next, but it cannot promise a date.',
+                question: strings.settingsFaqDurationQuestion,
+                answer: strings.settingsFaqDurationAnswer,
               ),
               _Faq(
-                question: 'Something in my record is wrong.',
-                answer:
-                    'You can report it from your profile or household screen. '
-                    'The office checks and corrects it — the app never changes '
-                    'your record directly.',
+                question: strings.settingsFaqRecordQuestion,
+                answer: strings.settingsFaqRecordAnswer,
               ),
               _Faq(
-                question: 'I lost my phone.',
-                answer:
-                    'Sign in on your new phone. If you think somebody else is '
-                    'using your account, tell the municipal hall, and sign out '
-                    'other devices from the sign-in and security screen.',
+                question: strings.settingsFaqLostPhoneQuestion,
+                answer: strings.settingsFaqLostPhoneAnswer,
               ),
             ],
           ),
@@ -675,13 +657,9 @@ class HelpScreen extends StatelessWidget {
         // No invented phone number, address or opening hours. Publishing an
         // office's contact details this app cannot verify is how a resident
         // travels to a building that closed.
-        const SoftNote(
-          title: 'Contacting Taytay LGU. ',
-          message:
-              'Use the contact details published on the service, programme '
-              'or event you are asking about — those come from the office '
-              'running it. Your barangay hall can always point you to the '
-              'right desk.',
+        SoftNote(
+          title: strings.settingsHelpContactTitle,
+          message: strings.settingsHelpContactBody,
         ),
       ],
     );

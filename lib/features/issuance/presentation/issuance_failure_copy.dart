@@ -1,4 +1,6 @@
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/result/result.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// The three things a resident sends about a document request.
 enum IssuanceAct {
@@ -32,6 +34,20 @@ enum IssuanceAct {
   /// retry (`IssuanceSendKey`): the server answers a repeat with what the
   /// first one did, and never acts twice.
   final String unconfirmed;
+
+  /// [nothing] in the resident's language. The constant above is the English
+  /// fallback, kept so a test can read it without a locale.
+  String nothingIn(AppStrings strings) => switch (this) {
+    IssuanceAct.submit || IssuanceAct.resubmit => strings.issuanceNothingSent,
+    IssuanceAct.cancel => strings.issuanceNothingCancelled,
+  };
+
+  /// [unconfirmed] in the resident's language.
+  String unconfirmedIn(AppStrings strings) => switch (this) {
+    IssuanceAct.submit => strings.issuanceUnconfirmedSubmit,
+    IssuanceAct.resubmit => strings.issuanceUnconfirmedResubmit,
+    IssuanceAct.cancel => strings.issuanceUnconfirmedCancel,
+  };
 }
 
 /// What a resident reads when sending to the office did not go through.
@@ -40,93 +56,82 @@ enum IssuanceAct {
 /// operator and never reaches the screen (Article 5.5); the failure's kind is
 /// what decides the words. Each one says whether anything reached the office,
 /// because "did it go?" is the question a resident has at that moment.
+///
+/// [strings] is the resident's language (`AppStrings.of(context)`); without
+/// it the English strings are used, as a test reads them.
 ({String title, String body, bool offerVerification}) issuanceSendFailure(
   AppFailure failure, {
   required IssuanceAct act,
+  AppStrings? strings,
 }) {
-  final String nothing = act.nothing;
+  final AppStrings s = strings ?? lookupAppStrings(AppLocales.english);
+  final String nothing = act.nothingIn(s);
   return switch (failure) {
     // The request may have arrived: no answer came, the connection dropped
     // after it was written, the answer could not be read, or the server
     // failed part-way. "Nothing was sent" here would be a guess.
     _ when failure.outcomeUnknown => (
-      title: 'Not confirmed yet',
-      body: act.unconfirmed,
+      title: s.unsentTitle,
+      body: act.unconfirmedIn(s),
       offerVerification: false,
     ),
     // `VERIFICATION_REQUIRED`: the server said why, so the way on is offered.
     ForbiddenFailure(requiresVerification: true) => (
-      title: 'Only verified residents can do this',
-      body:
-          '$nothing Taytay LGU does not have your account as verified. Finish '
-          'verification first, then come back to this page.',
+      title: s.issuanceFailVerifyTitle,
+      body: '$nothing ${s.issuanceFailVerifyBody}',
       offerVerification: true,
     ),
     // A plain `FORBIDDEN` is a different refusal — a staff account, for one.
     // The app does not guess which, and verification would not help.
     ForbiddenFailure() => (
-      title: 'Not available for this account',
-      body:
-          '$nothing Document requests are not open to this account. The '
-          'municipal hall can tell you more.',
+      title: s.applyNotAllowedTitle,
+      body: '$nothing ${s.issuanceFailForbiddenBody}',
       offerVerification: false,
     ),
     // Past the guard above, the connection failed before the request left
     // the phone. A timeout is always unknown and never reaches this line; it
     // is named only because the switch must cover every kind.
     NetworkFailure() || TimeoutFailure() => (
-      title: 'You are offline',
-      body:
-          '$nothing Your answers are still here on the phone. Connect to the '
-          'internet and try again.',
+      title: s.applyOfflineTitle,
+      body: '$nothing ${s.issuanceFailOfflineBody}',
       offerVerification: false,
     ),
     ValidationFailure() => (
-      title: 'Something needs another look',
-      body:
-          '$nothing The office could not accept part of it. The items marked '
-          'below need checking.',
+      title: s.applyCheckTitle,
+      body: '$nothing ${s.issuanceFailCheckBody}',
       offerVerification: false,
     ),
     UnacceptableUploadFailure() => (
-      title: 'A file could not be accepted',
-      body:
-          '$nothing A file was too large or could not be read. Choose a smaller '
-          'photo or another file, and try again.',
+      title: s.applyFileTitle,
+      body: '$nothing ${s.issuanceFailFileBody}',
       offerVerification: false,
     ),
     RateLimitedFailure() => (
-      title: 'Too many tries',
-      body: '$nothing Wait a few minutes, then try again.',
+      title: s.applyRateTitle,
+      body: '$nothing ${s.issuanceFailRateBody}',
       offerVerification: false,
     ),
     // A new request has no state to conflict with. A 409 on a submit means
     // its key was already used for something else: a fault in this app, not
     // anything the resident did. Said plainly, and nothing about it is logged.
     ConflictFailure() when act == IssuanceAct.submit => (
-      title: 'It did not go through',
-      body:
-          '$nothing Something went wrong on our side. Open My document '
-          'requests to check what the office has before trying again.',
+      title: s.applyServerTitle,
+      body: '$nothing ${s.issuanceFailKeyConflictBody}',
       offerVerification: false,
     ),
     ConflictFailure() => (
-      title: 'The request has moved on',
-      body:
-          '$nothing The office has already acted on it. Go back and open it '
-          'again to see where it stands.',
+      title: s.addDocsMovedTitle,
+      body: '$nothing ${s.issuanceFailMovedBody}',
       offerVerification: false,
     ),
     NotFoundFailure() => (
-      title: 'No longer available',
-      body:
-          '$nothing The office no longer lists this. Go back to the list to see '
-          'what is available.',
+      title: s.issuanceFailGoneTitle,
+      body: '$nothing ${s.issuanceFailGoneBody}',
       offerVerification: false,
     ),
     UnauthenticatedFailure() => (
-      title: 'Please sign in again',
-      body: '$nothing Your session ended. Sign in, then try again.',
+      title: s.applySessionTitle,
+      body: '$nothing ${s.issuanceFailSessionBody}',
       offerVerification: false,
     ),
     // Past the guard above: a `503` that turned it away before acting.
@@ -134,8 +139,8 @@ enum IssuanceAct {
     ContractFailure() ||
     UnexpectedFailure() ||
     CodeExchangeFailure() => (
-      title: 'It did not go through',
-      body: '$nothing Something went wrong on our side. Try again in a moment.',
+      title: s.applyServerTitle,
+      body: '$nothing ${s.issuanceFailServerBody}',
       offerVerification: false,
     ),
   };

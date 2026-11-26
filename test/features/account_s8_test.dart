@@ -9,6 +9,7 @@ import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/assets/asset_manifest.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/router/app_routes.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -170,6 +171,8 @@ void main() {
     var opened = 0;
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
         home: Scaffold(
           body: AccountCanvas(
             frame: AccountFrame.settings,
@@ -365,6 +368,8 @@ void main() {
   testWidgets('a published notice replaces the bundled draft', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
         home: Scaffold(
           body: AccountCanvas(
             frame: AccountFrame.privacy,
@@ -389,6 +394,8 @@ void main() {
     final MockAccountPasswordClient client = MockAccountPasswordClient();
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
         home: Scaffold(body: ChangePasswordForm(client: client)),
       ),
     );
@@ -415,6 +422,8 @@ void main() {
 
     await tester.pumpWidget(
       const MaterialApp(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
         home: Scaffold(
           body: SizedBox(
             width: 390,
@@ -435,6 +444,8 @@ void main() {
 
     await tester.pumpWidget(
       const MaterialApp(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
         home: Scaffold(
           body: SizedBox(
             width: 390,
@@ -500,6 +511,8 @@ void main() {
   ) async {
     await tester.pumpWidget(
       const MaterialApp(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
         home: Scaffold(
           body: AccountCanvas(
             frame: AccountFrame.privacy,
@@ -527,7 +540,11 @@ void main() {
     await tester.pumpWidget(
       AppDependenciesScope(
         dependencies: dependencies,
-        child: const MaterialApp(home: MessagesInboxScreen()),
+        child: const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
+          home: MessagesInboxScreen(),
+        ),
       ),
     );
     await tester.pump();
@@ -552,7 +569,11 @@ void main() {
     await tester.pumpWidget(
       AppDependenciesScope(
         dependencies: dependencies,
-        child: const MaterialApp(home: MessagesInboxScreen()),
+        child: const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
+          home: MessagesInboxScreen(),
+        ),
       ),
     );
     await tester.pump();
@@ -583,7 +604,11 @@ void main() {
     await tester.pumpWidget(
       AppDependenciesScope(
         dependencies: dependencies,
-        child: const MaterialApp(home: MessagesInboxScreen()),
+        child: const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
+          home: MessagesInboxScreen(),
+        ),
       ),
     );
     await tester.pump();
@@ -613,7 +638,11 @@ void main() {
     await tester.pumpWidget(
       AppDependenciesScope(
         dependencies: dependencies,
-        child: const MaterialApp(home: PrivacyNoticeScreen()),
+        child: const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
+          home: PrivacyNoticeScreen(),
+        ),
       ),
     );
     await tester.pump();
@@ -782,7 +811,11 @@ void main() {
         await tester.pumpWidget(
           AppDependenciesScope(
             dependencies: dependencies,
-            child: MaterialApp.router(routerConfig: router),
+            child: MaterialApp.router(
+              localizationsDelegates: AppStrings.localizationsDelegates,
+              supportedLocales: AppLocales.supported,
+              routerConfig: router,
+            ),
           ),
         );
         await tester.pump();
@@ -895,7 +928,11 @@ void main() {
     await tester.pumpWidget(
       AppDependenciesScope(
         dependencies: dependencies,
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pump();
@@ -947,7 +984,11 @@ void main() {
     await tester.pumpWidget(
       AppDependenciesScope(
         dependencies: live,
-        child: const MaterialApp(home: MessagesInboxScreen()),
+        child: const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
+          home: MessagesInboxScreen(),
+        ),
       ),
     );
     await tester.pump();
@@ -968,7 +1009,11 @@ void main() {
     await tester.pumpWidget(
       AppDependenciesScope(
         dependencies: mock,
-        child: const MaterialApp(home: MessagesInboxScreen()),
+        child: const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
+          home: MessagesInboxScreen(),
+        ),
       ),
     );
     await tester.pump();
@@ -987,6 +1032,8 @@ void main() {
       AppDependenciesScope(
         dependencies: live,
         child: const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
           home: AccountThreadScreen(threadId: 'thread-1'),
         ),
       ),
@@ -1010,6 +1057,8 @@ void main() {
       AppDependenciesScope(
         dependencies: mock,
         child: const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
           home: AccountThreadScreen(threadId: 'thread-1'),
         ),
       ),
@@ -1054,6 +1103,8 @@ void main() {
         AppDependenciesScope(
           dependencies: dependencies,
           child: MaterialApp(
+            localizationsDelegates: AppStrings.localizationsDelegates,
+            supportedLocales: AppLocales.supported,
             home: PrivacyNoticeScreen(
               key: ValueKey<String>('$environment-${notice.version}'),
             ),

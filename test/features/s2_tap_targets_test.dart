@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/features/auth/presentation/account_wizard_screen.dart';
 import 'package:taytay_resident/features/auth/presentation/forgot_password_screen.dart';
 import 'package:taytay_resident/features/auth/presentation/reset_flow_screens.dart';
 import 'package:taytay_resident/features/auth/presentation/sign_in_screen.dart';
 import 'package:taytay_resident/features/auth/presentation/too_many_attempts_screen.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 
 /// Every tappable control on `02-01` through `02-13` is at least 48 dp.
 void main() {
@@ -42,6 +44,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           debugShowCheckedModeBanner: false,
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
           theme: AppTheme.light(),
           home: entry.value,
         ),

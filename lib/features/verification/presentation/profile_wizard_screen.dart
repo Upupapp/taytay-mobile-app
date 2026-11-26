@@ -3,9 +3,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/startup/platform_controller.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
@@ -33,7 +35,12 @@ class ProfileWizardScreen extends StatefulWidget {
 class _ProfileWizardScreenState extends State<ProfileWizardScreen> {
   ResidentRecord? _record;
   DateTime? _submittedAt;
+
+  /// Why the record could not be shown: the read's [AppFailure], or
+  /// [_unavailable] when this build has no repository. Worded in [build], in
+  /// the resident's language.
   Object? _failureMessage;
+  static const Object _unavailable = Object();
   bool _certified = true;
   bool _started = false;
 
@@ -64,7 +71,7 @@ class _ProfileWizardScreenState extends State<ProfileWizardScreen> {
   Future<void> _load() async {
     final ResidentRecordRepository? repository = _repository();
     if (repository == null) {
-      setState(() => _failureMessage = 'Profile is not available right now.');
+      setState(() => _failureMessage = _unavailable);
       return;
     }
     final result = await repository.load();
@@ -87,7 +94,7 @@ class _ProfileWizardScreenState extends State<ProfileWizardScreen> {
           _failureMessage = null;
         });
       case Err(:final failure):
-        setState(() => _failureMessage = failure.residentMessage);
+        setState(() => _failureMessage = failure);
     }
   }
 
@@ -155,26 +162,29 @@ class _ProfileWizardScreenState extends State<ProfileWizardScreen> {
     final ResidentRecord? record = _record;
     if (record == null) {
       final Object? message = _failureMessage;
+      final AppStrings strings = AppStrings.of(context);
       return Scaffold(
         backgroundColor: BrandColors.background,
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            const BlueHeader(title: 'Resident profile', showBack: true),
+            BlueHeader(title: strings.verifProfileHeader, showBack: true),
             const OfflineBanner(),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(Spacing.lg),
                 children: <Widget>[
                   if (message == null)
-                    const LoadingSkeleton(
+                    LoadingSkeleton(
                       layout: SkeletonLayout.detail,
                       count: 1,
-                      semanticLabel: 'Loading your profile',
+                      semanticLabel: strings.verifProfileLoading,
                     )
                   else
                     ErrorState(
-                      title: '$message',
+                      title: message is AppFailure
+                          ? localisedResidentMessage(context, message)
+                          : strings.verifProfileUnavailable,
                       onRetry: widget.preview == null ? _retry : null,
                       boxed: true,
                     ),

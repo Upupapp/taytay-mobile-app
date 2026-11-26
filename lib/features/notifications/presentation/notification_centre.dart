@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/pills.dart';
 import '../../../shared/widgets/settings_list.dart';
@@ -82,6 +83,7 @@ class _NotificationCentreState extends State<NotificationCentre> {
         if (_rows(section).isNotEmpty)
           NoticeSection(heading: section.heading, rows: _rows(section)),
     ];
+    final AppStrings strings = AppStrings.of(context);
     // Its own ink layer: the centre may be drawn on a page with no Material.
     return Material(
       type: MaterialType.transparency,
@@ -102,12 +104,12 @@ class _NotificationCentreState extends State<NotificationCentre> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: <Widget>[
                     SoftChoiceChip(
-                      label: 'All',
+                      label: strings.inboxFilterAll,
                       selected: !_unreadOnly,
                       onTap: () => setState(() => _unreadOnly = false),
                     ),
                     SoftChoiceChip(
-                      label: 'Unread · $_unread',
+                      label: strings.inboxFilterUnread(_unread),
                       selected: _unreadOnly,
                       onTap: () => setState(() => _unreadOnly = true),
                     ),
@@ -117,7 +119,7 @@ class _NotificationCentreState extends State<NotificationCentre> {
               if (_unread > 0)
                 Flexible(
                   child: AuthLink(
-                    'Mark all read',
+                    strings.inboxMarkAllRead,
                     alignment: Alignment.centerRight,
                     onPressed: widget.onMarkAllRead,
                   ),
@@ -236,7 +238,7 @@ class _Row extends StatelessWidget {
                   top: Spacing.xs,
                 ),
                 child: Semantics(
-                  label: 'Unread',
+                  label: AppStrings.of(context).inboxUnread,
                   child: Container(
                     width: Spacing.sm,
                     height: Spacing.sm,

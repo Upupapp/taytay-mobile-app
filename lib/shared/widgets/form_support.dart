@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/design/taytay_icons.dart';
 import '../../core/forms/field_error.dart';
+import '../../core/l10n/shared_copy.dart';
+import '../../l10n/app_localizations.dart';
 import 'app_banner.dart';
 import 'taytay_icon.dart';
 
@@ -34,9 +36,9 @@ class FormErrorSummary extends StatelessWidget {
     if (errors.isEmpty) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
-    final heading = errors.length == 1
-        ? 'There is a problem'
-        : 'There are ${errors.length} problems';
+    final heading = sharedStrings(
+      context,
+    ).sharedFormErrorSummaryHeading(errors.length);
 
     return Focus(
       focusNode: focusNode,
@@ -122,7 +124,9 @@ class FieldLabel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          required ? label : '$label (optional)',
+          required
+              ? label
+              : sharedStrings(context).profileFieldOptionalSuffix(label),
           style: theme.textTheme.titleSmall,
         ),
         if (hint != null) ...<Widget>[
@@ -157,7 +161,7 @@ class WhyWeAsk extends StatelessWidget {
     required this.purpose,
     required this.whoSeesIt,
     this.ifYouDecline,
-    this.title = 'Why we ask for this',
+    this.title,
     super.key,
   });
 
@@ -170,11 +174,13 @@ class WhyWeAsk extends StatelessWidget {
   /// What happens if it is not provided. Omitted for genuinely required data.
   final String? ifYouDecline;
 
-  final String title;
+  /// Null says "Why we ask for this" in the reader's language.
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final AppStrings strings = sharedStrings(context);
     return Theme(
       // Removes the default divider lines so the panel reads as part of the
       // field rather than as a separate section.
@@ -191,16 +197,19 @@ class WhyWeAsk extends StatelessWidget {
           color: theme.colorScheme.primary,
         ),
         title: Text(
-          title,
+          title ?? strings.sharedWhyWeAskTitle,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.primary,
           ),
         ),
         children: <Widget>[
-          _Line(label: 'Why', value: purpose),
-          _Line(label: 'Who sees it', value: whoSeesIt),
+          _Line(label: strings.sharedWhyWeAskWhy, value: purpose),
+          _Line(label: strings.sharedWhyWeAskWhoSeesIt, value: whoSeesIt),
           if (ifYouDecline != null)
-            _Line(label: 'If you would rather not', value: ifYouDecline!),
+            _Line(
+              label: strings.sharedWhyWeAskIfYouDecline,
+              value: ifYouDecline!,
+            ),
         ],
       ),
     );

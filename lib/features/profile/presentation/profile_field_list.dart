@@ -8,6 +8,7 @@ import '../../../core/design/typography.dart';
 import '../../../core/l10n/app_locales.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/settings_list.dart';
@@ -69,6 +70,7 @@ class ProfileFieldList extends StatelessWidget {
         ResidentProfileField.ownedBy(ownership);
     final editable = ownership.isEditableInApp;
     final copy = profileSectionCopy(context, ownership);
+    final strings = AppStrings.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -100,7 +102,7 @@ class ProfileFieldList extends StatelessWidget {
         ),
         const SizedBox(height: Spacing.md),
         if (loading)
-          const LoadingSkeleton(semanticLabel: 'Loading your record')
+          LoadingSkeleton(semanticLabel: strings.profLoadingRecord)
         else
           SettingsList(
             glass: glass,
@@ -118,10 +120,8 @@ class ProfileFieldList extends StatelessWidget {
           const SizedBox(height: Spacing.sm),
           Text(
             editable
-                ? 'Taytay LGU has not switched on account details in this app '
-                      'yet. Your account still works.'
-                : 'Taytay LGU has not switched on your record in this app yet. '
-                      'The municipal hall can tell you what is on file.',
+                ? strings.profAccountDetailsUnavailable
+                : strings.profRecordUnavailable,
             style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
           ),
         ],
@@ -156,8 +156,8 @@ class _FieldRow extends StatelessWidget {
           // Never "—" or a blank: an empty row on a government record reads
           // as data loss. Saying which it is costs one sentence.
           : unavailable
-          ? 'Not available in this app yet'
-          : 'Not on file',
+          ? AppStrings.of(context).profNotAvailableYet
+          : AppStrings.of(context).hhNotOnFile,
       detailStyle: AppTypography.listDetail.copyWith(
         color: known ? BrandColors.text : BrandColors.muted,
         fontWeight: known ? AppTypography.medium : null,
@@ -202,6 +202,7 @@ abstract final class CanonicalFieldSheet {
   ) async {
     final router = GoRouter.of(context);
     final session = AppDependencies.of(context).session.state;
+    final strings = AppStrings.of(context);
     // A switch rather than an equality test: exhaustive over the level, so a
     // new access level cannot silently fall into the wrong branch, and no
     // scattered comparison creeps back in (TAB 10's rule).
@@ -212,7 +213,7 @@ abstract final class CanonicalFieldSheet {
 
     await AppDialog.show<void>(
       context: context,
-      title: CanonicalCorrection.title,
+      title: strings.profCanonicalTitle,
       builder: (sheetContext) {
         final theme = Theme.of(sheetContext);
         return Column(
@@ -234,18 +235,18 @@ abstract final class CanonicalFieldSheet {
             ],
             const SizedBox(height: Spacing.lg),
             Text(
-              CanonicalCorrection.explanation,
+              strings.profCanonicalExplanation,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: Spacing.md),
             Text(
-              CanonicalCorrection.nextStep,
+              strings.profCanonicalNextStep,
               style: theme.textTheme.bodyMedium,
             ),
             if (midVerification) ...<Widget>[
               const SizedBox(height: Spacing.md),
               Text(
-                CanonicalCorrection.duringVerification,
+                strings.profCanonicalDuringVerification,
                 style: theme.textTheme.bodyMedium,
               ),
             ],
@@ -255,7 +256,7 @@ abstract final class CanonicalFieldSheet {
       actions: (dialog) => AppDialogActions(
         primary: midVerification
             ? DialogButton(
-                label: 'Check my verification',
+                label: strings.profCheckMyVerification,
                 onPressed: () {
                   Navigator.of(dialog).pop();
                   router.goNamed(AppRoute.verification.routeName);
@@ -263,7 +264,7 @@ abstract final class CanonicalFieldSheet {
               )
             : null,
         text: DialogButton(
-          label: 'Close',
+          label: strings.actionClose,
           onPressed: () => Navigator.of(dialog).pop(),
         ),
       ),
@@ -283,6 +284,7 @@ class VerificationBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final level = AppDependencies.of(context).session.accessLevel;
+    final strings = AppStrings.of(context);
 
     final (
       String label,
@@ -291,19 +293,19 @@ class VerificationBadge extends StatelessWidget {
       Color foreground,
     ) = switch (level) {
       AccessLevel.guest => (
-        'Not signed in',
+        strings.profBadgeNotSignedIn,
         TaytayIcons.circleUser,
         BrandColors.chipFill,
         BrandColors.text,
       ),
       AccessLevel.unverified => (
-        'Not yet verified',
+        strings.profBadgeNotVerified,
         TaytayIcons.hourglass,
         BrandColors.gold50,
         BrandColors.goldInk,
       ),
       AccessLevel.verified => (
-        'Verified by Taytay LGU',
+        strings.profBadgeVerified,
         TaytayIcons.badgeCheck,
         BrandColors.green50,
         BrandColors.green,

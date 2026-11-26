@@ -11,6 +11,7 @@ import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/taytay_icons.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/mock/mock_behavior.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -26,6 +27,7 @@ import 'package:taytay_resident/features/tulong/data/social_service_api_reposito
 import 'package:taytay_resident/features/tulong/data/social_service_codec.dart';
 import 'package:taytay_resident/features/tulong/domain/social_service.dart';
 import 'package:taytay_resident/features/tulong/presentation/tulong_canvas.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/icon_tile.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
 import 'package:taytay_resident/shared/widgets/taytay_icon.dart';
@@ -510,6 +512,8 @@ void main() {
       );
       await tester.pumpWidget(
         const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
           home: TulongCanvas(frame: TulongFrame.detail, service: service),
         ),
       );
@@ -539,6 +543,8 @@ void main() {
     Future<void> pumpRow(String iconKey, int tile) {
       return tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
           home: TulongCanvas(
             frame: TulongFrame.list,
             services: <SocialService>[
@@ -576,6 +582,8 @@ void main() {
 
     await tester.pumpWidget(
       const MaterialApp(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
         home: TulongCanvas(
           frame: TulongFrame.detail,
           service: SocialService(

@@ -17,6 +17,7 @@ import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/platform/domain/app_bootstrap.dart';
 import 'package:taytay_resident/features/platform/domain/onboarding_mode.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 
 const SessionState _guest = GuestSession();
 const SessionState _verified = AuthenticatedSession(
@@ -66,7 +67,7 @@ Future<void> _bootToSignIn(
   await tester.pump(const Duration(seconds: 2));
   await tester.pumpAndSettle();
 
-  final signIn = find.text('Sign in').first;
+  final signIn = find.text(lookupAppStrings(locale).actionSignIn).first;
   await tester.ensureVisible(signIn);
   await tester.tap(signIn);
   await tester.pumpAndSettle();
@@ -163,7 +164,9 @@ void main() {
       expect(find.text('Accounts are made at the MSWDO office'), findsNothing);
     });
 
-    testWidgets('the sign-in copy stays the design in Filipino too', (
+    // The greeting is the design's Filipino in both languages; the rest of
+    // the screen reads in the phone's language since D-237.
+    testWidgets('the sign-in copy reads in Filipino on a Filipino phone', (
       tester,
     ) async {
       await _bootToSignIn(
@@ -173,7 +176,11 @@ void main() {
       );
 
       expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
-      expect(find.text('Create an account'), findsOneWidget);
+      expect(
+        find.text(lookupAppStrings(AppLocales.filipino).gateSheetCreateAccount),
+        findsOneWidget,
+      );
+      expect(find.text('Create an account'), findsNothing);
     });
   });
 

@@ -9,8 +9,11 @@ import '../../../core/design/brand_assets.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/core_copy.dart';
+import '../../../core/l10n/verification_copy.dart';
 import '../../../core/result/app_failure.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/dashed_outline.dart';
 import '../../../shared/widgets/failure_view.dart';
@@ -21,7 +24,6 @@ import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_rows.dart';
-import '../../verification/domain/verification_id_type.dart';
 import '../domain/card_preparation.dart';
 import '../domain/credential_repository.dart';
 import '../domain/digital_id_face.dart';
@@ -83,16 +85,17 @@ class DigitalIdView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final String? published = publishedResidentName(name);
     final ResidentCredential? card = this.card;
     final DigitalIdFace? face = digitalIdFace(card, now);
     final AppFailure? failure = this.failure;
     final List<Widget> body;
     if (loading) {
-      body = const <Widget>[
+      body = <Widget>[
         LoadingSkeleton(
           layout: SkeletonLayout.detail,
-          semanticLabel: 'Loading your digital ID',
+          semanticLabel: strings.digitalIdLoading,
         ),
       ];
     } else if (failure != null) {
@@ -119,7 +122,7 @@ class DigitalIdView extends StatelessWidget {
       body = <Widget>[
         const _IdCard(),
         Text(
-          'Your digital ID will appear here once Taytay LGU issues it.',
+          strings.digitalIdUnknownStatus,
           textAlign: TextAlign.center,
           style: _note,
         ),
@@ -139,8 +142,7 @@ class DigitalIdView extends StatelessWidget {
         if (qr != null) _QrCard(qr: qr, now: now),
         if (face != DigitalIdFace.active) _Notice(face: face),
         Text(
-          'Taytay LGU issued this card. A scanner checks the code. '
-          'This phone does not decide that the card is genuine.',
+          strings.digitalIdGenuineNote,
           textAlign: TextAlign.center,
           style: _note,
         ),
@@ -160,12 +162,13 @@ class DigitalIdView extends StatelessWidget {
           addSemanticIndexes: false,
           padding: const EdgeInsets.only(bottom: Spacing.xl),
           children: <Widget>[
-            const BlueHeader(
-              title: 'My Taytay ID',
+            BlueHeader(
+              title: strings.digitalIdTitle,
+              // A place name, the same in both languages.
               subtitle: 'Bayan ng Taytay · Rizal',
               showBack: true,
               overlap: true,
-              actions: <Widget>[HeaderSeal()],
+              actions: const <Widget>[HeaderSeal()],
             ),
             GlassOverlap(
               child: Padding(
@@ -277,7 +280,7 @@ class _IdCard extends StatelessWidget {
                               Padding(
                                 padding: const EdgeInsets.all(Spacing.lg),
                                 child: Text(
-                                  'Not yet issued',
+                                  AppStrings.of(context).digitalIdNotYetIssued,
                                   textAlign: TextAlign.center,
                                   style: AppTypography.label.copyWith(
                                     fontWeight: AppTypography.black,
@@ -386,7 +389,7 @@ class _Band extends StatelessWidget {
         child: Row(
           children: <Widget>[
             Semantics(
-              label: seal.semanticLabel,
+              label: brandAssetSemanticLabel(AppStrings.of(context), seal),
               image: true,
               child: Container(
                 width: 34,
@@ -488,7 +491,9 @@ class _Middle extends StatelessWidget {
                       child: DecodedMemoryImage(
                         bytes: bytes,
                         fit: BoxFit.cover,
-                        semanticLabel: 'ID photo',
+                        semanticLabel: AppStrings.of(
+                          context,
+                        ).digitalIdPhotoSemantic,
                         keepInImageCache: false,
                         placeholder: _PhotoPlaceholder(size: photo),
                       ),
@@ -632,7 +637,7 @@ class _PhotoPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: 'Photo placeholder',
+      label: AppStrings.of(context).digitalIdPhotoPlaceholder,
       child: Container(
         width: size.width,
         height: size.height,
@@ -683,7 +688,14 @@ class _Bottom extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final _TagStyle style = _TagStyle.of(face);
+    final String status = switch (face) {
+      DigitalIdFace.active => strings.digitalIdStatusActive,
+      DigitalIdFace.suspended => strings.digitalIdStatusSuspended,
+      DigitalIdFace.revoked => strings.digitalIdStatusRevoked,
+      DigitalIdFace.expired => strings.assistanceStageExpired,
+    };
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, Spacing.sm, 14, Spacing.sm),
       child: Row(
@@ -705,7 +717,7 @@ class _Bottom extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Semantics(
-            label: 'Status: ${style.label}',
+            label: strings.digitalIdStatusSemantic(status),
             child: ExcludeSemantics(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -729,7 +741,7 @@ class _Bottom extends StatelessWidget {
                       ),
                       const SizedBox(width: Spacing.xs),
                       Text(
-                        style.label,
+                        status,
                         style: AppTypography.category.copyWith(
                           letterSpacing: 0,
                           color: style.foreground,
@@ -747,35 +759,32 @@ class _Bottom extends StatelessWidget {
   }
 }
 
+/// The pill's colours and icon; its words are the face in the resident's
+/// language, chosen where the pill is built.
 class _TagStyle {
-  const _TagStyle(this.label, this.background, this.foreground, this.icon);
+  const _TagStyle(this.background, this.foreground, this.icon);
 
-  final String label;
   final Color background;
   final Color foreground;
   final IconData icon;
 
   static _TagStyle of(DigitalIdFace face) => switch (face) {
     DigitalIdFace.active => const _TagStyle(
-      'Active',
       BrandColors.green50,
       BrandColors.green,
       TaytayIcons.circleCheck,
     ),
     DigitalIdFace.suspended => const _TagStyle(
-      'Suspended',
       BrandColors.gold,
       BrandColors.navy,
       TaytayIcons.pause,
     ),
     DigitalIdFace.revoked => const _TagStyle(
-      'Revoked',
       BrandColors.red,
       BrandColors.white,
       TaytayIcons.circleSlash,
     ),
     DigitalIdFace.expired => const _TagStyle(
-      'Expired',
       BrandColors.line2,
       BrandColors.text,
       TaytayIcons.clock,
@@ -880,19 +889,22 @@ class _QrCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final bool live = qr.isLive(now);
     final DateTime? expiry = qr.expiresAt;
     final String refresh = expiry == null
-        ? 'Code refreshes'
-        : 'Code refreshes · valid until ${formatDigitalIdClock(expiry)} '
-              '${ManilaTime.label}';
+        ? strings.digitalIdCodeRefreshes
+        : strings.digitalIdCodeValidUntil(
+            formatDigitalIdClock(expiry),
+            ManilaTime.label,
+          );
     return GlassCard(
       child: Column(
         children: <Widget>[
           Semantics(
             header: true,
             child: Text(
-              'Show this code to be scanned',
+              strings.digitalIdShowCode,
               textAlign: TextAlign.center,
               style: AppTypography.sectionTitle.copyWith(
                 fontWeight: AppTypography.strong,
@@ -972,7 +984,7 @@ class _RefreshingCode extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: _qrSide, minHeight: _qrSide),
       child: Center(
         child: Text(
-          'Refreshing code…',
+          AppStrings.of(context).digitalIdRefreshingCode,
           textAlign: TextAlign.center,
           style: AppTypography.fieldValue.copyWith(
             fontWeight: AppTypography.strong,
@@ -992,7 +1004,8 @@ class _Notice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final _NoticeCopy copy = _NoticeCopy.of(face);
+    final AppStrings strings = AppStrings.of(context);
+    final _NoticeCopy copy = _NoticeCopy.of(face, strings);
     return Semantics(
       container: true,
       liveRegion: true,
@@ -1044,7 +1057,7 @@ class _Notice extends StatelessWidget {
             ),
             const SizedBox(height: Spacing.md),
             Text(
-              'No code is shown while the card is not active.',
+              strings.digitalIdNoCodeWhileInactive,
               style: AppTypography.listDetail.copyWith(
                 color: BrandColors.muted,
               ),
@@ -1065,38 +1078,37 @@ class _NoticeCopy {
   final Color ink;
   final IconData icon;
 
-  static _NoticeCopy of(DigitalIdFace face) => switch (face) {
-    DigitalIdFace.suspended => const _NoticeCopy(
-      'Your ID is suspended',
-      'Taytay LGU has paused this card. Visit the Municipal Hall or '
-          'message the LGU to find out why.',
-      BrandColors.gold50,
-      BrandColors.goldInk,
-      TaytayIcons.shieldAlert,
-    ),
-    DigitalIdFace.revoked => const _NoticeCopy(
-      'This ID is no longer valid',
-      'Taytay LGU has revoked this card. Visit the Municipal Hall if you '
-          'need a new one.',
-      BrandColors.red50,
-      BrandColors.redInk,
-      TaytayIcons.circleSlash,
-    ),
-    DigitalIdFace.expired => const _NoticeCopy(
-      'Your ID has expired',
-      'This card passed its expiry date. Visit the Municipal Hall to renew it.',
-      BrandColors.blue50,
-      BrandColors.muted,
-      TaytayIcons.clock,
-    ),
-    DigitalIdFace.active => const _NoticeCopy(
-      '',
-      '',
-      BrandColors.background,
-      BrandColors.ink,
-      TaytayIcons.circleCheck,
-    ),
-  };
+  static _NoticeCopy of(DigitalIdFace face, AppStrings strings) =>
+      switch (face) {
+        DigitalIdFace.suspended => _NoticeCopy(
+          strings.digitalIdSuspendedTitle,
+          strings.digitalIdSuspendedBody,
+          BrandColors.gold50,
+          BrandColors.goldInk,
+          TaytayIcons.shieldAlert,
+        ),
+        DigitalIdFace.revoked => _NoticeCopy(
+          strings.digitalIdRevokedTitle,
+          strings.digitalIdRevokedBody,
+          BrandColors.red50,
+          BrandColors.redInk,
+          TaytayIcons.circleSlash,
+        ),
+        DigitalIdFace.expired => _NoticeCopy(
+          strings.digitalIdExpiredTitle,
+          strings.digitalIdExpiredBody,
+          BrandColors.blue50,
+          BrandColors.muted,
+          TaytayIcons.clock,
+        ),
+        DigitalIdFace.active => const _NoticeCopy(
+          '',
+          '',
+          BrandColors.background,
+          BrandColors.ink,
+          TaytayIcons.circleCheck,
+        ),
+      };
 }
 
 /// `.ghost`: where the card will be, drawn as a dashed outline of the same
@@ -1106,6 +1118,7 @@ class _PreparingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _IdCard._maxWidth),
@@ -1140,7 +1153,7 @@ class _PreparingCard extends StatelessWidget {
                             Semantics(
                               header: true,
                               child: Text(
-                                CardPreparingCopy.title,
+                                strings.digitalIdPreparingTitle,
                                 textAlign: TextAlign.center,
                                 style: _cardHeading,
                               ),
@@ -1149,7 +1162,7 @@ class _PreparingCard extends StatelessWidget {
                             ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 250),
                               child: Text(
-                                CardPreparingCopy.body,
+                                strings.digitalIdPreparingBody,
                                 textAlign: TextAlign.center,
                                 style: _note,
                               ),
@@ -1176,54 +1189,56 @@ class _PreparingSteps extends StatelessWidget {
 
   final CardPreparation preparation;
 
-  static String _date(DateTime? instant) =>
-      instant == null ? '' : ManilaTime.formatDate(instant);
+  static String _date(DateTime? instant, String languageCode) => instant == null
+      ? ''
+      : ManilaTime.formatDate(instant, languageCode: languageCode);
 
   @override
   Widget build(BuildContext context) {
-    final String idType = idTypeLabel(preparation.idType);
+    final AppStrings strings = AppStrings.of(context);
+    final String idType = localisedIdTypeLabel(strings, preparation.idType);
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Semantics(
             header: true,
-            child: Text(CardPreparingCopy.stepsTitle, style: _cardHeading),
+            child: Text(strings.digitalIdStepsTitle, style: _cardHeading),
           ),
           const SizedBox(height: Spacing.xs),
           Timeline(
             steps: <TimelineStep>[
               TimelineStep(
                 icon: TaytayIcons.check,
-                title: CardPreparingCopy.accountCreated,
-                detail: _date(preparation.accountCreatedAt),
+                title: strings.digitalIdStepAccountCreated,
+                detail: _date(preparation.accountCreatedAt, strings.localeName),
                 tone: TimelineTone.done,
               ),
               TimelineStep(
                 icon: TaytayIcons.check,
-                title: CardPreparingCopy.idSent,
+                title: strings.digitalIdStepIdSent,
                 detail: CardPreparingCopy.detail(<String>[
-                  _date(preparation.sentAt),
+                  _date(preparation.sentAt, strings.localeName),
                   idType,
                 ]),
                 tone: TimelineTone.done,
               ),
               TimelineStep(
                 icon: TaytayIcons.check,
-                title: CardPreparingCopy.verified,
-                detail: _date(preparation.verifiedAt),
+                title: strings.digitalIdStepVerified,
+                detail: _date(preparation.verifiedAt, strings.localeName),
                 tone: TimelineTone.done,
               ),
-              const TimelineStep(
+              TimelineStep(
                 icon: TaytayIcons.clock,
-                title: CardPreparingCopy.issued,
-                detail: CardPreparingCopy.issuedDetail,
+                title: strings.digitalIdStepIssued,
+                detail: strings.digitalIdStepIssuedDetail,
                 tone: TimelineTone.current,
               ),
-              const TimelineStep(
+              TimelineStep(
                 icon: TaytayIcons.idCard,
-                title: CardPreparingCopy.show,
-                detail: CardPreparingCopy.showDetail,
+                title: strings.digitalIdStepShow,
+                detail: strings.digitalIdStepShowDetail,
                 tone: TimelineTone.upcoming,
               ),
             ],
@@ -1242,6 +1257,7 @@ class _AboutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final VoidCallback? onMessageOffice = this.onMessageOffice;
     final TextStyle fact = AppTypography.listDetail.copyWith(
       color: BrandColors.text,
@@ -1252,16 +1268,16 @@ class _AboutCard extends StatelessWidget {
         children: <Widget>[
           Semantics(
             header: true,
-            child: Text(CardPreparingCopy.aboutTitle, style: _cardHeading),
+            child: Text(strings.digitalIdAboutTitle, style: _cardHeading),
           ),
           const SizedBox(height: Spacing.md),
-          Text(CardPreparingCopy.aboutWhat, style: fact),
+          Text(strings.digitalIdAboutWhat, style: fact),
           const SizedBox(height: Spacing.sm),
-          Text(CardPreparingCopy.aboutStops, style: fact),
+          Text(strings.digitalIdAboutStops, style: fact),
           if (onMessageOffice != null) ...<Widget>[
             const SizedBox(height: Spacing.md),
             SecondaryButton(
-              label: CardPreparingCopy.message,
+              label: strings.digitalIdMessageMswdo,
               onPressed: onMessageOffice,
               icon: const TaytayIcon(
                 icon: TaytayIcons.messageCircle,

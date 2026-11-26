@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/design/taytay_icons.dart';
 import '../../core/design/typography.dart';
+import '../../core/l10n/shared_copy.dart';
+import '../../l10n/app_localizations.dart';
 import 'taytay_icon.dart';
 
 /// What a [SoftNote] says about the moment it describes.
@@ -62,6 +64,7 @@ class SoftNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = sharedStrings(context);
     final (
       Color fill,
       Color ink,
@@ -72,31 +75,31 @@ class SoftNote extends StatelessWidget {
         BrandColors.blue50,
         BrandColors.text,
         TaytayIcons.info,
-        'Information',
+        strings.sharedNoteToneInfo,
       ),
       NoteTone.warning => (
         BrandColors.gold50,
         BrandColors.goldInk,
         TaytayIcons.clock,
-        'Note',
+        strings.sharedNoteToneWarning,
       ),
       NoteTone.error => (
         BrandColors.red50,
         BrandColors.redInk,
         TaytayIcons.circleAlert,
-        'Error',
+        strings.sharedNoteToneError,
       ),
       NoteTone.success => (
         BrandColors.green50,
         BrandColors.green,
         TaytayIcons.circleCheck,
-        'Done',
+        strings.sharedNoteToneSuccess,
       ),
       NoteTone.emergency => (
         BrandColors.red50,
         BrandColors.redInk,
         TaytayIcons.siren,
-        'Emergency',
+        strings.sharedNoteToneEmergency,
       ),
     };
     final String? title = this.title;

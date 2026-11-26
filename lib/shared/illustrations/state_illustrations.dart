@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/l10n/shared_copy.dart';
 import '../../core/motion/motion_tokens.dart';
+import '../../l10n/app_localizations.dart';
 import 'illustration.dart';
 
 /// Artwork for empty, success and error states, and for dialogs.
@@ -13,21 +15,17 @@ import 'illustration.dart';
 /// baked-in raster would be the one element that stops matching the surface
 /// around it.
 abstract final class StateIllustrations {
-  static Widget empty({double size = 120, Key? key}) => Illustration(
+  static Widget empty({double size = 120, Key? key}) => _Localised(
     key: key,
-    size: Size.square(size),
-    semanticLabel:
-        'Illustration: an empty tray, meaning there is nothing here '
-        'yet.',
+    size: size,
+    label: (strings) => strings.sharedIllustrationEmpty,
     painterBuilder: _EmptyPainter.new,
   );
 
-  static Widget error({double size = 120, Key? key}) => Illustration(
+  static Widget error({double size = 120, Key? key}) => _Localised(
     key: key,
-    size: Size.square(size),
-    semanticLabel:
-        'Illustration: a disconnected link, meaning something could not be '
-        'loaded.',
+    size: size,
+    label: (strings) => strings.sharedIllustrationError,
     painterBuilder: _ErrorPainter.new,
   );
 
@@ -43,6 +41,28 @@ abstract final class StateIllustrations {
   /// travel. It is never looped, and it never replays on rebuild.
   static Widget success({double size = 120, Key? key}) =>
       _AnimatedSuccess(size: size, key: key);
+}
+
+/// An [Illustration] whose accessible name is read in the reader's language
+/// when it is built, since the factories above have no context.
+class _Localised extends StatelessWidget {
+  const _Localised({
+    required this.size,
+    required this.label,
+    required this.painterBuilder,
+    super.key,
+  });
+
+  final double size;
+  final String Function(AppStrings strings) label;
+  final CustomPainter Function(IllustrationPalette palette) painterBuilder;
+
+  @override
+  Widget build(BuildContext context) => Illustration(
+    size: Size.square(size),
+    semanticLabel: label(sharedStrings(context)),
+    painterBuilder: painterBuilder,
+  );
 }
 
 class _AnimatedSuccess extends StatefulWidget {
@@ -85,7 +105,7 @@ class _AnimatedSuccessState extends State<_AnimatedSuccess>
   Widget build(BuildContext context) {
     final palette = IllustrationPalette.of(context);
     return Semantics(
-      label: 'Illustration: a check mark, meaning the request was completed.',
+      label: sharedStrings(context).sharedIllustrationSuccess,
       image: true,
       child: RepaintBoundary(
         child: AnimatedBuilder(

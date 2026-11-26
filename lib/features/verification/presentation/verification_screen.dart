@@ -9,6 +9,8 @@ import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
+import '../../../core/l10n/app_locales.dart';
+import '../../../core/l10n/verification_copy.dart';
 import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
@@ -16,6 +18,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../core/session/biometric_consent_controller.dart';
 import '../../../core/startup/platform_controller.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/biometric_consent_dialog.dart';
@@ -187,7 +190,7 @@ class _VerificationScreenState extends State<VerificationScreen>
 
   String get _submittedOn {
     final DateTime? at = _controller.status?.submittedAt;
-    return at == null ? '' : formatManilaStamp(at);
+    return at == null ? '' : formatManilaStamp(at, AppStrings.of(context));
   }
 
   String get _residentMessage => _controller.status?.residentGuidance ?? '';
@@ -196,10 +199,13 @@ class _VerificationScreenState extends State<VerificationScreen>
     for (final VerificationItemCategory category
         in _controller.status?.submittedCategories ??
             const <VerificationItemCategory>[])
-      _noteLabel(category),
+      verificationItemCategoryLabel(AppStrings.of(context), category),
   ];
 
-  String get _notice => _controller.failure?.residentMessage ?? '';
+  String get _notice {
+    final AppFailure? failure = _controller.failure;
+    return failure == null ? '' : localisedResidentMessage(context, failure);
+  }
 
   VerificationFace get _face {
     final VerificationStatusDetail? status = _controller.status;
@@ -243,7 +249,10 @@ class _VerificationScreenState extends State<VerificationScreen>
     return <FieldCorrectionNote>[
       for (final VerificationItemIssue issue in status.issues)
         FieldCorrectionNote(
-          label: _noteLabel(issue.category),
+          label: verificationItemCategoryLabel(
+            AppStrings.of(context),
+            issue.category,
+          ),
           note: issue.instruction,
         ),
     ];
@@ -252,8 +261,9 @@ class _VerificationScreenState extends State<VerificationScreen>
   @override
   Widget build(BuildContext context) {
     final face = _face;
+    final AppStrings s = AppStrings.of(context);
     final VerificationStatusDetail? status = _controller.status;
-    final String idLabel = idTypeLabel(status?.idType);
+    final String idLabel = localisedIdTypeLabel(s, status?.idType);
     // An in-person verification has no reviewed request: the date is the
     // account's own decision date.
     final String reviewed = _date(
@@ -273,10 +283,11 @@ class _VerificationScreenState extends State<VerificationScreen>
         onMyRequests: () => context.pushNamed(AppRoute.myRequests.routeName),
         verifiedOn: reviewed,
         linkedToOfficeRecord: _linked,
-        method: VerificationMethodCopy.of(_method),
+        method: VerificationMethodCopy.of(_method, s),
         replaced: status?.supersededInPerson == true
             ? VerificationMethodCopy.replaced(
                 erased: status?.selfieErased == true,
+                strings: s,
               )
             : '',
       ),
@@ -311,18 +322,22 @@ class _VerificationScreenState extends State<VerificationScreen>
         frontValue: _slotLabel(
           file: _front,
           sent: _frontSent,
-          empty: 'Upload new photo',
+          empty: s.verifUploadNewPhoto,
         ),
-        backValue: _slotLabel(file: _back, sent: _backSent, empty: 'Add'),
+        backValue: _slotLabel(
+          file: _back,
+          sent: _backSent,
+          empty: s.verifAddPhoto,
+        ),
         selfieKept: _selfieKept && _selfie == null,
         selfieValue: _slotLabel(
           file: _selfie,
           sent: _selfieSent,
           empty: _selfieKept
-              ? 'Previous selfie kept'
+              ? s.verifPreviousSelfieKept
               : _selfieErased
-              ? VerificationSelfieCopy.erasedSlot
-              : 'Take a selfie',
+              ? s.verifSelfieErasedSlot
+              : s.verifTakeSelfie,
         ),
         selfieNotice: _selfieErased && _selfie == null
             ? _erasedNotice(pending: false)
@@ -360,10 +375,10 @@ class _VerificationScreenState extends State<VerificationScreen>
     if (!_tierReady && _controller.status == null && _controller.loading) {
       return _StatePage(
         onBack: () => _leave(context),
-        child: const LoadingSkeleton(
+        child: LoadingSkeleton(
           layout: SkeletonLayout.detail,
           count: 1,
-          semanticLabel: 'Checking your verification status',
+          semanticLabel: s.verifCheckingStatus,
         ),
       );
     }
@@ -376,7 +391,7 @@ class _VerificationScreenState extends State<VerificationScreen>
       return _StatePage(
         onBack: () => _leave(context),
         child: ErrorState(
-          title: 'Could not check your status',
+          title: s.verifCouldNotCheckStatus,
           onRetry: () {
             _controller.refresh();
             _loadTier();
@@ -394,7 +409,8 @@ class _VerificationScreenState extends State<VerificationScreen>
     required String empty,
   }) {
     if (file == null) return empty;
-    return sent ? 'New photo sent' : 'Photo added';
+    final AppStrings s = AppStrings.of(context);
+    return sent ? s.verifNewPhotoSent : s.verifPhotoAdded;
   }
 
   Future<void> _pick(VerificationPhotoSlot slot) async {
@@ -468,16 +484,17 @@ class _VerificationScreenState extends State<VerificationScreen>
   }
 
   Future<void> _pickIdType() async {
+    final AppStrings s = AppStrings.of(context);
     final String? chosen = await AppSheet.show<String>(
       context: context,
-      title: 'Type of ID',
+      title: s.verifIdType,
       builder: (BuildContext sheetContext) {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             for (final String wire in verificationIdTypes)
               ListTile(
-                title: Text(idTypeLabel(wire)),
+                title: Text(localisedIdTypeLabel(s, wire)),
                 onTap: () => Navigator.of(sheetContext).pop(wire),
               ),
           ],
@@ -558,23 +575,24 @@ class _VerificationScreenState extends State<VerificationScreen>
   /// consent stands or can be asked for and was not declined.
   Widget? _consentNotice() {
     final BiometricConsentStatus status = _biometric.status;
+    final AppStrings s = AppStrings.of(context);
     return switch (status) {
-      BiometricConsentChecking() => const LoadingSkeleton(
+      BiometricConsentChecking() => LoadingSkeleton(
         layout: SkeletonLayout.text,
         count: 1,
-        semanticLabel: VerificationSelfieCopy.checking,
+        semanticLabel: s.verifSelfieConsentChecking,
       ),
       BiometricConsentFailed() => SoftNote(
         key: verificationConsentFailedKey,
         tone: NoteTone.error,
-        heading: BiometricConsentCopy.failedHeading,
-        message: BiometricConsentCopy.failed,
+        heading: s.sharedBiometricFailedHeading,
+        message: s.sharedBiometricFailed,
         action: PillButtonRow(
           wrap: true,
           padding: EdgeInsets.zero,
           actions: <PillAction>[
             PillAction(
-              label: 'Try again',
+              label: s.actionTryAgain,
               primary: true,
               onPressed: () => unawaited(_biometric.load()),
             ),
@@ -584,11 +602,11 @@ class _VerificationScreenState extends State<VerificationScreen>
       BiometricConsentUnavailable() => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const SoftNote(
+          SoftNote(
             key: verificationSelfieUnavailableKey,
             tone: NoteTone.warning,
-            heading: BiometricConsentCopy.unavailableHeading,
-            message: BiometricConsentCopy.unavailable,
+            heading: s.sharedBiometricUnavailableHeading,
+            message: s.sharedBiometricUnavailable,
           ),
           const SizedBox(height: Spacing.md),
           InPersonVerificationNote(office: _biometric.inPersonOffice),
@@ -599,9 +617,9 @@ class _VerificationScreenState extends State<VerificationScreen>
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  const SoftNote(
-                    heading: BiometricConsentCopy.declinedHeading,
-                    message: BiometricConsentCopy.declined,
+                  SoftNote(
+                    heading: s.sharedBiometricDeclinedHeading,
+                    message: s.sharedBiometricDeclined,
                   ),
                   const SizedBox(height: Spacing.md),
                   InPersonVerificationNote(office: _biometric.inPersonOffice),
@@ -614,8 +632,9 @@ class _VerificationScreenState extends State<VerificationScreen>
   /// The selfie was erased because the resident withdrew the consent. On a
   /// pending request staff cannot approve until a new one is sent (D-212).
   Widget _erasedNotice({required bool pending}) {
+    final AppStrings s = AppStrings.of(context);
     final DateTime? at = _controller.status?.selfieErasedAt;
-    final String on = at == null ? '' : ' on ${formatManilaDate(at)}';
+    final String? on = at == null ? null : formatManilaDate(at, s);
     final bool canRetake = _mayEdit && _selfieOffered;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -623,17 +642,17 @@ class _VerificationScreenState extends State<VerificationScreen>
         SoftNote(
           key: verificationSelfieErasedKey,
           tone: NoteTone.warning,
-          heading: VerificationSelfieCopy.erasedHeading,
+          heading: s.verifSelfieErasedHeading,
           message: pending
-              ? VerificationSelfieCopy.erasedPending(on)
-              : VerificationSelfieCopy.erasedRejected(on),
+              ? VerificationSelfieCopy.erasedPendingIn(s, on)
+              : VerificationSelfieCopy.erasedRejectedIn(s, on),
           action: canRetake && pending
               ? PillButtonRow(
                   wrap: true,
                   padding: EdgeInsets.zero,
                   actions: <PillAction>[
                     PillAction(
-                      label: VerificationSelfieCopy.retake,
+                      label: s.verifSelfieRetake,
                       primary: true,
                       buttonKey: verificationRetakeSelfieKey,
                       onPressed: _controller.submitting
@@ -653,6 +672,7 @@ class _VerificationScreenState extends State<VerificationScreen>
   }
 
   Widget _startPhotos() {
+    final AppStrings s = AppStrings.of(context);
     return SoftCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -661,7 +681,7 @@ class _VerificationScreenState extends State<VerificationScreen>
             header: true,
             child: Text(
               // A first start: nothing was sent before, so nothing is "new".
-              'Send your valid ID',
+              s.verifSendValidId,
               style: AppTypography.sectionTitle.copyWith(
                 color: BrandColors.ink,
               ),
@@ -669,20 +689,20 @@ class _VerificationScreenState extends State<VerificationScreen>
           ),
           S3Field(
             key: const Key('verification-id-type'),
-            label: 'Type of ID',
+            label: s.verifIdType,
             asterisk: true,
-            value: idTypeLabel(_idType),
+            value: localisedIdTypeLabel(s, _idType),
             chevron: true,
             onTap: _pickIdType,
           ),
           S3Field(
             key: const Key('verification-id-front'),
-            label: 'Front of ID',
+            label: s.verifIdFront,
             asterisk: true,
             value: _slotLabel(
               file: _front,
               sent: false,
-              empty: 'Upload new photo',
+              empty: s.verifUploadNewPhoto,
             ),
             dashed: true,
             onTap: () => _pick(VerificationPhotoSlot.front),
@@ -695,8 +715,8 @@ class _VerificationScreenState extends State<VerificationScreen>
             ),
           ),
           S3Field(
-            label: 'Back of ID (optional)',
-            value: _slotLabel(file: _back, sent: false, empty: 'Add'),
+            label: s.verifIdBackOptional,
+            value: _slotLabel(file: _back, sent: false, empty: s.verifAddPhoto),
             dashed: true,
             onTap: () => _pick(VerificationPhotoSlot.back),
             leading: const TaytayIcon(
@@ -709,11 +729,11 @@ class _VerificationScreenState extends State<VerificationScreen>
           ),
           S3Field(
             key: const Key('verification-selfie'),
-            label: 'Selfie',
+            label: s.verifSelfie,
             value: _slotLabel(
               file: _selfie,
               sent: false,
-              empty: 'Take a selfie',
+              empty: s.verifTakeSelfie,
             ),
             dashed: true,
             onTap: _selfieOffered
@@ -733,10 +753,10 @@ class _VerificationScreenState extends State<VerificationScreen>
   }
 
   String _stamp(DateTime? instant) =>
-      instant == null ? '' : formatManilaStamp(instant);
+      instant == null ? '' : formatManilaStamp(instant, AppStrings.of(context));
 
   String _date(DateTime? instant) =>
-      instant == null ? '' : formatManilaDate(instant);
+      instant == null ? '' : formatManilaDate(instant, AppStrings.of(context));
 
   void _leave(BuildContext context) {
     if (context.canPop()) {
@@ -762,23 +782,33 @@ const Key verificationConsentFailedKey = Key('verification-consent-failed');
 const Key verificationRetakeSelfieKey = Key('verification-retake-selfie');
 
 /// How the account was verified, in words (D-210).
+///
+/// The constants are the English, kept as the no-context fallback that tests
+/// compare against; pass the screen's [AppStrings] to say it in the
+/// resident's language.
 abstract final class VerificationMethodCopy {
   static const String inPerson = 'Verified in person at the Taytay LGU office.';
   static const String selfie = 'Verified with your valid ID and selfie.';
 
-  static String of(VerificationMethod? method) => switch (method) {
-    VerificationMethod.inPerson => inPerson,
-    VerificationMethod.selfie => selfie,
-    null => '',
-  };
+  static String of(VerificationMethod? method, [AppStrings? strings]) =>
+      switch (method) {
+        VerificationMethod.inPerson => strings?.verifMethodInPerson ?? inPerson,
+        VerificationMethod.selfie => strings?.verifMethodSelfie ?? selfie,
+        null => '',
+      };
 
   /// A selfie request closed because the office verified the account in
   /// person (`superseded`).
-  static String replaced({required bool erased}) => erased
-      ? 'Replaced: you were verified in person at the office, so your selfie '
-            'request was closed and the selfie you sent was erased.'
-      : 'Replaced: you were verified in person at the office, so your selfie '
-            'request was closed.';
+  static String replaced({required bool erased, AppStrings? strings}) {
+    if (strings != null) {
+      return erased ? strings.verifReplacedErased : strings.verifReplaced;
+    }
+    return erased
+        ? 'Replaced: you were verified in person at the office, so your selfie '
+              'request was closed and the selfie you sent was erased.'
+        : 'Replaced: you were verified in person at the office, so your selfie '
+              'request was closed.';
+  }
 }
 
 /// What the verification screen says about the selfie (D-209, D-212).
@@ -796,6 +826,19 @@ abstract final class VerificationSelfieCopy {
   static String erasedRejected(String on) =>
       'You withdrew your selfie consent$on, so the selfie you sent was '
       'erased. Send a new one with your ID, or verify in person instead.';
+
+  /// [erasedPending] in the resident's language; [date] is already
+  /// formatted, null when the server gave no time.
+  static String erasedPendingIn(AppStrings strings, String? date) =>
+      date == null
+      ? strings.verifSelfieErasedPending
+      : strings.verifSelfieErasedPendingOn(date);
+
+  /// [erasedRejected] in the resident's language.
+  static String erasedRejectedIn(AppStrings strings, String? date) =>
+      date == null
+      ? strings.verifSelfieErasedRejected
+      : strings.verifSelfieErasedRejectedOn(date);
 }
 
 /// The status page while it has nothing to show yet, or could not read the
@@ -814,7 +857,7 @@ class _StatePage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           S3Header(
-            title: 'Verification status',
+            title: AppStrings.of(context).verifStatusTitle,
             subtitle: 'Bayan ng Taytay · Rizal',
             onBack: onBack,
           ),
@@ -837,7 +880,7 @@ class _StatePage extends StatelessWidget {
 Future<String?> showResubmitMessageDialog(BuildContext context) {
   return AppDialog.show<String>(
     context: context,
-    title: 'Message to Taytay LGU',
+    title: AppStrings.of(context).verifResubmitDialogTitle,
     builder: (BuildContext _) => const _ResubmitMessageSheet(),
   );
 }
@@ -862,6 +905,7 @@ class _ResubmitMessageSheetState extends State<_ResubmitMessageSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -874,12 +918,12 @@ class _ResubmitMessageSheetState extends State<_ResubmitMessageSheet> {
         AppDialogActions(
           primary: DialogButton(
             key: const Key('verification-resubmit-confirm'),
-            label: 'Resubmit for verification',
+            label: s.verifResubmit,
             onPressed: () => Navigator.of(context).pop(_field.text),
           ),
           text: DialogButton(
             key: const Key('verification-resubmit-cancel'),
-            label: 'Cancel',
+            label: s.actionCancel,
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
@@ -887,12 +931,3 @@ class _ResubmitMessageSheetState extends State<_ResubmitMessageSheet> {
     );
   }
 }
-
-String _noteLabel(VerificationItemCategory category) => switch (category) {
-  VerificationItemCategory.personalDetails => 'Your details',
-  VerificationItemCategory.address => 'Address',
-  VerificationItemCategory.contact => 'Contact details',
-  VerificationItemCategory.identityDocument => 'ID photo',
-  VerificationItemCategory.photo => 'Photo of you',
-  VerificationItemCategory.other => 'Details',
-};

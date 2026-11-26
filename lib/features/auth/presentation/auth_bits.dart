@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../domain/code_exchange.dart';
@@ -199,13 +200,14 @@ class PasswordRules extends StatelessWidget {
     final bool chars = password.length >= 8;
     final bool digit = RegExp(r'\d').hasMatch(password);
     final bool letter = RegExp('[A-Za-z]').hasMatch(password);
+    final AppStrings strings = AppStrings.of(context);
     return Wrap(
       spacing: Spacing.lg,
       runSpacing: Spacing.xs,
       children: <Widget>[
-        PasswordRule('Hindi bababa sa 8 character', met: chars ? true : null),
-        PasswordRule('May numero', met: digit ? true : null),
-        PasswordRule('May letra', met: letter ? true : null),
+        PasswordRule(strings.authResetRuleLength, met: chars ? true : null),
+        PasswordRule(strings.authResetRuleDigit, met: digit ? true : null),
+        PasswordRule(strings.authResetRuleLetter, met: letter ? true : null),
       ],
     );
   }
@@ -222,13 +224,16 @@ class PasswordRule extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool? met = this.met;
+    final AppStrings strings = AppStrings.of(context);
     final Color ink = switch (met) {
       true => BrandColors.green,
       false => BrandColors.redInk,
       null => BrandColors.muted,
     };
     return Semantics(
-      label: '$label, ${met == true ? 'met' : 'not met'}',
+      label: met == true
+          ? strings.authPasswordRuleMet(label)
+          : strings.authPasswordRuleNotMet(label),
       excludeSemantics: true,
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -258,22 +263,27 @@ class PasswordRule extends StatelessWidget {
 
 /// Show / Hide inside a password field (CSS `.pw button`): blue 13.5 / 700
 /// on no fill, a 48 dp target.
+///
+/// With no labels it says the reset flow's words ("Ipakita" / "Itago").
 class ShowPasswordToggle extends StatelessWidget {
   const ShowPasswordToggle({
     required this.shown,
     required this.onPressed,
-    this.showLabel = 'Ipakita',
-    this.hideLabel = 'Itago',
+    this.showLabel,
+    this.hideLabel,
     super.key,
   });
 
   final bool shown;
   final VoidCallback onPressed;
-  final String showLabel;
-  final String hideLabel;
+  final String? showLabel;
+  final String? hideLabel;
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
+    final String showLabel = this.showLabel ?? strings.authResetShowPassword;
+    final String hideLabel = this.hideLabel ?? strings.authResetHidePassword;
     return Padding(
       padding: const EdgeInsetsDirectional.only(end: Spacing.xs),
       child: TextButton(

@@ -167,7 +167,7 @@ class AssistanceRequestRow extends StatelessWidget {
     final AppStrings s = AppStrings.of(context);
     final VoidCallback? onTap = this.onTap;
     final String programme = AssistanceCopy.programme(s, request);
-    final String? filed = AssistanceCopy.date(request.filedAt);
+    final String? filed = AssistanceCopy.date(request.filedAt, s.localeName);
     final String filedLine = filed == null ? '' : s.myRequestsFiled(filed);
     final String? channel = AssistanceCopy.channel(s, request.channel);
     final String? control = AssistanceCopy.controlNumber(s, request);
@@ -450,7 +450,7 @@ class _Facts extends StatelessWidget {
             const Key('my-request-filed'),
             TaytayIcons.calendar,
             s.myRequestFiledOn,
-            AssistanceCopy.date(request.filedAt),
+            AssistanceCopy.date(request.filedAt, s.localeName),
           ),
           (
             const Key('my-request-amount'),
@@ -462,7 +462,7 @@ class _Facts extends StatelessWidget {
             const Key('my-request-payout-date'),
             TaytayIcons.calendar,
             s.myRequestPayoutDate,
-            AssistanceCopy.date(request.payoutScheduledFor),
+            AssistanceCopy.date(request.payoutScheduledFor, s.localeName),
           ),
           (
             const Key('my-request-payout-venue'),
@@ -474,19 +474,19 @@ class _Facts extends StatelessWidget {
             const Key('my-request-released'),
             TaytayIcons.circleCheck,
             s.myRequestReleasedOn,
-            AssistanceCopy.date(request.releasedAt),
+            AssistanceCopy.date(request.releasedAt, s.localeName),
           ),
           (
             const Key('my-request-changed'),
             TaytayIcons.clock,
             s.myRequestStatusChangedOn,
-            AssistanceCopy.date(request.statusChangedAt),
+            AssistanceCopy.date(request.statusChangedAt, s.localeName),
           ),
           (
             const Key('my-request-documents-sent'),
             TaytayIcons.send,
             s.myRequestDocumentsSentOn,
-            AssistanceCopy.date(request.documentsSentAt),
+            AssistanceCopy.date(request.documentsSentAt, s.localeName),
           ),
           (
             const Key('my-request-channel'),

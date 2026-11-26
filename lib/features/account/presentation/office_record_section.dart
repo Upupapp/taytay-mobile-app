@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/profile_copy.dart';
 import '../../../shared/widgets/surface_cards.dart';
 import '../../profile/domain/office_record.dart';
 import '../../registration/domain/registration_domain.dart';
@@ -34,9 +35,10 @@ class OfficeRecordSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = officeRecordCopy(context);
+    final OfficeRecordSex? sex = record.sex;
     final String barangay =
-        barangayFor(record.barangayId, barangays)?.name ??
-        OfficeRecordCopy.notShown;
+        barangayFor(record.barangayId, barangays)?.name ?? copy.notShown;
     return SoftCard(
       key: officeRecordSectionKey,
       filled: true,
@@ -46,7 +48,7 @@ class OfficeRecordSection extends StatelessWidget {
           Semantics(
             header: true,
             child: Text(
-              OfficeRecordCopy.title,
+              copy.title,
               style: AppTypography.listTitle.copyWith(
                 fontWeight: AppTypography.strong,
                 color: BrandColors.ink,
@@ -54,16 +56,22 @@ class OfficeRecordSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Spacing.md),
-          _Row(label: OfficeRecordCopy.name, value: record.fullName),
+          _Row(label: copy.name, value: record.fullName),
           _Row(
-            label: OfficeRecordCopy.sex,
-            value: record.sex?.label ?? OfficeRecordCopy.notShown,
+            label: copy.sex,
+            value: sex == null
+                ? copy.notShown
+                : officeRecordSexLabel(context, sex),
           ),
-          _Row(label: OfficeRecordCopy.birthDate, value: record.birthDateLabel),
-          _Row(label: OfficeRecordCopy.barangay, value: barangay),
+          _Row(
+            label: copy.birthDate,
+            value: officeRecordBirthDate(context, record),
+          ),
+          _Row(label: copy.barangay, value: barangay),
           const SizedBox(height: Spacing.sm),
           Text(
-            OfficeRecordCopy.keptByOffice,
+            copy.keptByOffice,
+
             style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
           ),
         ],

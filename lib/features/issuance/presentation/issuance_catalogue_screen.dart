@@ -8,17 +8,18 @@ import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
+import '../../../core/l10n/issuance_copy.dart';
 import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/header_search_field.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/settings_list.dart';
 import '../../../shared/widgets/taytay_states.dart';
-import '../domain/issuance_terms.dart';
 import '../domain/issuance_type.dart';
 import 'issuance_widgets.dart';
 
@@ -106,12 +107,13 @@ class _IssuanceCatalogueScreenState extends State<IssuanceCatalogueScreen>
   @override
   Widget build(BuildContext context) {
     final AppDependencies dependencies = AppDependencies.of(context);
+    final AppStrings strings = AppStrings.of(context);
     return IssuanceScaffold(
-      title: 'Request documents',
+      title: strings.issuanceCatalogueTitle,
       bottom: _failure == null && _searchable
           ? HeaderSearchField(
               fieldKey: const Key('issuance-search'),
-              hint: 'Search documents',
+              hint: strings.issuanceSearchHint,
               controller: _search,
               onChanged: (_) => setState(() {}),
             )
@@ -134,7 +136,7 @@ class _IssuanceCatalogueScreenState extends State<IssuanceCatalogueScreen>
             return IssuanceLoadFailure(
               failure: failure,
               onRetry: _load,
-              what: 'the documents',
+              failedTitle: strings.issuanceLoadFailedDocuments,
             );
           }
           return RefreshIndicator(
@@ -150,8 +152,8 @@ class _IssuanceCatalogueScreenState extends State<IssuanceCatalogueScreen>
                       children: <Widget>[
                         SettingsRow(
                           key: const Key('issuance-my-requests'),
-                          title: 'My document requests',
-                          detail: 'Follow what you have sent',
+                          title: strings.issuanceMyRequests,
+                          detail: strings.issuanceMyRequestsDetail,
                           leading: const IconTile.lucide(
                             icon: TaytayIcons.inbox,
                             tone: TileTone.navy,
@@ -163,23 +165,18 @@ class _IssuanceCatalogueScreenState extends State<IssuanceCatalogueScreen>
                       ],
                     ),
                   ),
-                const Padding(
-                  padding: EdgeInsets.only(bottom: Spacing.section),
-                  child: IssuanceText(
-                    'Certificates and certified copies the municipal offices '
-                    'issue. Choose one to see what it needs. Any fee is paid '
-                    'at the office, never in the app.',
-                  ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: Spacing.section),
+                  child: IssuanceText(strings.issuanceCatalogueIntro),
                 ),
                 if (_loading && _types.isEmpty)
-                  const LoadingSkeleton(semanticLabel: 'Loading documents')
+                  LoadingSkeleton(
+                    semanticLabel: strings.issuanceCatalogueLoading,
+                  )
                 else if (_types.isEmpty)
-                  const EmptyState(
-                    title: 'No documents listed yet',
-                    message:
-                        'The municipal offices have not listed any documents '
-                        'in the app yet. You can still ask at the Municipal '
-                        'Hall.',
+                  EmptyState(
+                    title: strings.issuanceCatalogueEmptyTitle,
+                    message: strings.issuanceCatalogueEmptyMessage,
                     boxed: true,
                   )
                 else
@@ -193,14 +190,15 @@ class _IssuanceCatalogueScreenState extends State<IssuanceCatalogueScreen>
   }
 
   List<Widget> _catalogue(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final List<IssuanceType> shown = _searchable
         ? searchTypes(_types, _search.text)
         : _types;
     return <Widget>[
       if (shown.isEmpty)
-        const EmptyState(
-          title: 'No document matches',
-          message: 'Try another word, or clear the search to see them all.',
+        EmptyState(
+          title: strings.issuanceNoMatchTitle,
+          message: strings.issuanceNoMatchMessage,
           boxed: true,
         ),
       for (final (String office, List<IssuanceType> types) in groupByOffice(
@@ -216,8 +214,8 @@ class _IssuanceCatalogueScreenState extends State<IssuanceCatalogueScreen>
                   key: Key('issuance-type-${type.id}'),
                   title: type.name,
                   detail:
-                      '${issuanceFeeLine(type.feeCentavos)} · '
-                      '${issuanceProcessingLine(type.processingDays)}',
+                      '${issuanceFeeText(strings, type.feeCentavos)} · '
+                      '${issuanceProcessingText(strings, type.processingDays)}',
                   leading: const IconTile.glyph(glyph: TaytayGlyph.document),
                   onTap: () => context.pushNamed(
                     AppRoute.issuanceType.routeName,

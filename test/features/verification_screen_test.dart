@@ -325,7 +325,13 @@ void main() {
     testWidgets('pending, verified and needs-correction say what they are', (
       tester,
     ) async {
-      await tester.pumpWidget(const MaterialApp(home: PendingStatusPage()));
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
+          home: PendingStatusPage(),
+        ),
+      );
       expect(find.text('Pending review'), findsOneWidget);
       expect(find.text('Your account is verified'), findsNothing);
 
@@ -343,6 +349,8 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
           home: NeedsCorrectionPage(
             notes: <FieldCorrectionNote>[
               FieldCorrectionNote(

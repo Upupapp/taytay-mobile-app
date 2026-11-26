@@ -10,6 +10,7 @@ import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/success_screen.dart';
@@ -74,12 +75,15 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
     });
   }
 
+  /// The address the code went to, or empty when the draft names none.
   String get _email {
-    final String email = widget.draft?.email ?? '';
     if (_sample) return AuthSample.email;
-    if (email.isEmpty) return 'your email';
-    return email;
+    return widget.draft?.email ?? '';
   }
+
+  /// [_email] as the page says it.
+  String _shownEmail(AppStrings strings) =>
+      _email.isEmpty ? strings.authYourEmail : _email;
 
   String get _expiryLabel {
     if (_sample) return AuthSample.expiry;
@@ -150,7 +154,7 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
       AppRoute.tooMany.routeName,
       extra: CodeHold.fromWait(
         origin: CodeHoldOrigin.passwordReset,
-        email: _email == 'your email' ? '' : _email,
+        email: _email,
         now: now,
         wait: wait != null && wait.isNegative ? Duration.zero : wait,
       ),
@@ -185,10 +189,11 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final bool wrong = _sample || _view.wrong;
     return AuthFormPage(
-      title: 'Ilagay ang 6-digit na code',
-      subtitle: 'Nagpadala kami ng code sa $_email.',
+      title: strings.authResetCodeTitle,
+      subtitle: strings.authResetCodeSubtitle(_shownEmail(strings)),
       onBack: () => context.canPop()
           ? context.pop()
           : context.goNamed(AppRoute.forgotPassword.routeName),
@@ -197,8 +202,8 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
         children: <Widget>[
           PrimaryButton(
             label: _view.expired
-                ? 'Magpadala ng bagong code'
-                : 'I-verify ang code',
+                ? strings.authResetSendNewCode
+                : strings.authResetVerifyCode,
             onPressed: _busy
                 ? null
                 : _view.expired
@@ -207,12 +212,12 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
           ),
           const SizedBox(height: Spacing.sm),
           Text(
-            'Valid ang code nang 10 minuto. May 5 subok ka bawat code.',
+            strings.authResetCodeRules,
             textAlign: TextAlign.center,
             style: AppTypography.small.copyWith(color: BrandColors.muted),
           ),
           AuthLink(
-            'Bumalik sa sign in',
+            strings.authResetBackToSignIn,
             onPressed: () => context.goNamed(AppRoute.signIn.routeName),
           ),
         ],
@@ -223,32 +228,31 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
           if (wrong) ...<Widget>[
             SoftNote(
               tone: NoteTone.error,
-              title: 'Mali ang code. ',
+              title: strings.authResetWrongTitle,
               message: _sample
-                  ? '4 sa ${CodeExchangeRules.attempts} subok na lang ang '
-                        'natitira.'
+                  ? strings.authResetAttemptsLeft(4, CodeExchangeRules.attempts)
                   : _view.attemptsRemaining == null
-                  ? 'May ${CodeExchangeRules.attempts} subok ka bawat code.'
-                  : '${_view.attemptsRemaining} sa '
-                        '${CodeExchangeRules.attempts} subok na lang ang '
-                        'natitira.',
+                  ? strings.authResetAttemptsPerCode(CodeExchangeRules.attempts)
+                  : strings.authResetAttemptsLeft(
+                      _view.attemptsRemaining ?? 0,
+                      CodeExchangeRules.attempts,
+                    ),
             ),
             const SizedBox(height: Spacing.formGap),
           ] else if (_view.expired) ...<Widget>[
             SoftNote(
               tone: NoteTone.warning,
-              title: 'Nag-expire na ang code. ',
-              message: _view.attemptsRemaining == null
-                  ? 'Magpadala ng bago. May 5 subok ka ulit.'
-                  : 'Magpadala ng bago. May ${_view.attemptsRemaining} '
-                        'subok ka ulit.',
+              title: strings.authResetExpiredTitle,
+              message: strings.authResetExpiredBody(
+                _view.attemptsRemaining ?? 5,
+              ),
             ),
             const SizedBox(height: Spacing.formGap),
           ] else if (_view.unavailable) ...<Widget>[
-            const SoftNote(
+            SoftNote(
               tone: NoteTone.error,
-              title: 'Subukang muli. ',
-              message: CodeAttemptView.unavailableCopy,
+              title: strings.authResetUnavailableTitle,
+              message: strings.authCodeServiceUnavailable,
             ),
             const SizedBox(height: Spacing.formGap),
           ],
@@ -281,11 +285,11 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
             runSpacing: Spacing.xs,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
-              CodeExpiryChip(label: 'Mag-e-expire sa $_expiryLabel'),
+              CodeExpiryChip(label: strings.authResetExpiresIn(_expiryLabel)),
               CodeResendButton(
                 label: _canResend
-                    ? 'Ipadala muli'
-                    : 'Ipadala muli sa $_resendLabel',
+                    ? strings.authResetResend
+                    : strings.authResetResendIn(_resendLabel),
                 onPressed: _canResend ? _resend : null,
               ),
             ],
@@ -376,7 +380,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
         ? CodeExchangeRules.sampleConfirm
         : _confirm.text;
     if (password != confirm) {
-      setState(() => _matchError = 'Hindi tugma ang password. Pakiulit.');
+      setState(() => _matchError = AppStrings.of(context).authResetMismatch);
       return;
     }
     if (!CodeExchangeRules.acceptablePassword(password)) {
@@ -405,12 +409,15 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                 false);
         final bool stillValid =
             widget.draft?.grant?.expiredAt(DateTime.now()) == false;
+        final AppStrings strings = AppStrings.of(context);
         setState(() {
           _busy = false;
           _matchError = !weak && stillValid && password != confirm
-              ? 'Hindi tugma ang password. Pakiulit.'
+              ? strings.authResetMismatch
               : null;
-          _saveFailure = weak ? null : resetSaveFailureWords(failure);
+          _saveFailure = weak
+              ? null
+              : localisedResetSaveFailure(strings, failure);
         });
     }
   }
@@ -431,9 +438,10 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
     final bool matched =
         !mismatch && password.isNotEmpty && password == confirm;
     final bool live = widget.fixture == SetPasswordFixture.live && !expired;
+    final AppStrings strings = AppStrings.of(context);
     return AuthFormPage(
-      title: 'Gumawa ng bagong password',
-      subtitle: 'Para sa $_email. Gamitin ito sa susunod mong pag-sign in.',
+      title: strings.authResetNewPasswordTitle,
+      subtitle: strings.authResetNewPasswordSubtitle(_email),
       onBack: () => context.canPop()
           ? context.pop()
           : context.goNamed(AppRoute.forgotPassword.routeName),
@@ -441,11 +449,13 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           PrimaryButton(
-            label: expired ? 'Humingi ng bagong code' : 'I-save ang password',
+            label: expired
+                ? strings.authRequestNewCode
+                : strings.authResetSavePassword,
             onPressed: _busy ? null : _save,
           ),
           AuthLink(
-            'Bumalik sa sign in',
+            strings.authResetBackToSignIn,
             onPressed: () => context.goNamed(AppRoute.signIn.routeName),
           ),
         ],
@@ -457,23 +467,21 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
             SoftNote(
               key: const Key('reset-save-failure'),
               tone: NoteTone.error,
-              title: 'Hindi pa napalitan ang password. ',
+              title: strings.authResetNotChangedTitle,
               message: why,
             ),
             const SizedBox(height: Spacing.formGap),
           ],
           if (expired) ...<Widget>[
-            const SoftNote(
+            SoftNote(
               tone: NoteTone.error,
-              title: 'Nag-expire na ang reset link mo. ',
-              message:
-                  'Valid lang ito nang 15 minuto. Humingi ng bagong code '
-                  'para makapagpatuloy.',
+              title: strings.authResetLinkExpiredTitle,
+              message: strings.authResetLinkExpiredBody,
             ),
             const SizedBox(height: Spacing.formGap),
           ],
           AuthField(
-            label: 'Bagong password *',
+            label: strings.authResetNewPasswordLabel,
             controller: _password,
             icon: TaytayIcons.lock,
             obscure: !_showPassword,
@@ -493,13 +501,13 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
           ),
           const SizedBox(height: Spacing.formGap),
           AuthField(
-            label: 'Ulitin ang bagong password *',
+            label: strings.authResetConfirmLabel,
             controller: _confirm,
             icon: TaytayIcons.lock,
             obscure: !_showConfirm,
             enabled: live,
-            error: mismatch ? 'Hindi tugma ang password. Pakiulit.' : null,
-            hint: matched || _sampleExpired ? 'Tugma ang password' : null,
+            error: mismatch ? strings.authResetMismatch : null,
+            hint: matched || _sampleExpired ? strings.authResetMatched : null,
             autofillHints: const <String>[AutofillHints.newPassword],
             onChanged: (_) => setState(() => _matchError = null),
             trailing: ShowPasswordToggle(
@@ -513,8 +521,22 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
   }
 }
 
+/// What a refused reset says, in the device's language: what happened and what
+/// to do, never a code. The screen's way to [resetSaveFailureWords].
+String localisedResetSaveFailure(AppStrings strings, AppFailure failure) =>
+    switch (failure) {
+      NetworkFailure() || TimeoutFailure() => strings.authResetFailOffline,
+      RateLimitedFailure() => strings.authResetFailRateLimited,
+      ValidationFailure(:final fieldErrors)
+          when fieldErrors.containsKey('reset_token') =>
+        strings.authResetFailLinkUsed,
+      ValidationFailure() => strings.authResetFailWeak,
+      _ => strings.authResetFailOther,
+    };
+
 /// What a refused reset says, in the flow's Filipino (D-236): what happened
-/// and what to do, never a code.
+/// and what to do, never a code. The no-context default; the screen reads
+/// [localisedResetSaveFailure].
 String resetSaveFailureWords(AppFailure failure) => switch (failure) {
   NetworkFailure() || TimeoutFailure() =>
     'Walang koneksyon. Ikonekta ang telepono at subukang muli.',
@@ -535,24 +557,21 @@ class PasswordUpdatedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     void signIn() => context.goNamed(AppRoute.signIn.routeName);
+    final AppStrings strings = AppStrings.of(context);
     return Scaffold(
       backgroundColor: BrandColors.white,
       body: SuccessScreen(
-        title: 'Na-update na ang password mo',
-        message:
-            'Gamitin ang bagong password sa susunod mong pag-sign in sa '
-            'Taytay LGUIDS.',
+        title: strings.authResetDoneTitle,
+        message: strings.authResetDoneBody,
         showBack: true,
         onBack: signIn,
-        body: const SoftNote(
+        body: SoftNote(
           tone: NoteTone.success,
           live: false,
-          title: 'Para sa iyong seguridad. ',
-          message:
-              'Kung hindi ikaw ang nagpalit ng password, tumawag sa '
-              'Municipal Hall o pumunta sa MSWDO.',
+          title: strings.authResetDoneSecurityTitle,
+          message: strings.authResetDoneSecurityBody,
         ),
-        primaryLabel: 'Mag-sign in',
+        primaryLabel: strings.authResetDoneSignIn,
         onPrimary: signIn,
       ),
     );

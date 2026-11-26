@@ -41,10 +41,10 @@ String issuanceFeeLine(int? feeCentavos) {
 
 /// Which files the office takes, from the server's own `accepts` block, so
 /// the sentence and the check that enforces it cannot disagree.
+///
+/// The English, no-context fallback; screens use `acceptedFilesText`.
 String acceptedFilesLine(UploadPolicy policy) {
-  final List<String> kinds = <String>[
-    for (final String type in policy.mimeTypes) ?_kindName(type),
-  ]..sort();
+  final List<String> kinds = acceptedFileKinds(policy);
   final String list = switch (kinds.length) {
     0 => 'a file',
     1 => kinds.first,
@@ -52,6 +52,13 @@ String acceptedFilesLine(UploadPolicy policy) {
   };
   return '$list, up to ${policy.maxMegabytes} MB each';
 }
+
+/// The names of the file types the office takes, sorted: `JPEG`, `PDF`,
+/// `PNG`. The same in every language, so the translated sentence reads them
+/// from here.
+List<String> acceptedFileKinds(UploadPolicy policy) =>
+    <String>[for (final String type in policy.mimeTypes) ?_kindName(type)]
+      ..sort();
 
 /// The name a resident knows a file type by. A type this build cannot name is
 /// left out of the sentence rather than shown as a wire value.

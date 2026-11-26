@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/design/typography.dart';
 import '../../core/haptics/app_haptics.dart';
+import '../../core/l10n/shared_copy.dart';
 import '../../core/result/result.dart';
 import '../../core/session/biometric_consent_controller.dart';
 import '../../features/citizen_api/domain/citizen_contract.dart';
+import '../../l10n/app_localizations.dart';
 import 'app_dialog.dart';
 import 'consent_check_card.dart';
 import 'legal_text_sheet.dart';
@@ -14,6 +16,10 @@ import 'soft_note.dart';
 /// The words of the selfie's consent, the in-person way and withdrawal, in
 /// one place so registration, verification and the consents screen say the
 /// same thing (D-209, D-210).
+///
+/// These are the English words, kept as the no-context fallback and for tests;
+/// a screen draws the `sharedBiometric…` strings of [AppStrings], which carry
+/// the same sentences in the reader's language (D-237).
 abstract final class BiometricConsentCopy {
   static const String dialogTitle = 'Your consent before a selfie';
 
@@ -119,7 +125,7 @@ Future<BiometricConsentChoice> ensureBiometricConsent(
   final BiometricConsentChoice? choice =
       await AppDialog.show<BiometricConsentChoice>(
         context: context,
-        title: BiometricConsentCopy.dialogTitle,
+        title: sharedStrings(context).sharedBiometricDialogTitle,
         builder: (BuildContext dialog) =>
             BiometricConsentPanel(controller: controller, status: status),
       );
@@ -171,21 +177,22 @@ class _BiometricConsentPanelState extends State<BiometricConsentPanel> {
     return ListenableBuilder(
       listenable: widget.controller,
       builder: (BuildContext context, Widget? _) {
+        final AppStrings strings = sharedStrings(context);
         final bool recording = widget.controller.isRecording;
         final AppFailure? failure = widget.controller.recordFailure;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            const SoftNote(
-              heading: BiometricConsentCopy.whatHeading,
-              message: BiometricConsentCopy.what,
+            SoftNote(
+              heading: strings.sharedBiometricWhatHeading,
+              message: strings.sharedBiometricWhat,
               live: false,
             ),
             const SizedBox(height: Spacing.lg),
             Semantics(
               header: true,
               child: Text(
-                BiometricConsentCopy.textHeading,
+                strings.sharedBiometricTextHeading,
                 style: AppTypography.sectionTitle.copyWith(
                   color: BrandColors.ink,
                 ),
@@ -193,14 +200,14 @@ class _BiometricConsentPanelState extends State<BiometricConsentPanel> {
             ),
             const SizedBox(height: Spacing.xs),
             Text(
-              BiometricConsentCopy.version(widget.status.version),
+              strings.sharedBiometricVersion(widget.status.version),
               style: AppTypography.small.copyWith(color: BrandColors.muted),
             ),
             const SizedBox(height: Spacing.sm),
             NoticeTextColumn(markdown: widget.status.text.bodyMarkdown),
             const SizedBox(height: Spacing.lg),
             Text(
-              BiometricConsentCopy.choice,
+              strings.sharedBiometricChoice,
               style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
             ),
             const SizedBox(height: Spacing.md),
@@ -210,15 +217,15 @@ class _BiometricConsentPanelState extends State<BiometricConsentPanel> {
               onChanged: recording
                   ? null
                   : (bool value) => setState(() => _ticked = value),
-              label: BiometricConsentCopy.tick,
+              label: strings.sharedBiometricTick,
             ),
             if (failure != null) ...<Widget>[
               const SizedBox(height: Spacing.md),
               SoftNote(
                 tone: NoteTone.error,
                 message: failure.outcomeUnknown
-                    ? BiometricConsentCopy.notConfirmed
-                    : BiometricConsentCopy.notRecorded,
+                    ? strings.sharedBiometricNotConfirmed
+                    : strings.sharedBiometricNotRecorded,
               ),
             ],
             const SizedBox(height: Spacing.lg),
@@ -226,15 +233,15 @@ class _BiometricConsentPanelState extends State<BiometricConsentPanel> {
               primary: DialogButton(
                 key: biometricConsentAgreeKey,
                 label: recording
-                    ? BiometricConsentCopy.recording
-                    : BiometricConsentCopy.agree,
+                    ? strings.sharedBiometricRecording
+                    : strings.sharedBiometricAgree,
                 loading: recording,
                 hapticIntent: HapticIntent.confirm,
                 onPressed: _ticked && !recording ? _agree : null,
               ),
               text: DialogButton(
                 key: biometricConsentDeclineKey,
-                label: BiometricConsentCopy.decline,
+                label: strings.sharedBiometricDecline,
                 onPressed: recording
                     ? null
                     : () => Navigator.of(
@@ -262,21 +269,22 @@ class InPersonVerificationNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = sharedStrings(context);
     final MunicipalOffice? known = office;
     final List<String> lines = <String>[
       if (known != null && known.name.trim().isNotEmpty) known.name.trim(),
       if (known != null && known.address.trim().isNotEmpty)
         known.address.trim(),
       if (known != null && known.hours.trim().isNotEmpty)
-        'Hours: ${known.hours.trim()}',
+        strings.sharedBiometricInPersonHours(known.hours.trim()),
       if (known != null && known.phone.trim().isNotEmpty)
-        'Phone: ${known.phone.trim()}',
+        strings.sharedBiometricInPersonPhone(known.phone.trim()),
     ];
     final String details = lines.isEmpty ? '' : '\n\n${lines.join('\n')}';
     return SoftNote(
       key: inPersonVerificationNoteKey,
-      heading: BiometricConsentCopy.inPersonHeading,
-      message: '${BiometricConsentCopy.inPerson}$details',
+      heading: strings.sharedBiometricInPersonHeading,
+      message: '${strings.sharedBiometricInPerson}$details',
       live: false,
     );
   }

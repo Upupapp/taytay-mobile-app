@@ -61,27 +61,81 @@ abstract final class ManilaTime {
     'Sun',
   ];
 
+  /// Filipino month abbreviations, as CLDR's `fil` locale writes them
+  /// (abbreviated, format context) — the same names Android and iOS print in
+  /// their own date pickers on a phone set to Filipino.
+  ///
+  /// The **order** of day, month and year does not change with the language:
+  /// only the words do. `05 Ago 2026` and `05 Aug 2026` are the same day, which
+  /// is the property this class exists to keep (see [formatDate]).
+  static const List<String> _monthsFil = <String>[
+    'Ene',
+    'Peb',
+    'Mar',
+    'Abr',
+    'May',
+    'Hun',
+    'Hul',
+    'Ago',
+    'Set',
+    'Okt',
+    'Nob',
+    'Dis',
+  ];
+
+  /// Filipino weekday abbreviations, Monday first, as CLDR's `fil` locale
+  /// writes them.
+  static const List<String> _weekdaysFil = <String>[
+    'Lun',
+    'Mar',
+    'Miy',
+    'Huw',
+    'Biy',
+    'Sab',
+    'Lin',
+  ];
+
+  /// Language code for which the month and weekday names are Filipino.
+  /// Anything else reads English, the app's fallback (`AppLocales`).
+  static const String filipinoLanguageCode = 'fil';
+
+  static List<String> _monthsFor(String languageCode) =>
+      languageCode == filipinoLanguageCode ? _monthsFil : _months;
+
+  static List<String> _weekdaysFor(String languageCode) =>
+      languageCode == filipinoLanguageCode ? _weekdaysFil : _weekdays;
+
   /// `05 Aug 2026`.
   ///
   /// Written out rather than numeric: `05/08/2026` is the fifth of August to a
   /// Filipino reader and the eighth of May to an American one, and a municipal
   /// schedule cannot afford that ambiguity.
-  static String formatDate(DateTime instant) {
+  ///
+  /// [languageCode] chooses only the month's **name** (`fil` gives `05 Ago
+  /// 2026`); it defaults to English for callers with no `BuildContext`. A
+  /// screen passes the reader's language through `manilaDate` in
+  /// `core/l10n/core_copy.dart` rather than reading the device locale here.
+  static String formatDate(DateTime instant, {String languageCode = 'en'}) {
     final manila = of(instant);
     final day = manila.day.toString().padLeft(2, '0');
-    return '$day ${_months[manila.month - 1]} ${manila.year}';
+    return '$day ${_monthsFor(languageCode)[manila.month - 1]} ${manila.year}';
   }
 
   /// `Wed 05 Aug 2026`.
-  static String formatDateWithWeekday(DateTime instant) {
+  static String formatDateWithWeekday(
+    DateTime instant, {
+    String languageCode = 'en',
+  }) {
     final manila = of(instant);
-    return '${_weekdays[manila.weekday - 1]} ${formatDate(instant)}';
+    return '${_weekdaysFor(languageCode)[manila.weekday - 1]} '
+        '${formatDate(instant, languageCode: languageCode)}';
   }
 
   /// `7:00 PM`.
   ///
   /// 12-hour with AM/PM, which is how time is spoken and written in the
-  /// Philippines.
+  /// Philippines. It takes no language: CLDR's `fil` writes `AM` and `PM` too,
+  /// so a Filipino reader sees the same characters an English one does.
   static String formatTime(DateTime instant) {
     final manila = of(instant);
     final hour24 = manila.hour;
@@ -96,8 +150,12 @@ abstract final class ManilaTime {
   }
 
   /// `Wed 05 Aug 2026, 7:00 PM PHT`.
-  static String formatDateTime(DateTime instant) =>
-      '${formatDateWithWeekday(instant)}, ${formatTime(instant)} $label';
+  static String formatDateTime(
+    DateTime instant, {
+    String languageCode = 'en',
+  }) =>
+      '${formatDateWithWeekday(instant, languageCode: languageCode)}, '
+      '${formatTime(instant)} $label';
 
   /// A start and an end, collapsed when they fall on the same Manila day.
   ///
@@ -105,8 +163,12 @@ abstract final class ManilaTime {
   /// `Wed 05 Aug 2026, 7:00 PM – Thu 06 Aug 2026, 1:00 AM PHT` across midnight.
   /// An event that runs past midnight is exactly the case a collapsed range
   /// would misreport, so the day is repeated when it changes.
-  static String formatRange(DateTime start, DateTime? end) {
-    if (end == null) return formatDateTime(start);
+  static String formatRange(
+    DateTime start,
+    DateTime? end, {
+    String languageCode = 'en',
+  }) {
+    if (end == null) return formatDateTime(start, languageCode: languageCode);
 
     final startManila = of(start);
     final endManila = of(end);
@@ -115,12 +177,16 @@ abstract final class ManilaTime {
         startManila.month == endManila.month &&
         startManila.day == endManila.day;
 
+    final String startDay = formatDateWithWeekday(
+      start,
+      languageCode: languageCode,
+    );
     if (sameDay) {
-      return '${formatDateWithWeekday(start)}, '
-          '${formatTime(start)} – ${formatTime(end)} $label';
+      return '$startDay, ${formatTime(start)} – ${formatTime(end)} $label';
     }
-    return '${formatDateWithWeekday(start)}, ${formatTime(start)} – '
-        '${formatDateWithWeekday(end)}, ${formatTime(end)} $label';
+    return '$startDay, ${formatTime(start)} – '
+        '${formatDateWithWeekday(end, languageCode: languageCode)}, '
+        '${formatTime(end)} $label';
   }
 
   /// Whether [instant] is in the past relative to [now].

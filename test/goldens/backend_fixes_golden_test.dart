@@ -7,7 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:taytay_resident/core/design/app_theme.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/features/credential/presentation/digital_id_screen.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 
 import '../../tool/golden_compare.dart';
 
@@ -49,6 +51,8 @@ Future<img.Image> paintDigitalId(WidgetTester tester) async {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
         home: const RepaintBoundary(
           key: ValueKey<String>('backend-fix-frame'),
           child: DigitalIdScreen(),

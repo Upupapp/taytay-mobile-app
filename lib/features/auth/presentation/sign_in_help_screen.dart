@@ -5,6 +5,7 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/settings_list.dart';
 import '../../../shared/widgets/soft_note.dart';
@@ -37,84 +38,65 @@ class SignInHelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     // The form / notice pattern: the wave header with back over the white
     // page. Nothing here collects anything; it points at reset and explains.
     return AuthFormPage(
-      title: 'Forgot your password?',
-      subtitle: 'Sign-in help',
+      title: strings.authHelpTitle,
+      subtitle: strings.authHelpSubtitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Text(
-            'Reset it from the sign-in screen. We send a code to the email '
-            'or mobile number on the account, and we never say whether that '
-            'account exists.',
+            strings.authHelpIntro,
             style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
           ),
           const SizedBox(height: Spacing.md),
           FilledButton(
             onPressed: () => context.goNamed(AppRoute.forgotPassword.routeName),
-            child: const Text('Reset your password'),
+            child: Text(strings.authResetTitle),
           ),
           const SizedBox(height: Spacing.formGap),
-          const _HelpItem(
+          _HelpItem(
             icon: TaytayIcons.messageCircle,
-            title: 'The code did not arrive',
-            body:
-                'Check that you typed the number correctly, and that your '
-                'phone has signal. Messages can take a few minutes. You can '
-                'ask for a new code from the sign-in screen.',
+            title: strings.authHelpNoCodeTitle,
+            body: strings.authHelpNoCodeBody,
           ),
-          const _HelpItem(
+          _HelpItem(
             icon: TaytayIcons.timer,
-            title: 'The code did not work',
-            body:
-                'Codes are short-lived and single-use. Ask for a new one and '
-                'enter it as soon as it arrives.',
+            title: strings.authHelpCodeFailedTitle,
+            body: strings.authHelpCodeFailedBody,
           ),
-          const _HelpItem(
+          _HelpItem(
             icon: TaytayIcons.clock,
-            title: 'It says too many attempts',
-            body:
-                'Taytay LGU limits sign-in attempts to protect your account. '
-                'Wait a little while, then try again. Nothing is wrong with '
-                'your account.',
+            title: strings.authHelpTooManyTitle,
+            body: strings.authHelpTooManyBody,
           ),
-          const _HelpItem(
+          _HelpItem(
             icon: TaytayIcons.smartphone,
-            title: 'You no longer have that number',
-            body:
-                'Changing the number on an account is an identity decision, '
-                'so Taytay LGU makes it in person. Visit the municipal hall '
-                'with a valid ID and ask to update your registered mobile '
-                'number. You do not need this app or your old phone to do it.',
+            title: strings.authHelpLostNumberTitle,
+            body: strings.authHelpLostNumberBody,
           ),
-          const _HelpItem(
+          _HelpItem(
             icon: TaytayIcons.shieldAlert,
-            title: 'Someone else may have used your account',
-            body:
-                'Sign in and sign out of this device from Sign-in and '
-                'security. If you cannot sign in, report it at the municipal '
-                'hall — staff there can act on your account directly.',
+            title: strings.authHelpMisuseTitle,
+            body: strings.authHelpMisuseBody,
           ),
           const SizedBox(height: Spacing.sm),
-          const SoftNote(
+          SoftNote(
             tone: NoteTone.warning,
             live: false,
-            heading: 'What we will never ask you',
-            message:
-                'Taytay LGU staff will never ask for your one-time code, '
-                'by phone, text or message. If somebody asks you for it, '
-                'they are not from the LGU. Do not share it.',
+            heading: strings.authHelpNeverAskHeading,
+            message: strings.authHelpNeverAskBody,
           ),
           const SizedBox(height: Spacing.xl),
           FilledButton(
             onPressed: () => context.goNamed(AppRoute.signIn.routeName),
-            child: const Text('Back to sign in'),
+            child: Text(strings.authBackToSignIn),
           ),
           const SizedBox(height: Spacing.sm),
           AuthLink(
-            'Continue as guest',
+            strings.welcomeContinueAsGuest,
             muted: true,
             onPressed: () => context.goNamed(AppRoute.home.routeName),
           ),

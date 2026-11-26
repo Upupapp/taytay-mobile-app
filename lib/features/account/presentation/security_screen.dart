@@ -13,6 +13,7 @@ import '../../../core/result/result.dart';
 import '../../../core/session/app_lock_controller.dart';
 import '../../../core/session/local_authenticator.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
@@ -23,7 +24,6 @@ import '../../../shared/widgets/soft_page.dart';
 import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../auth/domain/device_session_repository.dart';
-import 'account_copy.dart';
 
 /// Sign-in and security: the controls a resident has over their own session.
 ///
@@ -55,7 +55,8 @@ class _SecurityScreenState extends State<SecurityScreen> {
 
     // Enabling requires passing the prompt once, so a resident cannot switch on
     // a lock their device turns out not to be able to satisfy.
-    final outcome = await lock.enable();
+    final String reason = AppStrings.of(context).coreAppLockEnableReason;
+    final outcome = await lock.enable(reason: reason);
     if (!mounted) return;
 
     await AppHaptics.fire(
@@ -65,7 +66,10 @@ class _SecurityScreenState extends State<SecurityScreen> {
       suppressed: reduced,
     );
     if (outcome != LocalUnlockOutcome.unlocked && mounted) {
-      Outcome.problem(context, _enableFailureCopy(outcome));
+      Outcome.problem(
+        context,
+        _enableFailureCopy(AppStrings.of(context), outcome),
+      );
     }
   }
 
@@ -89,11 +93,12 @@ class _SecurityScreenState extends State<SecurityScreen> {
   }
 
   Future<void> _revokeOne(DeviceSessionSummary session) async {
+    final AppStrings strings = AppStrings.of(context);
     final confirmed = await AppDialog.confirm(
       context: context,
-      title: AccountCopy.revokeOneTitle(session.label),
-      message: AccountCopy.revokeOne,
-      confirmLabel: AccountCopy.revokeOneAction,
+      title: strings.acctRevokeOneTitle(session.label),
+      message: strings.acctRevokeOneBody,
+      confirmLabel: strings.acctRevokeOneAction,
     );
     if (confirmed != true || !mounted) return;
 
@@ -113,11 +118,12 @@ class _SecurityScreenState extends State<SecurityScreen> {
   }
 
   Future<void> _revokeOthers() async {
+    final AppStrings strings = AppStrings.of(context);
     final confirmed = await AppDialog.confirm(
       context: context,
-      title: AccountCopy.revokeOthersTitle,
-      message: AccountCopy.revokeOthers,
-      confirmLabel: AccountCopy.revokeOthersAction,
+      title: strings.acctRevokeOthersTitle,
+      message: strings.acctRevokeOthersBody,
+      confirmLabel: strings.acctRevokeOthersAction,
     );
     if (confirmed != true || !mounted) return;
 
@@ -136,12 +142,13 @@ class _SecurityScreenState extends State<SecurityScreen> {
   Future<void> _signOut() async {
     final dependencies = AppDependencies.of(context);
     final reduced = Motion.reduced(context);
+    final AppStrings strings = AppStrings.of(context);
 
     final confirmed = await AppDialog.confirm(
       context: context,
-      title: AccountCopy.signOutTitle,
-      message: AccountCopy.signOut,
-      confirmLabel: AccountCopy.signOutAction,
+      title: strings.acctSignOutTitle,
+      message: strings.acctSignOutBody,
+      confirmLabel: strings.actionSignOut,
     );
     if (confirmed != true) return;
 
@@ -158,6 +165,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
   @override
   Widget build(BuildContext context) {
     final dependencies = AppDependencies.of(context);
+    final AppStrings strings = AppStrings.of(context);
     final lock = dependencies.appLock;
     final TextStyle lede = AppTypography.bodyStyle.copyWith(
       color: BrandColors.muted,
@@ -166,15 +174,11 @@ class _SecurityScreenState extends State<SecurityScreen> {
     return ListenableBuilder(
       listenable: lock,
       builder: (context, _) => SoftPage(
-        title: 'Sign-in and security',
+        title: strings.acctSecurityTitle,
         offlineBanner: true,
         children: <Widget>[
-          const SettingsSectionTitle('App lock'),
-          Text(
-            'Ask for your fingerprint, face or screen lock before showing '
-            'your details again after you leave the app.',
-            style: lede,
-          ),
+          SettingsSectionTitle(strings.acctAppLock),
+          Text(strings.acctAppLockLede, style: lede),
           const SizedBox(height: Spacing.md),
           SettingsList(
             children: <Widget>[
@@ -184,20 +188,15 @@ class _SecurityScreenState extends State<SecurityScreen> {
                     ? _toggleLock
                     : null,
                 icon: TaytayIcons.lock,
-                title: 'Lock this app',
-                detail: _availabilityCopy(lock),
+                title: strings.acctLockThisApp,
+                detail: _availabilityCopy(strings, lock),
               ),
             ],
           ),
           const SizedBox(height: Spacing.md),
-          const SoftNote(
-            message:
-                'This lock protects this phone only. It is not how Taytay '
-                'LGU knows who you are, and turning it on does not change '
-                'what your account can do.',
-          ),
+          SoftNote(message: strings.acctAppLockNote),
           const SizedBox(height: Spacing.xl),
-          const SettingsSectionTitle('Where you are signed in'),
+          SettingsSectionTitle(strings.acctWhereSignedIn),
           _DeviceSessions(
             loading: _loadingDevices,
             failure: _deviceFailure,
@@ -207,12 +206,8 @@ class _SecurityScreenState extends State<SecurityScreen> {
             onRevokeOthers: _revokeOthers,
           ),
           const SizedBox(height: Spacing.xl),
-          const SettingsSectionTitle('This device'),
-          Text(
-            'Signing out removes your session from this phone. Public '
-            'Taytay services stay available to you as a guest.',
-            style: lede,
-          ),
+          SettingsSectionTitle(strings.acctThisDevice),
+          Text(strings.acctSignOutLede, style: lede),
           const SizedBox(height: Spacing.md),
           OutlinedButton.icon(
             onPressed: _signOut,
@@ -222,36 +217,31 @@ class _SecurityScreenState extends State<SecurityScreen> {
               excludeSemantics: true,
               size: IconSizes.sm,
             ),
-            label: const Text('Sign out of this device'),
+            label: Text(strings.acctSignOutThisDevice),
           ),
         ],
       ),
     );
   }
 
-  static String _availabilityCopy(AppLockController lock) =>
+  static String _availabilityCopy(AppStrings strings, AppLockController lock) =>
       switch (lock.availability) {
         LocalUnlockAvailability.available when lock.isEnabled =>
-          'On. You will be asked to unlock when you come back to the app.',
-        LocalUnlockAvailability.available => 'Off.',
-        LocalUnlockAvailability.notEnrolled =>
-          'Set up a fingerprint, face unlock or screen lock in your phone '
-              'settings to use this.',
-        LocalUnlockAvailability.unsupported =>
-          'This phone cannot show an unlock prompt, so the app lock is not '
-              'available here.',
+          strings.acctLockOn,
+        LocalUnlockAvailability.available => strings.acctLockOff,
+        LocalUnlockAvailability.notEnrolled => strings.acctLockNotEnrolled,
+        LocalUnlockAvailability.unsupported => strings.acctLockUnsupported,
       };
 
-  static String _enableFailureCopy(LocalUnlockOutcome outcome) =>
-      switch (outcome) {
-        LocalUnlockOutcome.unlocked => '',
-        LocalUnlockOutcome.cancelled =>
-          'App lock was not turned on. You can try again any time.',
-        LocalUnlockOutcome.failed =>
-          'That did not match, so the app lock stays off.',
-        LocalUnlockOutcome.unavailable =>
-          'Your phone could not show the unlock prompt.',
-      };
+  static String _enableFailureCopy(
+    AppStrings strings,
+    LocalUnlockOutcome outcome,
+  ) => switch (outcome) {
+    LocalUnlockOutcome.unlocked => '',
+    LocalUnlockOutcome.cancelled => strings.acctLockCancelled,
+    LocalUnlockOutcome.failed => strings.acctLockFailed,
+    LocalUnlockOutcome.unavailable => strings.acctLockUnavailable,
+  };
 }
 
 /// The device list, or the honest reason there is not one.
@@ -280,11 +270,12 @@ class _DeviceSessions extends StatelessWidget {
   Widget build(BuildContext context) {
     final list = devices;
     final failure = this.failure;
+    final AppStrings strings = AppStrings.of(context);
 
     if (loading) {
-      return const LoadingSkeleton(
+      return LoadingSkeleton(
         count: 2,
-        semanticLabel: 'Checking where you are signed in',
+        semanticLabel: strings.acctCheckingSignIns,
       );
     }
 
@@ -293,11 +284,8 @@ class _DeviceSessions extends StatelessWidget {
       // endpoint — and it must not be reassuring. A resident who came here to
       // check for an intruder and is told nothing has learned nothing.
       return ErrorState(
-        title: 'Could not check your sign-ins',
-        message:
-            'We could not reach Taytay LGU IDS to list where your account is '
-            'signed in. Try again in a moment. Signing out here always ends '
-            'this device\'s session.',
+        title: strings.acctSignInsErrorTitle,
+        message: strings.acctSignInsErrorBody,
         onRetry: onLoad,
         boxed: true,
       );
@@ -309,14 +297,13 @@ class _DeviceSessions extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             Text(
-              'Check the devices your Taytay LGU IDS account is currently '
-              'signed in on.',
+              strings.acctCheckDevicesLede,
               style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
             ),
             const SizedBox(height: Spacing.md),
             FilledButton.tonal(
               onPressed: onLoad,
-              child: const Text('Check my devices'),
+              child: Text(strings.acctCheckMyDevices),
             ),
           ],
         ),
@@ -338,8 +325,8 @@ class _DeviceSessions extends StatelessWidget {
                     : SettingsTone.blue,
                 title: device.label,
                 detail: device.isCurrentDevice
-                    ? 'This device'
-                    : _lastSeenCopy(device.lastSeenAt),
+                    ? strings.acctThisDevice
+                    : _lastSeenCopy(strings, device.lastSeenAt),
                 // Only other sign-ins get a revoke action. Ending the current
                 // one is "sign out", which lives below with its own
                 // confirmation and its own local-first behaviour — offering it
@@ -349,7 +336,7 @@ class _DeviceSessions extends StatelessWidget {
                     ? null
                     : TextButton(
                         onPressed: () => onRevoke(device),
-                        child: const Text('Sign out'),
+                        child: Text(strings.actionSignOut),
                       ),
               ),
           ],
@@ -368,7 +355,7 @@ class _DeviceSessions extends StatelessWidget {
               excludeSemantics: true,
               size: IconSizes.sm,
             ),
-            label: Text('Sign out all ${others.length} other devices'),
+            label: Text(strings.acctSignOutOtherDevices(others.length)),
           ),
         ],
       ],
@@ -376,9 +363,9 @@ class _DeviceSessions extends StatelessWidget {
   }
 
   /// A last-seen time a resident can judge "is that me?" against.
-  static String _lastSeenCopy(DateTime? lastSeenAt) {
-    if (lastSeenAt == null) return 'Signed in';
+  static String _lastSeenCopy(AppStrings strings, DateTime? lastSeenAt) {
+    if (lastSeenAt == null) return strings.acctSignedIn;
     final DateTime seen = ManilaTime.of(lastSeenAt);
-    return 'Last used ${seen.day}/${seen.month}/${seen.year}';
+    return strings.acctLastUsed('${seen.day}/${seen.month}/${seen.year}');
   }
 }

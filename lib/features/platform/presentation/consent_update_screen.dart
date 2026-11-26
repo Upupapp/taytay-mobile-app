@@ -6,9 +6,11 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/consent_gate_controller.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/consent_check_card.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/icon_tile.dart';
@@ -109,30 +111,39 @@ class _ConsentUpdateBodyState extends State<_ConsentUpdateBody> {
   bool get _allTicked =>
       (!_terms || _termsTicked) && (!_privacy || _privacyTicked);
 
-  String get _title => switch ((_terms, _privacy)) {
-    (true, true) => 'The Terms of Use and the Privacy Notice have changed',
-    (true, false) => 'The Terms of Use have changed',
-    _ => 'The Privacy Notice has changed',
+  String _title(AppStrings strings) => switch ((_terms, _privacy)) {
+    (true, true) => strings.platformConsentBothChanged,
+    (true, false) => strings.platformConsentTermsChanged,
+    _ => strings.platformConsentPrivacyChanged,
   };
 
-  String _changedLine(ConsentText text) {
+  String _changedLine(AppStrings strings, ConsentText text) {
     final DateTime? on = review.updatedOn(text);
-    final String when = on == null ? '' : ' on ${ManilaTime.formatDate(on)}';
+    final String? when = on == null
+        ? null
+        : ManilaTime.formatDate(on, languageCode: strings.localeName);
     return switch (text) {
-      ConsentText.termsOfUse => 'The Terms of Use were updated$when.',
-      ConsentText.privacyNotice => 'The Privacy Notice was updated$when.',
+      ConsentText.termsOfUse =>
+        when == null
+            ? strings.platformTermsUpdated
+            : strings.platformTermsUpdatedOn(when),
+      ConsentText.privacyNotice =>
+        when == null
+            ? strings.platformPrivacyUpdated
+            : strings.platformPrivacyUpdatedOn(when),
     };
   }
 
   @override
   Widget build(BuildContext context) {
     final AppFailure? failed = failure;
+    final AppStrings strings = AppStrings.of(context);
     // The notice pattern (RegTerms): the wave header carries the title, with
     // no back control, because a resident cannot go around this screen while
     // signed in. The changes and the two ways on follow on the white page.
     return AuthFormPage(
       showBack: false,
-      title: _title,
+      title: _title(strings),
       subtitle: 'Bayan ng Taytay · Rizal',
       footer: Column(
         mainAxisSize: MainAxisSize.min,
@@ -140,14 +151,16 @@ class _ConsentUpdateBodyState extends State<_ConsentUpdateBody> {
         children: <Widget>[
           PrimaryButton(
             key: const Key('consent-agree'),
-            label: recording ? 'Recording your agreement…' : 'I agree',
+            label: recording
+                ? strings.platformConsentRecording
+                : strings.platformConsentAgree,
             onPressed: recording || !_allTicked ? null : widget.onAgree,
           ),
           if (failed != null && !recording) ...<Widget>[
             const SizedBox(height: Spacing.sm),
             SecondaryButton(
               key: const Key('consent-continue'),
-              label: 'Continue for now',
+              label: strings.platformConsentContinueForNow,
               onPressed: widget.onContinue,
             ),
           ],
@@ -160,7 +173,7 @@ class _ConsentUpdateBodyState extends State<_ConsentUpdateBody> {
               minimumSize: const Size(A11y.minTapTarget, A11y.minTapTarget),
               textStyle: AppTypography.link,
             ),
-            child: const Text('Sign out'),
+            child: Text(strings.actionSignOut),
           ),
         ],
       ),
@@ -188,7 +201,7 @@ class _ConsentUpdateBodyState extends State<_ConsentUpdateBody> {
                                   bottom: Spacing.xs,
                                 ),
                                 child: Text(
-                                  _changedLine(text),
+                                  _changedLine(strings, text),
                                   style: AppTypography.listTitle.copyWith(
                                     color: BrandColors.ink,
                                   ),
@@ -201,9 +214,7 @@ class _ConsentUpdateBodyState extends State<_ConsentUpdateBody> {
                 ),
                 const SizedBox(height: Spacing.sm),
                 Text(
-                  'Please read what changed. To keep using your account, '
-                  'tick each text below to agree to it. If you do not agree, '
-                  'you can sign out and keep using the app as a guest.',
+                  strings.platformConsentReadChanges,
                   style: AppTypography.bodyStyle.copyWith(
                     color: BrandColors.text,
                   ),
@@ -215,7 +226,7 @@ class _ConsentUpdateBodyState extends State<_ConsentUpdateBody> {
           if (_terms) ...<Widget>[
             SecondaryButton(
               key: const Key('consent-read-terms'),
-              label: 'Read the Terms of Use',
+              label: strings.platformReadTerms,
               onPressed: () => _read(context, ConsentText.termsOfUse),
             ),
             const SizedBox(height: Spacing.sm),
@@ -223,7 +234,7 @@ class _ConsentUpdateBodyState extends State<_ConsentUpdateBody> {
           if (_privacy) ...<Widget>[
             SecondaryButton(
               key: const Key('consent-read-privacy'),
-              label: 'Read the Privacy Notice',
+              label: strings.platformReadPrivacy,
               onPressed: () => _read(context, ConsentText.privacyNotice),
             ),
             const SizedBox(height: Spacing.sm),
@@ -236,7 +247,7 @@ class _ConsentUpdateBodyState extends State<_ConsentUpdateBody> {
               onChanged: recording
                   ? null
                   : (bool value) => setState(() => _termsTicked = value),
-              label: termsConsentLabel,
+              label: strings.sharedTermsConsentLabel,
             ),
           ],
           if (_privacy) ...<Widget>[
@@ -247,7 +258,7 @@ class _ConsentUpdateBodyState extends State<_ConsentUpdateBody> {
               onChanged: recording
                   ? null
                   : (bool value) => setState(() => _privacyTicked = value),
-              label: privacyConsentLabel,
+              label: strings.sharedPrivacyConsentLabel,
             ),
           ],
           if (failed != null) ...<Widget>[
@@ -260,20 +271,21 @@ class _ConsentUpdateBodyState extends State<_ConsentUpdateBody> {
   }
 
   void _read(BuildContext context, ConsentText text) {
+    final AppStrings strings = AppStrings.of(context);
     final (
       String title,
       PublishedText published,
       String pending,
     ) = switch (text) {
       ConsentText.termsOfUse => (
-        'Terms of Use',
+        strings.settingsConsentKindTerms,
         review.terms,
-        termsNotPublishedYet,
+        strings.sharedTermsNotPublishedYet,
       ),
       ConsentText.privacyNotice => (
-        'Privacy Notice',
+        strings.settingsConsentKindPrivacy,
         review.privacyNotice,
-        privacyNoticeNotPublishedYet,
+        strings.sharedPrivacyNoticeNotPublishedYet,
       ),
     };
     unawaited(
@@ -299,10 +311,12 @@ class _RecordFailure extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final String what = failure.outcomeUnknown
-        ? 'We could not confirm that your agreement was recorded. Agreeing '
-              'again is safe: it is recorded only once.'
-        : 'Your agreement was not recorded. ${failure.residentMessage}';
+        ? strings.platformAgreementUnconfirmed
+        : strings.platformAgreementNotRecorded(
+            localisedResidentMessage(context, failure),
+          );
     return Semantics(
       container: true,
       liveRegion: true,
@@ -326,8 +340,7 @@ class _RecordFailure extends StatelessWidget {
               ),
               const SizedBox(height: Spacing.xs),
               Text(
-                'You can also continue for now without it. The app will ask '
-                'again the next time you return to it.',
+                strings.platformConsentContinueNote,
                 style: AppTypography.listDetail.copyWith(
                   color: BrandColors.ink,
                   height: 1.45,
@@ -337,7 +350,7 @@ class _RecordFailure extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: Spacing.xs),
                   child: SelectableText(
-                    'Reference: $reference',
+                    strings.applyFailureReference(reference),
                     style: AppTypography.small.copyWith(
                       color: BrandColors.muted,
                     ),

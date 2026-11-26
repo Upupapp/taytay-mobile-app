@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
 import '../../core/haptics/app_haptics.dart';
+import '../../core/l10n/shared_copy.dart';
 import 'app_banner.dart';
 import 'app_dialog.dart';
 
@@ -42,8 +43,10 @@ abstract final class ConfirmSheet {
     required String confirmLabel,
     String? detail,
     bool isDestructive = true,
-    String cancelLabel = 'Keep it as it is',
+    String? cancelLabel,
   }) async {
+    final String cancel =
+        cancelLabel ?? sharedStrings(context).sharedConfirmKeepAsItIs;
     final confirmed = await AppDialog.show<bool>(
       context: context,
       title: title,
@@ -62,7 +65,7 @@ abstract final class ConfirmSheet {
           onPressed: () => Navigator.of(dialog).pop(true),
         ),
         text: DialogButton(
-          label: cancelLabel,
+          label: cancel,
           onPressed: () => Navigator.of(dialog).pop(false),
         ),
       ),
@@ -93,7 +96,7 @@ class _ConfirmBody extends StatelessWidget {
       children: <Widget>[
         AppBanner(
           tone: isDestructive ? BannerTone.warning : BannerTone.info,
-          title: 'What happens',
+          title: sharedStrings(context).sharedConfirmWhatHappens,
           message: consequence,
         ),
         if (detail != null) ...<Widget>[

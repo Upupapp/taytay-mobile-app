@@ -62,9 +62,10 @@ class _SectorApplyScreenState extends State<SectorApplyScreen> {
       ])
         if (controller.supports(source)) source,
     ];
+    final SectorsText words = SectorsText.of(context);
     final DocumentSource? source = await AppSheet.show<DocumentSource>(
       context: context,
-      title: SectorsCopy.sourceTitle,
+      title: words.sourceTitle,
       builder: (BuildContext sheet) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -73,7 +74,7 @@ class _SectorApplyScreenState extends State<SectorApplyScreen> {
             Padding(
               padding: const EdgeInsets.only(bottom: Spacing.sm),
               child: Text(
-                SectorsCopy.noSource,
+                words.noSource,
                 style: AppTypography.bodyStyle.copyWith(
                   color: BrandColors.text,
                 ),

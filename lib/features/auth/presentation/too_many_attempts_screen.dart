@@ -9,6 +9,7 @@ import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
@@ -85,11 +86,10 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
 
   bool get _ready => _remaining == Duration.zero;
 
+  /// The address the hold is for, or empty when it names none.
   String get _email {
     if (_painted) return AuthSample.email;
-    final String email = widget.hold?.email ?? '';
-    if (email.isEmpty) return 'your email';
-    return email;
+    return widget.hold?.email ?? '';
   }
 
   String get _clockLabel => CodeExchangeRules.holdClock(_remaining);
@@ -131,10 +131,13 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
           failure,
           now,
         );
+        final String unavailable = AppStrings.of(
+          context,
+        ).authCodeServiceUnavailable;
         setState(() {
           _busy = false;
           if (next.unavailable) {
-            _status = CodeAttemptView.unavailableCopy;
+            _status = unavailable;
             return;
           }
           if (next.limited && next.resendAt != null) {
@@ -143,7 +146,7 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
             _arm();
             return;
           }
-          _status = CodeAttemptView.unavailableCopy;
+          _status = unavailable;
         });
     }
   }
@@ -154,15 +157,18 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
   /// hold or hints at a way round it.
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final bool ready = _ready;
     final String? status = _status;
     final String lead = ready
-        ? 'Puwede ka nang humingi ng bagong code. Ipapadala namin ito sa '
-        : 'Para protektahan ang account mo, pansamantala naming itinigil ang '
-              'pagpapadala at pag-verify ng code para sa ';
+        ? strings.authHoldLeadReady
+        : strings.authHoldLeadLocked;
+    final String email = _email.isEmpty ? strings.authYourEmail : _email;
     return AuthFormPage(
-      title: ready ? 'Subukan ulit ngayon' : 'Masyadong maraming subok',
-      subtitle: ready ? 'Puwede na ulit' : 'Pansamantalang naka-lock',
+      title: ready ? strings.authHoldTitleReady : strings.authHoldTitleLocked,
+      subtitle: ready
+          ? strings.authHoldSubtitleReady
+          : strings.authHoldSubtitleLocked,
       onBack: () => context.canPop()
           ? context.pop()
           : context.goNamed(AppRoute.signIn.routeName),
@@ -173,7 +179,7 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
           if (ready)
             PrimaryButton(
               kind: TaytayButtonKind.signIn,
-              label: 'Humingi ng bagong code',
+              label: strings.authRequestNewCode,
               onPressed: _busy
                   ? null
                   : _painted
@@ -196,7 +202,7 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
             ),
           const SizedBox(height: Spacing.xs),
           AuthLink(
-            'Bumalik sa sign in',
+            strings.authResetBackToSignIn,
             onPressed: () => context.goNamed(AppRoute.signIn.routeName),
           ),
         ],
@@ -209,7 +215,7 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
               children: <InlineSpan>[
                 TextSpan(text: lead),
                 TextSpan(
-                  text: _email,
+                  text: email,
                   style: const TextStyle(fontWeight: AppTypography.black),
                 ),
                 const TextSpan(text: '.'),
@@ -221,13 +227,11 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
           _HoldClock(ready: ready, label: _clockLabel, remaining: _remaining),
           if (!ready) ...<Widget>[
             const SizedBox(height: Spacing.md),
-            const SoftNote(
+            SoftNote(
               tone: NoteTone.warning,
               live: false,
-              heading: 'Bakit ito nangyari?',
-              message:
-                  'Masyadong maraming maling code o hiling ng bagong code sa '
-                  'maikling oras. Hindi mo kailangang gumawa ng bagong account.',
+              heading: strings.authHoldWhyHeading,
+              message: strings.authHoldWhyBody,
             ),
           ],
         ],
@@ -252,10 +256,11 @@ class _HoldClock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final Color ink = ready ? BrandColors.green : BrandColors.goldInk;
     final String spoken = ready
-        ? 'Tapos na ang paghihintay. 00:00'
-        : 'Subukang muli sa $label';
+        ? strings.authHoldSpokenReady
+        : strings.authHoldSpokenWaiting(label);
     return Semantics(
       liveRegion: true,
       label: spoken,
@@ -282,7 +287,9 @@ class _HoldClock extends StatelessWidget {
                   const SizedBox(width: Spacing.sm - Spacing.xxs),
                   Flexible(
                     child: Text(
-                      ready ? 'Tapos na ang paghihintay' : 'Subukang muli sa',
+                      ready
+                          ? strings.authHoldClockReady
+                          : strings.authHoldClockWaiting,
                       textAlign: TextAlign.center,
                       style: AppTypography.label.copyWith(color: ink),
                     ),
@@ -334,7 +341,7 @@ class _LockedButton extends StatelessWidget {
         size: IconSizes.sm,
         color: BrandColors.muted,
       ),
-      label: const Text('Humingi ng bagong code'),
+      label: Text(AppStrings.of(context).authRequestNewCode),
     );
   }
 }

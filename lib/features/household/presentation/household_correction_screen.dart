@@ -8,6 +8,7 @@ import '../../../core/l10n/app_locales.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/resident_capability.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/form_page.dart';
@@ -103,9 +104,10 @@ class _HouseholdCorrectionScreenState extends State<HouseholdCorrectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return AuthFormPage(
-      title: 'Report an error',
-      subtitle: 'Household and family',
+      title: strings.hhReportError,
+      subtitle: strings.hhTitle,
       // The whole form, Send included, sits inside the gate: an account that
       // may not read the household record is not offered a way to report on
       // it either.
@@ -117,14 +119,13 @@ class _HouseholdCorrectionScreenState extends State<HouseholdCorrectionScreen> {
             Semantics(
               header: true,
               child: Text(
-                'What looks wrong?',
+                strings.hhFixQuestion,
                 style: AppTypography.pageTitle.copyWith(color: BrandColors.ink),
               ),
             ),
             const SizedBox(height: Spacing.xs),
             Text(
-              'Pick the closest one. Taytay LGU staff will check the record — '
-              'nothing changes until they do.',
+              strings.hhFixLead,
               style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
             ),
             const SizedBox(height: Spacing.lg),
@@ -162,57 +163,45 @@ class _HouseholdCorrectionScreenState extends State<HouseholdCorrectionScreen> {
             ),
 
             const SizedBox(height: Spacing.formGap),
-            const SoftNote(
+            SoftNote(
               tone: NoteTone.warning,
               live: false,
-              heading: 'Please do not type personal details here',
-              message:
-                  'This app asks only what kind of thing is wrong. Names, '
-                  'health information and reasons belong in the conversation '
-                  'with staff, who can record them properly and act on them.',
+              heading: strings.hhFixNoDetailsTitle,
+              message: strings.hhFixNoDetailsBody,
             ),
             const SizedBox(height: Spacing.md),
-            const SoftNote(
+            SoftNote(
               live: false,
-              heading: 'Bring it to the municipal hall',
-              message:
-                  'Household records are changed by Taytay LGU staff after '
-                  'they look at your documents. Visit the municipal hall with '
-                  'a valid ID — you do not need this app or your phone to be '
-                  'served there.',
+              heading: strings.hhFixHallTitle,
+              message: strings.hhFixHallBody,
             ),
 
             if (_sent) ...<Widget>[
               const SizedBox(height: Spacing.md),
-              const SoftNote(
+              SoftNote(
                 tone: NoteTone.success,
-                heading: 'Taytay LGU has your report',
-                message:
-                    'Staff will check the record. Nothing has been changed '
-                    'yet, and you will be told what they find.',
+                heading: strings.hhFixSentTitle,
+                message: strings.hhFixSentBody,
               ),
             ],
             if (_failure != null) ...<Widget>[
               const SizedBox(height: Spacing.md),
-              const SoftNote(
+              SoftNote(
                 tone: NoteTone.warning,
-                heading: 'Could not send your report',
-                message:
-                    'Taytay LGU has not switched on household reports in '
-                    'this app yet. Nothing was sent, and nothing has changed. '
-                    'The municipal hall can take it in person.',
+                heading: strings.hhFixFailedTitle,
+                message: strings.hhFixFailedBody,
               ),
             ],
 
             const SizedBox(height: Spacing.formGap),
             AppButton(
-              label: 'Send report',
+              label: strings.hhFixSend,
               loading: _sending,
               onPressed: _selected == null || _sending || _sent ? null : _send,
             ),
             const SizedBox(height: Spacing.sm),
             Text(
-              'Sending this does not change your household record.',
+              strings.hhFixNoChange,
               textAlign: TextAlign.center,
               style: AppTypography.small.copyWith(color: BrandColors.muted),
             ),

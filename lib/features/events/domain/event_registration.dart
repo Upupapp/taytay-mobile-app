@@ -205,6 +205,28 @@ enum RegistrationOutcome {
   couldNotSend,
 }
 
+/// Why the server turned a registration away ([RegistrationOutcome.refused]).
+///
+/// Held so the screen can say it in the resident's language: the English
+/// sentence stays on [RegistrationAttempt.residentMessage] as the no-context
+/// fallback (`registrationRefusalCopy`).
+enum RegistrationRefusal {
+  /// `403` naming verification: the event takes verified accounts only.
+  needsVerification,
+
+  /// Any other `403`.
+  notAllowed,
+
+  /// `404`: the event is no longer listed.
+  notListed,
+
+  /// `409`: the event is not taking registrations right now.
+  notTaking,
+
+  /// `422`: the registration could not be accepted as it was sent.
+  notAccepted,
+}
+
 /// The end of a registration attempt.
 @immutable
 class RegistrationAttempt {
@@ -213,13 +235,17 @@ class RegistrationAttempt {
     required this.residentMessage,
     this.registration,
     this.requestId,
+    this.refusal,
   });
 
   final RegistrationOutcome outcome;
 
   /// Fixed app copy chosen by [outcome] — never the server's operator-facing
-  /// `message`.
+  /// `message`. English; a screen localises it by [outcome] and [refusal].
   final String residentMessage;
+
+  /// Which refusal, when [outcome] is [RegistrationOutcome.refused].
+  final RegistrationRefusal? refusal;
 
   /// Present when the server issued one.
   final EventRegistration? registration;

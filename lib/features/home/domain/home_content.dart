@@ -39,6 +39,29 @@ class HomeSlide {
 }
 
 /// A row in the Home news teaser.
+/// The eyebrow and button a slide from a `GET /home` banner carries, named
+/// by where it goes. English: the no-context fallback. Home draws them in
+/// the resident's language (`homeSlideEyebrow`, `homeSlideAction`).
+abstract final class HomeSlideWords {
+  static String eyebrowFor(String route) => switch (route) {
+    'news' => 'BALITA',
+    'programs' => 'TULONG',
+    'services' => 'DIRECTORY',
+    'hotlines' => 'HOTLINES',
+    'events' => 'EVENTS',
+    _ => 'TAYTAY LGU',
+  };
+
+  static String actionFor(String route) => switch (route) {
+    'news' => 'Read Balita',
+    'programs' => 'Explore Tulong',
+    'services' => 'Open Directory',
+    'hotlines' => 'See hotlines',
+    'events' => 'See events',
+    _ => 'Open',
+  };
+}
+
 @immutable
 class HomeNewsItem {
   const HomeNewsItem({

@@ -59,7 +59,8 @@ void main() {
     final String screen = File(
       'lib/features/verification/presentation/verification_screen.dart',
     ).readAsStringSync();
-    expect(screen, contains('_noteLabel'));
+    // The category names are localised since D-237 (was `_noteLabel`).
+    expect(screen, contains('verificationItemCategoryLabel'));
     expect(screen, contains('allowsEdit'));
     expect(screen, isNot(contains("['notes']")));
   });

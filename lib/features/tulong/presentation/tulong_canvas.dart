@@ -8,6 +8,7 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/directory_copy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../l10n/app_localizations.dart';
@@ -48,7 +49,7 @@ class TulongCanvas extends StatelessWidget {
     this.services = const <SocialService>[],
     this.service,
     this.saved = const <SocialService>[],
-    this.offlineSubtitle = 'Social services · MSWDO',
+    this.offlineSubtitle,
     this.emptyMessage,
     this.staleSince,
     this.partialCatalogueCount,
@@ -78,8 +79,9 @@ class TulongCanvas extends StatelessWidget {
   final List<SocialService> saved;
 
   /// The offline header's second line. A live failure passes the list
-  /// subtitle instead of inventing an office.
-  final String offlineSubtitle;
+  /// subtitle instead of inventing an office. Null says "Social services ·
+  /// MSWDO" in the resident's language.
+  final String? offlineSubtitle;
 
   /// The empty state's title when a search matches nothing.
   final String? emptyMessage;
@@ -130,6 +132,10 @@ class TulongCanvas extends StatelessWidget {
   /// `GET /services/{slug}/hero` when the service has a hero URL.
   /// Null on a dev mock. The list does not paint it.
   final MediaBytesLoader? loadHero;
+
+  // The English words below are kept for tests and as the no-context
+  // fallback. The page draws the same sentences from [AppStrings]
+  // (`tulong…`).
 
   /// The tab's second line.
   static const String listSubtitle = 'Social services & programmes';
@@ -198,6 +204,7 @@ class _ListPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final TulongCanvas c = canvas;
     final bool offline = c.frame == TulongFrame.offline;
+    final AppStrings strings = AppStrings.of(context);
     return GlassBackground(
       child: ListView(
         // No per-item repaint / semantics wrappers: they hit-test only their
@@ -211,20 +218,22 @@ class _ListPage extends StatelessWidget {
           BlueHeader(
             overlap: true,
             leading: const HeaderSeal(),
-            title: 'Tulong',
-            subtitle: offline ? c.offlineSubtitle : TulongCanvas.listSubtitle,
+            title: strings.navTulong,
+            subtitle: offline
+                ? c.offlineSubtitle ?? strings.tulongSubtitleMswdo
+                : strings.tulongSubtitle,
             actions: <Widget>[
               HeaderIconButton(
                 key: const Key('tulong-bell'),
                 icon: TaytayIcons.bell,
-                semanticLabel: 'Notifications',
+                semanticLabel: strings.dirNotifications,
                 onPressed: c.onBell,
               ),
             ],
             bottom: offline
                 ? null
                 : HeaderSearchField(
-                    hint: 'Search programmes',
+                    hint: strings.tulongSearchHint,
                     fieldKey: const Key('tulong-search'),
                     controller: c.searchController,
                     onChanged: c.onSearch,
@@ -233,7 +242,7 @@ class _ListPage extends StatelessWidget {
           GlassOverlap(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
-              child: _body(c),
+              child: _body(strings, c),
             ),
           ),
         ],
@@ -241,11 +250,11 @@ class _ListPage extends StatelessWidget {
     );
   }
 
-  Widget _body(TulongCanvas c) {
+  Widget _body(AppStrings strings, TulongCanvas c) {
     return switch (c.frame) {
-      TulongFrame.loading => const LoadingSkeleton(
+      TulongFrame.loading => LoadingSkeleton(
         count: 6,
-        semanticLabel: 'Loading programmes',
+        semanticLabel: strings.tulongLoading,
       ),
       TulongFrame.offline => _OfflineBody(
         saved: c.saved,
@@ -293,6 +302,7 @@ class _ListBody extends StatelessWidget {
     final DateTime? stale = staleSince;
     final VoidCallback? retry = onRetry;
     final int? partial = partialCount;
+    final AppStrings strings = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -300,8 +310,13 @@ class _ListBody extends StatelessWidget {
           SoftNote(
             key: TulongCanvas.staleNoteKey,
             tone: NoteTone.warning,
-            heading: TulongCanvas.staleHeading,
-            message: TulongCanvas.staleMessage(stale),
+            heading: strings.tulongStaleHeading,
+            message: strings.tulongStaleMessage(
+              ManilaTime.formatDateTime(
+                stale,
+                languageCode: Localizations.localeOf(context).languageCode,
+              ),
+            ),
             action: retry == null
                 ? null
                 : PillButtonRow(
@@ -309,7 +324,9 @@ class _ListBody extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     actions: <PillAction>[
                       PillAction(
-                        label: retrying ? 'Trying again…' : 'Try again',
+                        label: retrying
+                            ? strings.tulongTryingAgain
+                            : strings.actionTryAgain,
                         onPressed: retrying ? null : retry,
                         buttonKey: TulongCanvas.staleRetryKey,
                       ),
@@ -321,7 +338,7 @@ class _ListBody extends StatelessWidget {
         if (partial != null) ...<Widget>[
           SoftNote(
             key: TulongCanvas.incompleteNoteKey,
-            message: TulongCanvas.incompleteMessage(partial),
+            message: strings.tulongIncomplete(partial),
             live: false,
           ),
           const SizedBox(height: Spacing.section),
@@ -340,15 +357,13 @@ class _ListBody extends StatelessWidget {
         else if (noMatch != null)
           EmptyState(
             title: noMatch,
-            message:
-                'Try another word, or clear the search to see every '
-                'programme.',
+            message: strings.tulongNoMatchBody,
             boxed: true,
           )
         else
-          const EmptyState(
-            title: 'No programmes listed yet',
-            message: 'Programme information from Taytay LGU will appear here.',
+          EmptyState(
+            title: strings.tulongEmptyTitle,
+            message: strings.tulongEmptyBody,
             boxed: true,
           ),
         _Note(
@@ -375,8 +390,8 @@ class _Note extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(Spacing.xs, Spacing.md, Spacing.xs, 0),
       child: Text(
         takesApplications
-            ? TulongCanvas.noteSomeApply
-            : TulongCanvas.noteInformationOnly,
+            ? AppStrings.of(context).tulongNoteSomeApply
+            : AppStrings.of(context).tulongNoteInformationOnly,
         style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
       ),
     );
@@ -467,6 +482,7 @@ class _OfflineBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final ValueChanged<SocialService>? open = onOpen;
     final AppFailure? failure = this.failure;
+    final AppStrings strings = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -479,18 +495,17 @@ class _OfflineBody extends StatelessWidget {
           )
         else
           ErrorState(
-            title: 'Programme pages need a connection',
+            title: strings.tulongOfflineTitle,
             message: saved.isEmpty
-                ? "We couldn't load the latest programme information."
-                : "We couldn't load the latest programme information. Pages "
-                      'you opened before are saved below.',
+                ? strings.tulongOfflineBody
+                : strings.tulongOfflineBodySaved,
             onRetry: onRetry,
             offline: true,
             boxed: true,
           ),
         if (saved.isNotEmpty) ...<Widget>[
           const SizedBox(height: Spacing.formGap),
-          const SettingsSectionTitle('Saved pages'),
+          SettingsSectionTitle(strings.tulongSavedPages),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               Spacing.xxs,
@@ -499,7 +514,7 @@ class _OfflineBody extends StatelessWidget {
               Spacing.sm,
             ),
             child: Text(
-              'Showing what was saved on this phone',
+              strings.dirOfflineShowingSaved,
               style: AppTypography.listDetail.copyWith(
                 color: BrandColors.muted,
               ),
@@ -553,20 +568,29 @@ class _DetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final String? url = service.heroUrl;
     final MediaBytesLoader? load = loadHero;
-    if (url == null || url.isEmpty || load == null) return _page(null);
-    return MediaBytesHost(id: service.slug, load: load, builder: _page);
+    final AppStrings strings = AppStrings.of(context);
+    if (url == null || url.isEmpty || load == null) {
+      return _page(strings, null);
+    }
+    return MediaBytesHost(
+      id: service.slug,
+      load: load,
+      builder: (Uint8List? bytes) => _page(strings, bytes),
+    );
   }
 
-  Widget _page(Uint8List? bytes) {
+  Widget _page(AppStrings strings, Uint8List? bytes) {
     final Widget sheet = DetailSheet(
       children: service.showsFeaturedLayout
           ? _featured(
+              strings,
               service,
               onShare,
               onApply: onApply,
               accountLinked: accountLinked,
             )
           : _standard(
+              strings,
               service,
               onCall: onCall,
               onDirections: onDirections,
@@ -614,6 +638,7 @@ class _DetailPage extends StatelessWidget {
 /// programme is, who can avail, the requirements (information only), the
 /// office's facts and the legal source.
 List<Widget> _standard(
+  AppStrings strings,
   SocialService service, {
   VoidCallback? onCall,
   VoidCallback? onDirections,
@@ -624,7 +649,7 @@ List<Widget> _standard(
 }) {
   final String? eligibility = service.eligibility;
   final String? source = service.legalBasis;
-  final List<_Fact> facts = _factsOf(service);
+  final List<_Fact> facts = _factsOf(strings, service);
   return <Widget>[
     _SheetTitle(service: service, title: service.name),
     const SizedBox(height: Spacing.formGap),
@@ -634,20 +659,20 @@ List<Widget> _standard(
       actions: <PillAction>[
         PillAction(
           buttonKey: const Key('tulong-call'),
-          label: 'Call',
+          label: strings.dirActionCall,
           glyph: TaytayGlyph.phone,
           primary: true,
           onPressed: onCall,
         ),
         PillAction(
           buttonKey: const Key('tulong-directions'),
-          label: 'Directions',
+          label: strings.dirActionDirections,
           glyph: TaytayGlyph.pin,
           onPressed: onDirections,
         ),
         PillAction(
           buttonKey: const Key('tulong-message'),
-          label: 'Message',
+          label: strings.dirActionMessage,
           glyph: TaytayGlyph.chat,
           onPressed: onMessage,
         ),
@@ -663,7 +688,7 @@ List<Widget> _standard(
     ],
     if (eligibility != null && eligibility.isNotEmpty) ...<Widget>[
       const SizedBox(height: Spacing.formGap),
-      const _SectionTitle('Who can avail'),
+      _SectionTitle(strings.tulongWhoCanAvail),
       const SizedBox(height: Spacing.xs + Spacing.xxs),
       _BodyText(eligibility),
     ],
@@ -673,11 +698,11 @@ List<Widget> _standard(
         header: true,
         child: Text.rich(
           TextSpan(
-            text: 'Requirements ',
+            text: '${strings.tulongRequirements} ',
             style: AppTypography.sectionTitle.copyWith(color: BrandColors.ink),
             children: <InlineSpan>[
               TextSpan(
-                text: '(information only)',
+                text: strings.tulongInformationOnly,
                 style: AppTypography.listDetail.copyWith(
                   fontWeight: AppTypography.medium,
                   color: BrandColors.muted,
@@ -715,6 +740,7 @@ List<Widget> _standard(
 /// The featured page: the headline, what it is, how to claim, when and
 /// whom to ask, and Share.
 List<Widget> _featured(
+  AppStrings strings,
   SocialService service,
   VoidCallback? onShare, {
   VoidCallback? onApply,
@@ -733,7 +759,7 @@ List<Widget> _featured(
     ],
     if (steps.isNotEmpty) ...<Widget>[
       const SizedBox(height: Spacing.formGap),
-      const _SectionTitle('How to claim'),
+      _SectionTitle(strings.tulongHowToClaim),
       for (var i = 0; i < steps.length; i++)
         _StepLine(number: i + 1, text: steps[i]),
     ],
@@ -747,13 +773,13 @@ List<Widget> _featured(
       if (schedule != null)
         DetailFactRow(
           icon: TaytayIcons.calendar,
-          label: 'Schedule',
+          label: strings.tulongSchedule,
           value: schedule,
         ),
       if (questions != null)
         DetailFactRow(
           icon: TaytayIcons.phone,
-          label: presentation?.questionsLabel ?? 'Questions',
+          label: presentation?.questionsLabel ?? strings.tulongQuestions,
           value: questions,
         ),
     ],
@@ -768,7 +794,7 @@ List<Widget> _featured(
         excludeSemantics: true,
         size: IconSizes.sm,
       ),
-      label: Text(presentation?.shareLabel ?? 'Share with a family member'),
+      label: Text(presentation?.shareLabel ?? strings.tulongShare),
     ),
   ];
 }
@@ -1040,13 +1066,13 @@ class _Fact {
   final bool office;
 }
 
-List<_Fact> _factsOf(SocialService service) {
+List<_Fact> _factsOf(AppStrings strings, SocialService service) {
   final List<_Fact> rows = <_Fact>[];
   final String? office = service.officeName;
   if (office != null && office.isNotEmpty) {
     rows.add(
       _Fact(
-        label: 'Office',
+        label: strings.tulongFactOffice,
         value: office,
         icon: TaytayIcons.handHeart,
         office: service.officeSlug != null,
@@ -1068,12 +1094,18 @@ List<_Fact> _factsOf(SocialService service) {
   );
   final String? hours = service.officeHours;
   if (!hoursContact && hours != null && hours.isNotEmpty) {
-    rows.add(_Fact(label: 'Hours', value: hours, icon: TaytayIcons.clock));
+    rows.add(
+      _Fact(
+        label: strings.tulongFactHours,
+        value: hours,
+        icon: TaytayIcons.clock,
+      ),
+    );
   }
   for (final ServiceContact contact in service.contacts) {
     rows.add(
       _Fact(
-        label: contact.displayLabel,
+        label: serviceContactLabel(strings, contact),
         value: contact.value,
         icon: _contactIcon(contact),
       ),

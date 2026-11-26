@@ -4,18 +4,15 @@ import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
 import '../../core/design/typography.dart';
+import '../../core/l10n/shared_copy.dart';
 
 /// Marks a fact the LGU has not confirmed. The word SAMPLE is the signal;
 /// the gold is only a repeat of it.
 class SampleTag extends StatelessWidget {
-  const SampleTag({
-    super.key,
-    this.label = 'SAMPLE',
-    this.lineHeight,
-    this.lineSlot,
-  });
+  const SampleTag({super.key, this.label, this.lineHeight, this.lineSlot});
 
-  final String label;
+  /// Null says SAMPLE in the reader's language.
+  final String? label;
 
   /// CSS `.sample` sets no line-height, so the chip's text is the font's
   /// normal 1.26. Callers that sit in a measured line pass that. The default
@@ -47,7 +44,7 @@ class SampleTag extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
             child: _SampleLabel(
-              label: label,
+              label: label ?? sharedStrings(context).sharedSampleTag,
               lineHeight: lineHeight,
               lineSlot: lineSlot,
             ),

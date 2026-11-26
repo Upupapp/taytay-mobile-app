@@ -55,6 +55,7 @@ import '../../features/verification/presentation/kyc_claim_screen.dart';
 import '../../features/verification/presentation/profile_wizard_page.dart';
 import '../../features/verification/presentation/profile_wizard_screen.dart';
 import '../../features/verification/presentation/verification_screen.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/blue_header.dart';
 import '../../shared/widgets/error_state.dart';
 import '../../shared/widgets/taytay_glyph.dart';
@@ -693,21 +694,22 @@ class _RouteNotFoundScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // The notice pattern: the blue header with back, then the state panel on
     // the screen background.
+    final strings = AppStrings.of(context);
     return Scaffold(
       backgroundColor: BrandColors.background,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const BlueHeader(title: 'Page not found', showBack: true),
+          BlueHeader(title: strings.coreRouteNotFoundTitle, showBack: true),
           Expanded(
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(Spacing.xl),
                 child: StatePanel(
                   art: const IllustrationArt(TaytayIllustration.noResults),
-                  title: 'That link does not lead anywhere in this app.',
+                  title: strings.coreRouteNotFoundBody,
                   action: StateActionButton(
-                    label: 'Go to home',
+                    label: strings.coreRouteGoHome,
                     primary: true,
                     onPressed: () => context.goNamed(AppRoute.home.routeName),
                   ),

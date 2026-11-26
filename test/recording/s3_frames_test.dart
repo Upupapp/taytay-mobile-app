@@ -9,11 +9,13 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/features/mock_data/data/mock/resident_record_mock.dart';
 import 'package:taytay_resident/features/verification/domain/verification_id_type.dart';
 import 'package:taytay_resident/features/verification/presentation/manila_stamp.dart';
 import 'package:taytay_resident/features/verification/presentation/profile_wizard_page.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 
 import '../support/unverified_gate_specimen.dart';
 
@@ -53,6 +55,8 @@ Future<void> _paint(WidgetTester tester, Widget child, String path) async {
         disableAnimations: true,
       ),
       child: MaterialApp(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
         home: RepaintBoundary(

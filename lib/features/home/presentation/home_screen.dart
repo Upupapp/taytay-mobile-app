@@ -15,6 +15,7 @@ import '../../../core/session/access_level.dart';
 import '../../../core/session/access_policy.dart';
 import '../../../core/session/session_controller.dart';
 import '../../../core/session/session_state.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
 import '../../citizen_api/domain/citizen_contract.dart';
 import '../../news/domain/announcement_repository.dart';
@@ -304,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveRefresh<HomeScreen> {
     ).externalLinks.dial(number);
     if (!mounted) return;
     if (outcome == LinkOutcome.unavailable) {
-      Outcome.problem(context, 'This phone has no app that can place a call.');
+      Outcome.problem(context, AppStrings.of(context).dirNoDialer);
     }
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/design/taytay_icons.dart';
 import '../../core/design/typography.dart';
+import '../../core/l10n/shared_copy.dart';
 import 'taytay_icon.dart';
 
 /// The meaning a banner carries.
@@ -146,7 +147,7 @@ class AppBanner extends StatelessWidget {
                     size: IconSizes.sm,
                   ),
                   color: foreground,
-                  tooltip: 'Dismiss',
+                  tooltip: sharedStrings(context).sharedBannerDismiss,
                   constraints: const BoxConstraints(
                     minWidth: A11y.minTapTarget,
                     minHeight: A11y.minTapTarget,

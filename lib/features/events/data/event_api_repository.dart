@@ -8,6 +8,7 @@ import '../../../core/api/paginated.dart';
 import '../../../core/result/result.dart';
 import '../../../core/telemetry/telemetry.dart';
 import '../domain/event_repository.dart';
+import '../domain/event_send_failure.dart';
 
 /// Talks to `events` and the registration routes beneath it (backend
 /// `580acbb`, DL-192; D-191).
@@ -223,7 +224,7 @@ class EventApiRepository implements EventRepository {
         );
         return Ok<RegistrationAttempt>(attempt);
       case Err<ApiEnvelope<_RegisterAnswer>>(:final failure):
-        final String? refusal = _refusalCopy(failure);
+        final RegistrationRefusal? refusal = _refusalOf(failure);
         // A timeout, a lost connection, a server fault or an unreadable answer
         // stays a failure. The caller keeps the key and says what it knows.
         if (refusal == null) return Err<RegistrationAttempt>(failure);
@@ -231,7 +232,8 @@ class EventApiRepository implements EventRepository {
         return Ok<RegistrationAttempt>(
           RegistrationAttempt(
             outcome: RegistrationOutcome.refused,
-            residentMessage: refusal,
+            residentMessage: registrationRefusalCopy(refusal),
+            refusal: refusal,
             requestId: failure.requestId,
           ),
         );
@@ -266,47 +268,22 @@ class EventApiRepository implements EventRepository {
 
   // ── Resident copy ──────────────────────────────────────────────────────────
   //
-  // This app's own sentences, chosen by the outcome or the refusal. Never the
-  // server's `words` or `error.message` (Article 5.5).
-
-  /// "Nothing was registered" is said for `full` and `closed` because the
-  /// server answers them only when this resident holds no place: a key it has
-  /// seen answers with what that send did, and a place already held is
-  /// reported before either.
-  static const String _registeredCopy =
-      'Taytay LGU has your place. Quote your reference at the door.';
-  static const String _waitlistedCopy =
-      'Taytay LGU has you on the waitlist. The office moves people up when a '
-      'place opens, and you will see a notice in the app if it does.';
-  static const String _fullCopy =
-      'Every place was taken before your registration arrived, and this event '
-      'keeps no waitlist. Nothing was registered.';
-  static const String _closedCopy =
-      'Registration for this event closed before your registration arrived. '
-      'Nothing was registered.';
+  // The sentences are the domain's (`event_send_failure.dart`), chosen by the
+  // outcome or the refusal. Never the server's `words` or `error.message`
+  // (Article 5.5).
 
   /// The refusals the brief names (`403`, `404`, `409`, `422`), or null for a
   /// failure that is not a refusal.
-  ///
-  /// None of these says "nothing was registered": a refusal says this send was
-  /// turned away, not what an earlier send under the same key did.
-  static String? _refusalCopy(AppFailure failure) => switch (failure) {
-    ForbiddenFailure(requiresVerification: true) =>
-      'This event takes registrations from verified accounts. Verify your '
-          'account first, then register.',
-    ForbiddenFailure() =>
-      'Event registration is not available for this account in the app.',
-    NotFoundFailure() =>
-      'This event is no longer listed, so Taytay LGU could not take a '
-          'registration for it.',
-    ConflictFailure() =>
-      'Taytay LGU is not taking registrations for this event right now. The '
-          'event page says whether registration opens later.',
-    ValidationFailure() =>
-      'Taytay LGU could not accept this registration as it was sent. If it '
-          'happens again, quote the reference below to the office.',
-    _ => null,
-  };
+  static RegistrationRefusal? _refusalOf(AppFailure failure) =>
+      switch (failure) {
+        ForbiddenFailure(requiresVerification: true) =>
+          RegistrationRefusal.needsVerification,
+        ForbiddenFailure() => RegistrationRefusal.notAllowed,
+        NotFoundFailure() => RegistrationRefusal.notListed,
+        ConflictFailure() => RegistrationRefusal.notTaking,
+        ValidationFailure() => RegistrationRefusal.notAccepted,
+        _ => null,
+      };
 
   // ── Decoding ──────────────────────────────────────────────────────────────
   //
@@ -466,10 +443,13 @@ class EventApiRepository implements EventRepository {
       RegistrationOutcome outcome,
       String copy,
     ) = switch (data['outcome']) {
-      'registered' => (RegistrationOutcome.registered, _registeredCopy),
-      'waitlisted' => (RegistrationOutcome.waitlisted, _waitlistedCopy),
-      'full' => (RegistrationOutcome.full, _fullCopy),
-      'closed' => (RegistrationOutcome.closed, _closedCopy),
+      'registered' => (RegistrationOutcome.registered, registrationHeldCopy),
+      'waitlisted' => (
+        RegistrationOutcome.waitlisted,
+        registrationWaitlistedCopy,
+      ),
+      'full' => (RegistrationOutcome.full, registrationFullCopy),
+      'closed' => (RegistrationOutcome.closed, registrationClosedCopy),
       // An outcome this build does not know may be a place it holds. Saying
       // "could not confirm" is true; any guess is not.
       _ => throw const FormatException('Unknown registration outcome.'),

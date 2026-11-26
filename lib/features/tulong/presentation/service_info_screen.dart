@@ -13,6 +13,7 @@ import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
 import '../../../core/sharing/share_service.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/error_state.dart';
@@ -154,7 +155,7 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
   Future<void> _call() async {
     final String? phone = _service?.dialable;
     if (phone == null) {
-      Outcome.problem(context, 'This office has not published a phone number.');
+      Outcome.problem(context, AppStrings.of(context).tulongNoPhone);
       return;
     }
     final LinkOutcome outcome = await AppDependencies.of(
@@ -162,14 +163,14 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
     ).externalLinks.dial(phone);
     if (!mounted) return;
     if (outcome == LinkOutcome.unavailable || outcome == LinkOutcome.refused) {
-      Outcome.problem(context, 'Calling is not available on this device.');
+      Outcome.problem(context, AppStrings.of(context).tulongNoCalling);
     }
   }
 
   Future<void> _directions() async {
     final String? query = _service?.directionsQuery;
     if (query == null) {
-      Outcome.problem(context, 'This office has not published an address.');
+      Outcome.problem(context, AppStrings.of(context).tulongNoAddress);
       return;
     }
     final String url = Uri.https(
@@ -182,7 +183,7 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
     ).externalLinks.open(url);
     if (!mounted) return;
     if (outcome == LinkOutcome.unavailable || outcome == LinkOutcome.refused) {
-      Outcome.problem(context, 'Maps could not be opened on this device.');
+      Outcome.problem(context, AppStrings.of(context).tulongNoMaps);
     }
   }
 
@@ -190,7 +191,7 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
     final SocialService? service = _service;
     final String? office = service?.officeSlug;
     if (service == null || office == null || office.isEmpty) {
-      Outcome.problem(context, 'This programme is not linked to an office.');
+      Outcome.problem(context, AppStrings.of(context).tulongNoOffice);
       return;
     }
     final AccessDecision decision = AccessPolicy.evaluate(
@@ -252,19 +253,20 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
     final SocialService? service = _service;
     if (service == null) return;
     final String headline = service.featuredHeadline ?? service.name;
+    final AppStrings strings = AppStrings.of(context);
     final ShareOutcome outcome = await AppDependencies.of(context).shareService
         .share(
           ShareableContent(
             title: headline,
-            body: '${service.details}\n\nFrom Taytay LGU',
+            body: '${service.details}\n\n${strings.tulongShareSignature}',
           ),
         );
     if (!mounted) return;
     switch (outcome) {
       case ShareOutcome.copiedToClipboard:
-        Outcome.succeeded(context, 'Copied. You can paste this into any app.');
+        Outcome.succeeded(context, strings.tulongCopied);
       case ShareOutcome.unavailable:
-        Outcome.problem(context, 'Sharing is not available on this device.');
+        Outcome.problem(context, strings.tulongNoSharing);
       case ShareOutcome.shared:
       case ShareOutcome.dismissed:
         break;
@@ -299,10 +301,11 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
     // connection is said as one; the office's side failing is said in the
     // failure's own words (D-221).
     final AppFailure? failure = _failure;
+    final AppStrings strings = AppStrings.of(context);
     final Widget state = _missing
-        ? const EmptyState(
-            title: 'This programme is not available',
-            message: 'Go back to Tulong to see the programmes listed now.',
+        ? EmptyState(
+            title: strings.tulongNotAvailableTitle,
+            message: strings.tulongNotAvailableBody,
             boxed: true,
           )
         : failure != null && !FailureView.isOffline(failure)
@@ -314,16 +317,16 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
           )
         : failure != null
         ? ErrorState(
-            title: 'Programme pages need a connection',
-            message: 'Check your connection and try again.',
+            title: strings.tulongOfflineTitle,
+            message: strings.tulongCheckConnection,
             offline: true,
             boxed: true,
             onRetry: _retry,
           )
-        : const LoadingSkeleton(
+        : LoadingSkeleton(
             layout: SkeletonLayout.detail,
             count: 1,
-            semanticLabel: 'Loading programme',
+            semanticLabel: strings.tulongLoadingOne,
           );
     return Scaffold(
       backgroundColor: BrandColors.background,
@@ -331,8 +334,8 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
         padding: const EdgeInsets.only(bottom: Spacing.xl),
         children: <Widget>[
           BlueHeader(
-            title: 'Tulong',
-            subtitle: TulongCanvas.listSubtitle,
+            title: strings.navTulong,
+            subtitle: strings.tulongSubtitle,
             showBack: true,
             onBack: _back,
           ),

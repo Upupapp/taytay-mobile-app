@@ -65,7 +65,7 @@ class OfficeApiRepository {
       }
       categories.add(office.category);
     }
-    return <String>['All', ...categories];
+    return <String>[Office.allChip, ...categories];
   }
 
   static List<Office> _decodeList(Object? data) {
@@ -115,7 +115,7 @@ class OfficeApiRepository {
       representative: false,
       credit: '',
       messageable: true,
-      callLabel: 'Call',
+      callLabel: Office.defaultCallLabel,
       callIsEmergency: false,
       phone: phone,
       directionsQuery: address.isNotEmpty ? address : name,
@@ -125,19 +125,36 @@ class OfficeApiRepository {
             label: 'Location',
             value: address,
             icon: OfficeFactIcon.pin,
+            kind: OfficeFactKind.location,
           ),
         if (hours.isNotEmpty)
           OfficeFact(
             label: 'Office hours',
             value: hours,
             icon: OfficeFactIcon.clock,
+            kind: OfficeFactKind.hours,
           ),
         if (phone.isNotEmpty)
-          OfficeFact(label: 'Phone', value: phone, icon: OfficeFactIcon.phone),
+          OfficeFact(
+            label: 'Phone',
+            value: phone,
+            icon: OfficeFactIcon.phone,
+            kind: OfficeFactKind.phone,
+          ),
         if (email.isNotEmpty)
-          OfficeFact(label: 'Email', value: email, icon: OfficeFactIcon.mail),
+          OfficeFact(
+            label: 'Email',
+            value: email,
+            icon: OfficeFactIcon.mail,
+            kind: OfficeFactKind.email,
+          ),
         if (head.isNotEmpty)
-          OfficeFact(label: 'Head', value: head, icon: OfficeFactIcon.pin),
+          OfficeFact(
+            label: 'Head',
+            value: head,
+            icon: OfficeFactIcon.pin,
+            kind: OfficeFactKind.head,
+          ),
       ],
       services: _serviceLines(json['service_lines']),
       bannerMediaId: _optional(json['banner_media_id']),

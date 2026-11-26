@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
 import '../../core/haptics/app_haptics.dart';
+import '../../core/l10n/shared_copy.dart';
 import '../../core/motion/motion_tokens.dart';
 import 'app_button.dart';
 
@@ -93,10 +94,13 @@ abstract final class AppDialog {
     required BuildContext context,
     required String title,
     required String message,
-    String confirmLabel = 'Confirm',
-    String cancelLabel = 'Cancel',
+    String? confirmLabel,
+    String? cancelLabel,
     bool destructive = false,
   }) async {
+    final strings = sharedStrings(context);
+    final String confirm = confirmLabel ?? strings.sharedDialogConfirm;
+    final String cancel = cancelLabel ?? strings.actionCancel;
     final reduced = Motion.reduced(context);
     if (destructive) {
       unawaited(AppHaptics.fire(HapticIntent.warning, suppressed: reduced));
@@ -108,7 +112,7 @@ abstract final class AppDialog {
       builder: (BuildContext dialog) => AppDialogMessage(message),
       actions: (BuildContext dialog) => AppDialogActions(
         primary: DialogButton(
-          label: confirmLabel,
+          label: confirm,
           destructive: destructive,
           hapticIntent: destructive
               ? HapticIntent.warning
@@ -116,7 +120,7 @@ abstract final class AppDialog {
           onPressed: () => Navigator.of(dialog).pop(true),
         ),
         text: DialogButton(
-          label: cancelLabel,
+          label: cancel,
           onPressed: () => Navigator.of(dialog).pop(false),
         ),
       ),
@@ -198,12 +202,12 @@ class AppDialogActions extends StatelessWidget {
   /// [dialogContext] belongs to. "Close" unless [label] says otherwise.
   factory AppDialogActions.close(
     BuildContext dialogContext, {
-    String label = 'Close',
+    String? label,
     Key? closeKey,
   }) {
     return AppDialogActions(
       text: DialogButton(
-        label: label,
+        label: label ?? sharedStrings(dialogContext).actionClose,
         key: closeKey,
         onPressed: () => Navigator.of(dialogContext).pop(),
       ),

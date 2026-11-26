@@ -7,6 +7,7 @@ import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/core_copy.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/taytay_back_button.dart';
@@ -51,7 +52,7 @@ class WelcomePageCopy {
 
   static List<WelcomePageCopy> fromStrings(AppStrings strings) {
     String photo(String key) => AppAssets.byKey(key)!.path;
-    String label(String key) => AppAssets.byKey(key)!.semanticLabel;
+    String label(String key) => assetSemanticLabel(strings, key);
     return <WelcomePageCopy>[
       WelcomePageCopy(
         eyebrow: strings.welcomeServicesEyebrow,

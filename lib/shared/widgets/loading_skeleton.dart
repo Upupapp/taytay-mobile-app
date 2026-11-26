@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
+import '../../core/l10n/shared_copy.dart';
 import 'taytay_states.dart';
 
 /// The shape of the content that is coming.
@@ -34,7 +35,7 @@ class LoadingSkeleton extends StatelessWidget {
   const LoadingSkeleton({
     this.layout = SkeletonLayout.list,
     this.count = 3,
-    this.semanticLabel = 'Loading',
+    this.semanticLabel,
     super.key,
   });
 
@@ -43,12 +44,14 @@ class LoadingSkeleton extends StatelessWidget {
   /// Rows, cards or lines drawn. Ignored by [SkeletonLayout.detail] and
   /// [SkeletonLayout.photo].
   final int count;
-  final String semanticLabel;
+
+  /// Null says "Loading" in the reader's language.
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: semanticLabel,
+      label: semanticLabel ?? sharedStrings(context).a11yLoading,
       liveRegion: true,
       container: true,
       child: ExcludeSemantics(

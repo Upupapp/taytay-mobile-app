@@ -600,7 +600,12 @@ void main() {
         ..physicalSize = const Size(390, 1600);
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
-        MaterialApp(theme: AppTheme.light(), home: canvas),
+        MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
+          theme: AppTheme.light(),
+          home: canvas,
+        ),
       );
       await tester.pump();
     }

@@ -89,7 +89,8 @@ enum ConsentKind {
   /// The value on the wire.
   final String wireValue;
 
-  /// What a row is called on the consents screen.
+  /// What a row is called on the consents screen, in English. The screen
+  /// says it through `consentKindLabel` (`core/l10n/settings_copy.dart`).
   String get label => switch (this) {
     ConsentKind.terms => 'Terms of Use',
     ConsentKind.privacy => 'Privacy Notice',
@@ -325,6 +326,10 @@ abstract interface class AccountControlsRepository {
 /// offices keep about her are not touched. Nobody from the office calls: the
 /// old words "the office will contact you" promised a step that does not
 /// exist.
+///
+/// The screen reads these words from the `settingsClose*` keys of the ARB
+/// files (D-237); the constants here are the no-context English and must say
+/// exactly what `app_en.arb` says.
 abstract final class AccountClosureCopy {
   static const String action = 'Close my account';
 

@@ -11,9 +11,11 @@ import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
+import '../../../core/l10n/issuance_copy.dart';
 import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/detail_page.dart';
 import '../../../shared/widgets/icon_tile.dart';
@@ -25,7 +27,6 @@ import '../domain/issuance_form.dart';
 import '../domain/issuance_repository.dart';
 import '../domain/issuance_request.dart';
 import '../domain/issuance_status.dart';
-import '../domain/issuance_terms.dart';
 import '../domain/issuance_type.dart';
 import 'issuance_failure_copy.dart';
 import 'issuance_file_slot.dart';
@@ -34,6 +35,9 @@ import 'issuance_widgets.dart';
 
 /// What the confirmation before cancelling a request says, in one place so a
 /// test can open it at every phone width and at 200% text (D-202).
+///
+/// The English, no-context fallback. The screen shows the same sentences in
+/// the resident's language (`issuanceCancel…` in the ARB files).
 abstract final class IssuanceCancelCopy {
   static const String title = 'Cancel this request?';
   static String message(String reference) =>
@@ -128,12 +132,13 @@ class _IssuanceRequestDetailScreenState
   Future<void> _cancel() async {
     final IssuanceRequestDetail? detail = _detail;
     if (detail == null || _cancelling) return;
+    final AppStrings strings = AppStrings.of(context);
     final bool? confirmed = await AppDialog.confirm(
       context: context,
-      title: IssuanceCancelCopy.title,
-      message: IssuanceCancelCopy.message(detail.summary.referenceNumber),
-      confirmLabel: IssuanceCancelCopy.confirm,
-      cancelLabel: IssuanceCancelCopy.keep,
+      title: strings.issuanceCancelTitle,
+      message: strings.issuanceCancelMessage(detail.summary.referenceNumber),
+      confirmLabel: strings.issuanceCancelConfirm,
+      cancelLabel: strings.issuanceCancelKeep,
       destructive: true,
     );
     if (confirmed != true || !mounted) return;
@@ -149,11 +154,15 @@ class _IssuanceRequestDetailScreenState
     });
     switch (result) {
       case Ok():
-        Outcome.succeeded(context, 'Request cancelled.');
+        Outcome.succeeded(context, strings.issuanceCancelDone);
       case Err(:final failure):
         Outcome.problem(
           context,
-          issuanceSendFailure(failure, act: IssuanceAct.cancel).body,
+          issuanceSendFailure(
+            failure,
+            act: IssuanceAct.cancel,
+            strings: strings,
+          ).body,
         );
     }
   }
@@ -162,23 +171,24 @@ class _IssuanceRequestDetailScreenState
   Widget build(BuildContext context) {
     final IssuanceRequestDetail? detail = _detail;
     final AppFailure? failure = _failure;
+    final AppStrings strings = AppStrings.of(context);
     return IssuanceScaffold(
-      title: 'Document request',
+      title: strings.issuanceDetailTitle,
       white: failure == null,
       body: failure != null
           ? IssuanceLoadFailure(
               failure: failure,
               onRetry: _load,
-              what: 'this request',
+              failedTitle: strings.issuanceLoadFailedRequest,
             )
           : detail == null
           ? ListView(
               padding: const EdgeInsets.all(Spacing.lg),
-              children: const <Widget>[
+              children: <Widget>[
                 LoadingSkeleton(
                   layout: SkeletonLayout.detail,
                   count: 1,
-                  semanticLabel: 'Opening your request',
+                  semanticLabel: strings.issuanceDetailLoading,
                 ),
               ],
             )
@@ -219,6 +229,7 @@ class IssuanceRequestDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final IssuanceStatus? status = detail.status;
     final String? asked = detail.needsInfoMessage;
     final String? claim = detail.claimDetails;
@@ -270,7 +281,7 @@ class IssuanceRequestDetailView extends StatelessWidget {
               ],
             ),
             const SizedBox(height: Spacing.section),
-            IssuanceText(issuanceStatusExplanation(status)),
+            IssuanceText(issuanceStatusExplanationText(strings, status)),
             const SizedBox(height: Spacing.sm),
             const Divider(height: 1, thickness: 1, color: BrandColors.divider),
             _ReferenceFact(reference: detail.summary.referenceNumber),
@@ -280,7 +291,7 @@ class IssuanceRequestDetailView extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: Spacing.section),
                 child: IssuanceQuote(
                   key: const Key('issuance-needs-info'),
-                  label: 'What the office asked for',
+                  label: strings.issuanceAskedLabel,
                   text: asked,
                   tone: IssuanceQuoteTone.action,
                 ),
@@ -295,14 +306,14 @@ class IssuanceRequestDetailView extends StatelessWidget {
               ),
             if (status == IssuanceStatus.readyForPickup)
               IssuanceCard(
-                title: 'How to claim it',
+                title: strings.issuanceHowToClaim,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     if (claim != null)
                       IssuanceQuote(
                         key: const Key('issuance-claim-details'),
-                        label: 'From the office',
+                        label: strings.issuanceFromOffice,
                         text: claim,
                         tone: IssuanceQuoteTone.ready,
                       ),
@@ -312,11 +323,11 @@ class IssuanceRequestDetailView extends StatelessWidget {
                     ],
                     IssuanceFact(
                       icon: TaytayIcons.handCoins,
-                      text: issuanceFeeLine(detail.feeCentavos),
+                      text: issuanceFeeText(strings, detail.feeCentavos),
                     ),
-                    const IssuanceFact(
+                    IssuanceFact(
                       icon: TaytayIcons.idCard,
-                      text: 'Bring a valid ID and your reference number.',
+                      text: strings.issuanceBringId,
                     ),
                   ],
                 ),
@@ -325,35 +336,41 @@ class IssuanceRequestDetailView extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: Spacing.section),
                 child: IssuanceQuote(
-                  label: "The office's reason",
+                  label: strings.issuanceRefusalLabel,
                   text: refusal,
                   tone: IssuanceQuoteTone.refused,
                 ),
               ),
             IssuanceCard(
-              title: 'Progress',
+              title: strings.issuanceProgress,
               child: IssuanceHistoryTimeline(detail: detail),
             ),
             IssuanceCard(
-              title: 'Your request',
+              title: strings.issuanceYourRequest,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  IssuanceQuote(label: 'Purpose', text: detail.purpose),
+                  IssuanceQuote(
+                    label: strings.issuancePurpose,
+                    text: detail.purpose,
+                  ),
                   if (status != IssuanceStatus.readyForPickup) ...<Widget>[
                     IssuanceFact(
                       icon: TaytayIcons.handCoins,
-                      text: issuanceFeeLine(detail.feeCentavos),
+                      text: issuanceFeeText(strings, detail.feeCentavos),
                     ),
                     IssuanceFact(
                       icon: TaytayIcons.clock,
-                      text: issuanceProcessingLine(detail.processingDays),
+                      text: issuanceProcessingText(
+                        strings,
+                        detail.processingDays,
+                      ),
                     ),
                   ],
                   if (detail.attachments.isNotEmpty) ...<Widget>[
                     const SizedBox(height: Spacing.md),
                     Text(
-                      'Files you sent',
+                      strings.issuanceFilesSent,
                       style: AppTypography.listTitle.copyWith(
                         color: BrandColors.ink,
                       ),
@@ -374,7 +391,7 @@ class IssuanceRequestDetailView extends StatelessWidget {
                 key: const Key('issuance-cancel'),
                 style: TaytayButtonStyles.soft(),
                 onPressed: onCancel,
-                child: const Text('Cancel this request'),
+                child: Text(strings.issuanceCancelButton),
               ),
           ],
         ),
@@ -418,7 +435,7 @@ class _ReferenceFact extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  'Reference number',
+                  AppStrings.of(context).myRequestReference,
                   style: AppTypography.small.copyWith(
                     fontWeight: AppTypography.medium,
                     color: BrandColors.muted,
@@ -454,20 +471,24 @@ class _AttachmentLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final String label =
-        detail.requirementLabel(attachment.requirementCode) ?? 'File';
-    final String kind = attachment.isImage ? 'Photo' : 'PDF';
-    final String version = attachment.version > 1
-        ? ' · version ${attachment.version}'
-        : '';
-    final String older = attachment.current ? '' : ' · replaced later';
+        detail.requirementLabel(attachment.requirementCode) ??
+        strings.issuanceFile;
+    final String facts = <String>[
+      if (attachment.isImage) strings.applyFilePhoto else strings.applyFilePdf,
+      if (attachment.version > 1)
+        strings.issuanceAttachmentVersion(attachment.version),
+      if (!attachment.current) strings.issuanceAttachmentReplaced,
+      issuanceDate(attachment.createdAt, strings.localeName),
+    ].join(' · ');
     return Padding(
       padding: const EdgeInsets.only(top: Spacing.xs),
       child: Row(
         children: <Widget>[
           Expanded(
             child: IssuanceText(
-              '$label: $kind$version$older · ${issuanceDate(attachment.createdAt)}',
+              '$label: $facts',
               color: BrandColors.textPrimary,
             ),
           ),
@@ -477,7 +498,7 @@ class _AttachmentLine extends StatelessWidget {
                 minimumSize: const Size(A11y.minTapTarget, A11y.minTapTarget),
               ),
               onPressed: () => _show(context, label),
-              child: const Text('View'),
+              child: Text(strings.issuanceView),
             ),
         ],
       ),
@@ -519,20 +540,21 @@ class _AttachmentPhotoState extends State<_AttachmentPhoto> {
     return FutureBuilder<Result<Uint8List>>(
       future: _photo,
       builder: (BuildContext context, AsyncSnapshot<Result<Uint8List>> snap) {
+        final AppStrings strings = AppStrings.of(context);
         return switch (snap.data) {
           null => LoadingSkeleton(
             layout: SkeletonLayout.photo,
-            semanticLabel: 'Loading the photo you sent for ${widget.label}',
+            semanticLabel: strings.issuancePhotoLoading(widget.label),
           ),
           Ok(:final value) => Image.memory(
             value,
             fit: BoxFit.contain,
-            semanticLabel: 'The photo you sent for ${widget.label}',
+            semanticLabel: strings.issuancePhotoSemantic(widget.label),
           ),
           Err(:final failure) => IssuanceText(
             failure is NetworkFailure || failure is TimeoutFailure
-                ? 'You are offline. Connect and try again.'
-                : 'This file cannot be shown here. The office still has it.',
+                ? strings.issuancePhotoOffline
+                : strings.issuancePhotoUnavailable,
             color: BrandColors.textPrimary,
           ),
         };
@@ -659,7 +681,7 @@ class _IssuanceResubmitSectionState extends State<IssuanceResubmitSection> {
       case Ok(:final value):
         _files.clear();
         setState(() => _sending = false);
-        Outcome.succeeded(context, 'Sent. The office will review it again.');
+        Outcome.succeeded(context, AppStrings.of(context).issuanceResubmitDone);
         widget.onSent(value);
       case Err(:final failure):
         setState(() {
@@ -674,19 +696,21 @@ class _IssuanceResubmitSectionState extends State<IssuanceResubmitSection> {
     final bool empty = !resubmissionHasContent(note: _note.text, files: _files);
     final bool tooLong = _note.text.trim().length > issuanceNoteMax;
     final AppFailure? failure = _failure;
+    final AppStrings strings = AppStrings.of(context);
     final ({String title, String body, bool offerVerification})? copy =
         failure == null
         ? null
-        : issuanceSendFailure(failure, act: IssuanceAct.resubmit);
+        : issuanceSendFailure(
+            failure,
+            act: IssuanceAct.resubmit,
+            strings: strings,
+          );
     return IssuanceCard(
-      title: 'Send what the office asked for',
+      title: strings.issuanceResubmitTitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const IssuanceText(
-            'Add a note, a new file, or both. A new file is kept beside the '
-            'one you sent before; nothing you sent is replaced.',
-          ),
+          IssuanceText(strings.issuanceResubmitIntro),
           const SizedBox(height: 10),
           TextField(
             key: const Key('issuance-resubmit-note'),
@@ -697,9 +721,9 @@ class _IssuanceResubmitSectionState extends State<IssuanceResubmitSection> {
             onChanged: (_) => setState(_edited),
             textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(
-              labelText: 'Note to the office (optional)',
+              labelText: strings.issuanceResubmitNoteLabel,
               errorText: tooLong
-                  ? 'Keep it to $issuanceNoteMax characters or fewer.'
+                  ? strings.applyPurposeTooLong(issuanceNoteMax)
                   : null,
             ),
           ),
@@ -710,7 +734,7 @@ class _IssuanceResubmitSectionState extends State<IssuanceResubmitSection> {
               chosen: _files[requirement.code],
               refused: _refused[requirement.code],
               policy: _policy,
-              optionalNote: 'New file, if asked',
+              optionalNote: strings.issuanceResubmitOptional,
               onAdd: () => _add(requirement),
               onRemove: () => setState(() {
                 _edited();
@@ -719,10 +743,10 @@ class _IssuanceResubmitSectionState extends State<IssuanceResubmitSection> {
               }),
             ),
           if (_checked && empty)
-            const Padding(
-              padding: EdgeInsets.only(top: Spacing.sm),
+            Padding(
+              padding: const EdgeInsets.only(top: Spacing.sm),
               child: IssuanceText(
-                'Add a note or a file first.',
+                strings.issuanceResubmitEmpty,
                 color: BrandColors.danger,
               ),
             ),
@@ -739,7 +763,9 @@ class _IssuanceResubmitSectionState extends State<IssuanceResubmitSection> {
           const SizedBox(height: 10),
           PrimaryButton(
             key: const Key('issuance-resubmit-send'),
-            label: _sending ? 'Sending…' : 'Send to the office',
+            label: _sending
+                ? strings.applySending
+                : strings.issuanceSendToOffice,
             onPressed: _sending ? null : _send,
           ),
         ],

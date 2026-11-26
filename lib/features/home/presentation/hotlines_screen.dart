@@ -15,6 +15,7 @@ import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/icon_tile.dart';
@@ -122,7 +123,7 @@ class _HotlinesScreenState extends State<HotlinesScreen>
     ).externalLinks.dial(number);
     if (!mounted) return;
     if (outcome == LinkOutcome.unavailable) {
-      Outcome.problem(context, 'This phone has no app that can place a call.');
+      Outcome.problem(context, AppStrings.of(context).dirNoDialer);
     }
   }
 
@@ -181,12 +182,13 @@ class HotlinesCanvas extends StatelessWidget {
     final List<HomeHotline> barangay = lines
         .where((HomeHotline line) => line.isBarangay)
         .toList(growable: false);
+    final AppStrings strings = AppStrings.of(context);
     return Material(
       color: BrandColors.background,
       child: Column(
         children: <Widget>[
           BlueHeader(
-            title: 'Emergency hotlines',
+            title: strings.homeHotlinesTitle,
             subtitle: 'Bayan ng Taytay · Rizal',
             showBack: true,
             onBack: onBack,
@@ -201,7 +203,7 @@ class HotlinesCanvas extends StatelessWidget {
               ),
               children: <Widget>[
                 if (loading)
-                  const LoadingSkeleton(semanticLabel: 'Loading hotlines')
+                  LoadingSkeleton(semanticLabel: strings.homeLoadingHotlines)
                 else if (failure case final AppFailure failure)
                   FailureView(
                     failure: failure,
@@ -209,21 +211,20 @@ class HotlinesCanvas extends StatelessWidget {
                     onRetry: onRetry,
                   )
                 else if (lines.isEmpty)
-                  const EmptyState(
-                    title: 'No hotlines to show',
-                    message:
-                        'Taytay LGU has not published any hotlines here yet.',
+                  EmptyState(
+                    title: strings.homeNoHotlinesTitle,
+                    message: strings.homeNoHotlinesBody,
                     boxed: true,
                   ),
                 if (municipal.isNotEmpty) ...<Widget>[
-                  const _Heading('Municipal', first: true),
+                  _Heading(strings.homeHotlinesMunicipal, first: true),
                   _Group(
                     lines: municipal,
                     onCall: (String number) => onCall?.call(number),
                   ),
                 ],
                 if (barangay.isNotEmpty) ...<Widget>[
-                  _Heading('Barangay', first: municipal.isEmpty),
+                  _Heading(strings.fieldBarangay, first: municipal.isEmpty),
                   _Group(
                     lines: barangay,
                     onCall: (String number) => onCall?.call(number),
@@ -231,7 +232,7 @@ class HotlinesCanvas extends StatelessWidget {
                 ],
                 const SizedBox(height: Spacing.md),
                 Text(
-                  'Source: Taytay LGU / Taytay Public Information Office.',
+                  strings.homeHotlinesSource,
                   style: AppTypography.tiny.copyWith(
                     fontWeight: AppTypography.medium,
                     color: BrandColors.muted,
@@ -358,7 +359,7 @@ class _Line extends StatelessWidget {
             ),
             Semantics(
               button: true,
-              label: 'Call ${line.name}',
+              label: AppStrings.of(context).dirCallName(line.name),
               excludeSemantics: true,
               child: GestureDetector(
                 key: Key('hotline-call-${line.id}'),

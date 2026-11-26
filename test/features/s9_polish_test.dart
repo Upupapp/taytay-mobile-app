@@ -26,15 +26,21 @@ void main() {
   // mockup)", a version this app does not have. It now names the build's own
   // `appVersion`, which app_version_test keeps equal to pubspec.yaml.
   test('the about version is one sentence with no hard break', () {
+    // The words live in the ARB since D-237; the canvas passes appVersion in.
     final String source = File(
       'lib/features/account/presentation/account_canvas.dart',
     ).readAsStringSync();
-    expect(
-      source.contains(r"'Municipality of Taytay, Rizal · version $appVersion'"),
-      isTrue,
-    );
-    expect(source.contains('design mockup'), isFalse);
-    expect(source.contains(r"Rizal '"), isFalse);
+    expect(source.contains('strings.acctAboutVersion(appVersion)'), isTrue);
+    for (final String arb in <String>['app_en.arb', 'app_fil.arb']) {
+      final String text = File('lib/l10n/$arb').readAsStringSync();
+      final String line = RegExp(
+        r'"acctAboutVersion": "([^"]*)"',
+      ).firstMatch(text)!.group(1)!;
+      expect(line, contains('Taytay, Rizal'), reason: arb);
+      expect(line, contains('{version}'), reason: arb);
+      expect(line, isNot(contains(r'\n')), reason: arb);
+      expect(line, isNot(contains('design mockup')), reason: arb);
+    }
   });
 
   test(

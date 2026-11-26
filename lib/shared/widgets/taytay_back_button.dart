@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/design/taytay_icons.dart';
 import '../../core/haptics/app_haptics.dart';
+import '../../core/l10n/shared_copy.dart';
 import '../../core/router/app_routes.dart';
 import 'taytay_icon.dart';
 
@@ -89,7 +90,7 @@ class TaytayBackButton extends StatelessWidget {
                 child: Center(
                   child: TaytayIcon(
                     icon: TaytayIcons.arrowLeft,
-                    semanticLabel: 'Back',
+                    semanticLabel: sharedStrings(context).applyBack,
                     size: translucent || light ? 20 : IconSizes.sm,
                     color: glyph,
                   ),

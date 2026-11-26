@@ -4,6 +4,8 @@ import '../../core/design/brand_assets.dart';
 import '../../core/design/brand_gradients.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/design/typography.dart';
+import '../../core/l10n/core_copy.dart';
+import '../../core/l10n/shared_copy.dart';
 import 'taytay_back_button.dart';
 import 'taytay_icon.dart';
 
@@ -194,7 +196,7 @@ class HeaderSeal extends StatelessWidget {
   Widget build(BuildContext context) {
     const BrandAsset seal = BrandAssets.municipalSeal;
     return Semantics(
-      label: seal.semanticLabel,
+      label: brandAssetSemanticLabel(sharedStrings(context), seal),
       image: true,
       child: Container(
         width: diameter,

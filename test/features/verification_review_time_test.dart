@@ -437,7 +437,11 @@ void main() {
         in _cases) {
       testWidgets('with $name', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(home: PendingStatusPage(reviewTime: time)),
+          MaterialApp(
+            localizationsDelegates: AppStrings.localizationsDelegates,
+            supportedLocales: AppLocales.supported,
+            home: PendingStatusPage(reviewTime: time),
+          ),
         );
         expect(find.text(body), findsOneWidget);
         // No dangling clause: the sentence goes whole, spaces and all.
@@ -479,6 +483,8 @@ void main() {
     testWidgets('one day reads singular on the page', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
           home: PendingStatusPage(reviewTime: ReviewTimeStated(1, 1)),
         ),
       );
@@ -504,7 +510,13 @@ void main() {
       );
 
       testWidgets('with $name', (tester) async {
-        await tester.pumpWidget(MaterialApp(home: page()));
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: AppStrings.localizationsDelegates,
+            supportedLocales: AppLocales.supported,
+            home: page(),
+          ),
+        );
         await tester.pump(const Duration(milliseconds: 50));
         expect(find.text('LGU review'), findsOneWidget);
         if (line.isEmpty) {
@@ -535,6 +547,8 @@ void main() {
       Future<List<String>> texts(VerificationReviewTime time) async {
         await tester.pumpWidget(
           MaterialApp(
+            localizationsDelegates: AppStrings.localizationsDelegates,
+            supportedLocales: AppLocales.supported,
             home: ProfileWizardPage(
               step: ProfileWizardStep.submitted,
               record: MockResidentRecordRepository.sampleRecord,
@@ -559,6 +573,8 @@ void main() {
     testWidgets('one number of days reads plural on the frame', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
           home: ProfileWizardPage(
             step: ProfileWizardStep.submitted,
             record: MockResidentRecordRepository.sampleRecord,
@@ -585,6 +601,8 @@ void main() {
         AppDependenciesScope(
           dependencies: dependencies,
           child: const MaterialApp(
+            localizationsDelegates: AppStrings.localizationsDelegates,
+            supportedLocales: AppLocales.supported,
             home: ProfileWizardScreen(
               step: ProfileWizardStep.submitted,
               preview: MockResidentRecordRepository.sampleRecord,

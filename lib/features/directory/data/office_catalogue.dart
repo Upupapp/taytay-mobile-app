@@ -64,7 +64,7 @@ abstract final class OfficeCatalogue {
     final Map<String, Object?> json = await MockFixtures.object('offices');
     final List<String> chips = json['chips'] is List
         ? (json['chips']! as List).map((Object? item) => '$item').toList()
-        : const <String>['All'];
+        : const <String>[Office.allChip];
     final List<Office> offices = json['offices'] is List
         ? (json['offices']! as List)
               .whereType<Map<dynamic, dynamic>>()

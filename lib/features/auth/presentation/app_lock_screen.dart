@@ -5,6 +5,7 @@ import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/session/app_lock_controller.dart';
 import '../../../core/session/local_authenticator.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/icon_tile.dart';
@@ -40,6 +41,7 @@ class AppLockScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     // The notice pattern (RegTerms / DirectoryOffline): a centred wave header
     // with the lock tile, then the state in words and the two ways on. No back
     // control: the lock covers every route, and leaving is Sign out.
@@ -70,7 +72,7 @@ class AppLockScreen extends StatelessWidget {
                     header: true,
                     liveRegion: true,
                     child: Text(
-                      'Taytay LGU IDS is locked',
+                      strings.authLockTitle,
                       textAlign: TextAlign.center,
                       style: AppTypography.pageTitle.copyWith(
                         color: BrandColors.ink,
@@ -79,7 +81,7 @@ class AppLockScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: Spacing.sm),
                   Text(
-                    _explain(lock.lastOutcome),
+                    _explain(strings, lock.lastOutcome),
                     textAlign: TextAlign.center,
                     style: AppTypography.bodyStyle.copyWith(
                       color: BrandColors.text,
@@ -87,7 +89,7 @@ class AppLockScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: Spacing.xl),
                   AppButton(
-                    label: 'Unlock',
+                    label: strings.authLockUnlock,
                     icon: TaytayIcons.scanFace,
                     loading: lock.isPrompting,
                     onPressed: lock.isPrompting ? null : onUnlock,
@@ -95,7 +97,7 @@ class AppLockScreen extends StatelessWidget {
                   const SizedBox(height: Spacing.sm),
                   // Deliberately always available. See the class doc.
                   AuthLink(
-                    'Sign out instead',
+                    strings.authLockSignOutInstead,
                     muted: true,
                     onPressed: lock.isPrompting ? null : onSignOut,
                   ),
@@ -108,16 +110,12 @@ class AppLockScreen extends StatelessWidget {
     );
   }
 
-  static String _explain(LocalUnlockOutcome? outcome) => switch (outcome) {
-    null =>
-      'You turned on the app lock, so Taytay LGU IDS asks for your fingerprint, '
-          'face or screen lock before showing your details again.',
-    LocalUnlockOutcome.unlocked => 'Unlocking…',
-    LocalUnlockOutcome.cancelled => 'Unlock to see your details again.',
-    LocalUnlockOutcome.failed =>
-      'That did not match. Try again, or sign out and sign back in.',
-    LocalUnlockOutcome.unavailable =>
-      'Your device could not show the unlock prompt. You can sign out and sign '
-          'back in instead — nothing is wrong with your account.',
-  };
+  static String _explain(AppStrings strings, LocalUnlockOutcome? outcome) =>
+      switch (outcome) {
+        null => strings.authLockExplainIdle,
+        LocalUnlockOutcome.unlocked => strings.authLockExplainUnlocking,
+        LocalUnlockOutcome.cancelled => strings.authLockExplainCancelled,
+        LocalUnlockOutcome.failed => strings.authLockExplainFailed,
+        LocalUnlockOutcome.unavailable => strings.authLockExplainUnavailable,
+      };
 }

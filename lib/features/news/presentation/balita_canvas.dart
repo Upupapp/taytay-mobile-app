@@ -11,6 +11,7 @@ import '../../../core/design/typography.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/failure_view.dart';
@@ -128,6 +129,7 @@ class BalitaCanvas extends StatelessWidget {
       );
     }
     final bool all = selectedChip == BalitaChip.all.label;
+    final AppStrings strings = AppStrings.of(context);
     return GlassBackground(
       child: ListView(
         // No per-item repaint / semantics wrappers: they hit-test only their
@@ -144,13 +146,17 @@ class BalitaCanvas extends StatelessWidget {
             leading: const HeaderSeal(),
             title: all
                 ? 'Balita'
-                : (selectedChip == 'Advisory' ? 'Advisories' : selectedChip),
-            subtitle: all ? 'Bayan ng Taytay · Rizal' : 'Balita · filtered',
+                : (selectedChip == 'Advisory'
+                      ? strings.balitaAdvisoriesTitle
+                      : selectedChip),
+            subtitle: all
+                ? 'Bayan ng Taytay · Rizal'
+                : strings.balitaFilteredSubtitle,
             actions: <Widget>[
               HeaderIconButton(
                 key: const Key('balita-bell'),
                 icon: TaytayIcons.bell,
-                semanticLabel: 'Notifications',
+                semanticLabel: strings.inboxTitle,
                 onPressed: onBell,
               ),
             ],
@@ -176,7 +182,7 @@ class BalitaCanvas extends StatelessWidget {
                     ),
                 child: KeyedSubtree(
                   key: ValueKey<String>('${frame.name}-$selectedChip'),
-                  child: _body(),
+                  child: _body(strings),
                 ),
               ),
             ),
@@ -186,13 +192,13 @@ class BalitaCanvas extends StatelessWidget {
     );
   }
 
-  Widget _body() {
+  Widget _body(AppStrings strings) {
     final AppFailure? failure = this.failure;
     return switch (frame) {
-      BalitaFrame.loading => const LoadingSkeleton(
+      BalitaFrame.loading => LoadingSkeleton(
         layout: SkeletonLayout.feed,
         count: 4,
-        semanticLabel: 'Loading Balita',
+        semanticLabel: strings.balitaLoading,
       ),
       BalitaFrame.failed
           when failure != null && !FailureView.isOffline(failure) =>
@@ -203,18 +209,15 @@ class BalitaCanvas extends StatelessWidget {
           boxed: true,
         ),
       BalitaFrame.failed => ErrorState(
-        title: 'Announcements are not available right now',
-        message:
-            'We could not reach Taytay LGU. Check your connection and try '
-            'again. Municipal notices are also posted at the municipal hall '
-            'and barangay halls.',
+        title: strings.balitaUnavailableTitle,
+        message: strings.balitaUnavailableBody,
         onRetry: onRetry,
         offline: true,
         boxed: true,
       ),
-      BalitaFrame.emptyFeed => const EmptyState(
-        title: 'Nothing new right now',
-        message: 'New Taytay LGU announcements will appear here.',
+      BalitaFrame.emptyFeed => EmptyState(
+        title: strings.balitaEmptyTitle,
+        message: strings.balitaEmptyBody,
         boxed: true,
       ),
       BalitaFrame.emptyCategory => _EmptyCategory(
@@ -246,7 +249,7 @@ class _Chips extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       container: true,
-      label: 'Filter Balita',
+      label: AppStrings.of(context).balitaFilterSemantics,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         clipBehavior: Clip.none,
@@ -308,7 +311,7 @@ class _Feed extends StatelessWidget {
           child: Semantics(
             header: true,
             child: Text(
-              'Latest Balita',
+              AppStrings.of(context).balitaLatest,
               style: AppTypography.sectionTitle.copyWith(
                 fontWeight: AppTypography.strong,
                 color: BrandColors.ink,
@@ -369,7 +372,11 @@ class _StoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String date = _listDate(article);
+    final String date = _listDate(
+      article,
+      Localizations.localeOf(context).languageCode,
+    );
+    final AppStrings strings = AppStrings.of(context);
     final Widget row = Padding(
       padding: const EdgeInsets.only(top: 14, bottom: Spacing.xs),
       child: Row(
@@ -435,7 +442,7 @@ class _StoryRow extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Semantics(
               button: true,
-              label: 'Share ${article.title}',
+              label: strings.balitaShareArticle(article.title),
               excludeSemantics: true,
               child: GestureDetector(
                 key: Key('balita-share-${article.id}'),
@@ -458,7 +465,7 @@ class _StoryRow extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Share',
+                        strings.balitaShare,
                         style: AppTypography.label.copyWith(
                           color: BrandColors.muted,
                         ),
@@ -575,9 +582,10 @@ class _PinnedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool emergency =
         article.advisoryLevel?.known == AdvisoryLevel.emergency;
+    final AppStrings strings = AppStrings.of(context);
     final String title = emergency
-        ? 'Emergency advisory'
-        : article.presentation?.pinnedTitle ?? 'Pinned advisory';
+        ? strings.balitaEmergencyAdvisory
+        : article.presentation?.pinnedTitle ?? strings.balitaPinnedAdvisory;
     final String body = article.presentation?.pinnedBody ?? article.title;
     return GlassCard(
       key: Key('balita-pinned-${article.id}'),
@@ -638,6 +646,7 @@ class _EmptyCategory extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool events = chip == 'Events';
+    final AppStrings strings = AppStrings.of(context);
     return GlassCard(
       padding: const EdgeInsets.only(bottom: Spacing.xl),
       child: Column(
@@ -647,14 +656,13 @@ class _EmptyCategory extends StatelessWidget {
                 ? 'Walang events pa'
                 : 'Walang ${chip.toLowerCase()} pa',
             message: events
-                ? "No upcoming municipal events have been posted. We'll "
-                      'notify you when the LGU announces one.'
-                : 'No ${chip.toLowerCase()} posts have been published yet.',
+                ? strings.balitaEmptyEventsBody
+                : strings.balitaEmptyCategoryBody(chip.toLowerCase()),
           ),
           FilledButton.tonal(
             key: const Key('balita-see-all'),
             onPressed: onSeeAll,
-            child: const Text('See all Balita'),
+            child: Text(strings.balitaSeeAll),
           ),
         ],
       ),
@@ -853,7 +861,9 @@ class _Sheet extends StatelessWidget {
     final String lead = presentation?.lead ?? article.body;
     final String office = article.author ?? article.officeSlug ?? '';
     final String labelled = presentation?.dateLabel ?? '';
-    final String date = labelled.isNotEmpty ? labelled : _listDate(article);
+    final String date = labelled.isNotEmpty
+        ? labelled
+        : _listDate(article, Localizations.localeOf(context).languageCode);
     final String meta = <String>[
       if (office.isNotEmpty) office,
       if (date.isNotEmpty) date,
@@ -1028,14 +1038,14 @@ class _Fact extends StatelessWidget {
   }
 }
 
-String _listDate(Announcement article) {
+String _listDate(Announcement article, [String languageCode = 'en']) {
   final String? listed = article.presentation?.listDate;
   if (listed != null) return listed;
   final String? labelled = article.presentation?.dateLabel;
   if (labelled != null && labelled.isNotEmpty) return labelled;
   final DateTime? at = article.publishedAt;
   if (at == null) return '';
-  return ManilaTime.formatDate(at);
+  return ManilaTime.formatDate(at, languageCode: languageCode);
 }
 
 Color _ink(Announcement article) {

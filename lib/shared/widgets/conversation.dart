@@ -7,7 +7,9 @@ import '../../core/design/ringed_input_border.dart';
 import '../../core/design/taytay_icons.dart';
 import '../../core/design/typography.dart';
 import '../../core/haptics/app_haptics.dart';
+import '../../core/l10n/shared_copy.dart';
 import '../../core/motion/motion_tokens.dart';
+import '../../l10n/app_localizations.dart';
 import 'taytay_icon.dart';
 
 /// The day above a run of messages (CSS `.log .day`): a grey pill.
@@ -149,7 +151,7 @@ class ConversationComposer extends StatelessWidget {
     this.sendEnabled = true,
     this.attachmentLabel,
     this.onClearAttachment,
-    this.hint = 'Write a message…',
+    this.hint,
     this.attachKey,
     this.sendKey,
     this.fieldKey,
@@ -165,7 +167,9 @@ class ConversationComposer extends StatelessWidget {
   final bool sendEnabled;
   final String? attachmentLabel;
   final VoidCallback? onClearAttachment;
-  final String hint;
+
+  /// Null says "Write a message…" in the reader's language.
+  final String? hint;
   final Key? attachKey;
   final Key? sendKey;
   final Key? fieldKey;
@@ -173,6 +177,7 @@ class ConversationComposer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = sharedStrings(context);
     final String? label = attachmentLabel;
     final VoidCallback? onClear = onClearAttachment;
     final double safeBottom = MediaQuery.paddingOf(context).bottom;
@@ -215,7 +220,7 @@ class ConversationComposer extends StatelessWidget {
                     ConversationRoundButton(
                       gestureKey: clearKey,
                       icon: TaytayIcons.close,
-                      semanticLabel: 'Remove attachment',
+                      semanticLabel: strings.sharedComposerRemoveAttachment,
                       onPressed: onClear,
                     ),
                 ],
@@ -227,7 +232,7 @@ class ConversationComposer extends StatelessWidget {
                 ConversationRoundButton(
                   gestureKey: attachKey,
                   icon: TaytayIcons.paperclip,
-                  semanticLabel: 'Attach photo or PDF',
+                  semanticLabel: strings.sharedComposerAttach,
                   onPressed: onAttach,
                 ),
                 const SizedBox(width: Spacing.sm),
@@ -242,7 +247,7 @@ class ConversationComposer extends StatelessWidget {
                       color: BrandColors.ink,
                     ),
                     decoration: InputDecoration(
-                      hintText: hint,
+                      hintText: hint ?? strings.sharedComposerHint,
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: Spacing.lg,
@@ -280,7 +285,7 @@ class ConversationComposer extends StatelessWidget {
                 ConversationRoundButton(
                   gestureKey: sendKey,
                   icon: TaytayIcons.send,
-                  semanticLabel: 'Send',
+                  semanticLabel: strings.sharedComposerSend,
                   solid: true,
                   onPressed: sendEnabled ? onSend : null,
                 ),

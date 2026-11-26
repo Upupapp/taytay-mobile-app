@@ -33,7 +33,8 @@ enum IssuanceStatus {
 /// Who made a move in a request's history.
 enum IssuanceActor { resident, office, unknown }
 
-/// The status in plain words. `null` is a status this build does not know: a
+/// The status in plain words, in English: the no-context fallback; screens use
+/// `issuanceStatusText`. `null` is a status this build does not know: a
 /// newer server, which must never crash a released app (Article 8).
 String issuanceStatusLabel(IssuanceStatus? status) => switch (status) {
   IssuanceStatus.submitted => 'Sent to the office',
@@ -72,31 +73,67 @@ String issuanceStatusExplanation(IssuanceStatus? status) => switch (status) {
         'unclear.',
 };
 
-/// One line of a request's history, in the resident's words.
+/// One move in a request's history, as the resident reads it.
 ///
-/// Composed here rather than taken from the server's `description`, so the
-/// copy a resident reads is this app's own and can be translated with the rest
-/// of it. The office's own message travels beside the line, unchanged.
-String issuanceHistoryLine({
+/// Decided here, once, so the English line below and the translated line in
+/// `core/l10n/issuance_copy.dart` cannot disagree about which move it was.
+enum IssuanceHistoryMove {
+  sent,
+  cancelled,
+  answered,
+  reviewStarted,
+  askedForMore,
+  approved,
+  refused,
+  ready,
+  released,
+  submitted,
+  updated,
+}
+
+IssuanceHistoryMove issuanceHistoryMove({
   required IssuanceStatus? from,
   required IssuanceStatus? to,
 }) {
   if (from == null && to == IssuanceStatus.submitted) {
-    return 'You sent the request';
+    return IssuanceHistoryMove.sent;
   }
-  if (to == IssuanceStatus.cancelled) return 'You cancelled the request';
+  if (to == IssuanceStatus.cancelled) return IssuanceHistoryMove.cancelled;
   if (from == IssuanceStatus.needsInfo && to == IssuanceStatus.underReview) {
-    return 'You sent what the office asked for';
+    return IssuanceHistoryMove.answered;
   }
   return switch (to) {
-    IssuanceStatus.underReview => 'The office started reviewing it',
-    IssuanceStatus.needsInfo => 'The office asked for more',
-    IssuanceStatus.approved => 'The office approved it',
-    IssuanceStatus.rejected => 'The office could not issue it',
-    IssuanceStatus.readyForPickup => 'Ready to claim',
-    IssuanceStatus.released => 'The office released the document',
-    IssuanceStatus.submitted => 'Sent to the office',
-    IssuanceStatus.cancelled => 'You cancelled the request',
-    null => 'The request was updated',
+    IssuanceStatus.underReview => IssuanceHistoryMove.reviewStarted,
+    IssuanceStatus.needsInfo => IssuanceHistoryMove.askedForMore,
+    IssuanceStatus.approved => IssuanceHistoryMove.approved,
+    IssuanceStatus.rejected => IssuanceHistoryMove.refused,
+    IssuanceStatus.readyForPickup => IssuanceHistoryMove.ready,
+    IssuanceStatus.released => IssuanceHistoryMove.released,
+    IssuanceStatus.submitted => IssuanceHistoryMove.submitted,
+    IssuanceStatus.cancelled => IssuanceHistoryMove.cancelled,
+    null => IssuanceHistoryMove.updated,
   };
 }
+
+/// One line of a request's history, in the resident's words.
+///
+/// Composed here rather than taken from the server's `description`, so the
+/// copy a resident reads is this app's own and can be translated with the rest
+/// of it. The office's own message travels beside the line, unchanged. This is
+/// the English, no-context fallback; screens use `issuanceHistoryText`.
+String issuanceHistoryLine({
+  required IssuanceStatus? from,
+  required IssuanceStatus? to,
+}) => switch (issuanceHistoryMove(from: from, to: to)) {
+  IssuanceHistoryMove.sent => 'You sent the request',
+  IssuanceHistoryMove.cancelled => 'You cancelled the request',
+  IssuanceHistoryMove.answered => 'You sent what the office asked for',
+  IssuanceHistoryMove.reviewStarted => 'The office started reviewing it',
+  IssuanceHistoryMove.askedForMore => 'The office asked for more',
+  IssuanceHistoryMove.approved => 'The office approved it',
+  IssuanceHistoryMove.refused => 'The office could not issue it',
+  IssuanceHistoryMove.ready => 'Ready to claim',
+  IssuanceHistoryMove.released => 'The office released the document',
+  IssuanceHistoryMove.submitted => 'Sent to the office',
+  IssuanceHistoryMove.updated => 'The request was updated',
+};

@@ -6,10 +6,13 @@ import '../../../core/design/button_styles.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/app_locales.dart';
+import '../../../core/l10n/issuance_copy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/icon_tile.dart';
@@ -100,14 +103,16 @@ class IssuanceStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => StatusPill(
-    label: issuanceStatusLabel(status),
+    label: issuanceStatusText(AppStrings.of(context), status),
     tone: issuanceStatusTone(status),
   );
 }
 
 /// `05 Nov 2026`, in Manila time, or a dash when the server sent none.
-String issuanceDate(DateTime? instant) =>
-    instant == null ? '—' : ManilaTime.formatDate(instant);
+String issuanceDate(DateTime? instant, [String languageCode = 'en']) =>
+    instant == null
+    ? '—'
+    : ManilaTime.formatDate(instant, languageCode: languageCode);
 
 /// A section of a white page (Office `.sheet`, RegDetails): a filled soft
 /// card with an optional 15 / 600 heading.
@@ -273,14 +278,15 @@ class IssuanceHistoryTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final List<IssuanceHistoryEntry> history = detail.history;
     final IssuanceStatus? status = detail.status;
     final String? upcoming = switch (status) {
       IssuanceStatus.submitted ||
       IssuanceStatus.underReview ||
       IssuanceStatus.needsInfo ||
-      IssuanceStatus.approved => 'Ready to claim',
-      IssuanceStatus.readyForPickup => 'Claimed at the office',
+      IssuanceStatus.approved => strings.issuanceStatusReadyForPickup,
+      IssuanceStatus.readyForPickup => strings.issuanceHistoryClaimedNext,
       _ => null,
     };
     return Column(
@@ -289,22 +295,23 @@ class IssuanceHistoryTimeline extends StatelessWidget {
         for (var i = 0; i < history.length; i++)
           _HistoryRow(
             key: ValueKey<String>('issuance-history-$i'),
-            title: issuanceHistoryLine(
+            title: issuanceHistoryText(
+              strings,
               from: history[i].from,
               to: history[i].to,
             ),
-            when: _when(history[i]),
+            when: _when(strings, history[i]),
             current: i == history.length - 1 && !(status?.isFinished ?? false),
             last: i == history.length - 1 && upcoming == null,
             words: _words(history[i]),
             wordsLabel: history[i].by == IssuanceActor.resident
-                ? 'Your note'
-                : 'From the office',
+                ? strings.issuanceYourNote
+                : strings.issuanceFromOffice,
           ),
         if (upcoming != null)
           _HistoryRow(
             title: upcoming,
-            when: 'You will see it here',
+            when: strings.issuanceHistoryUpcoming,
             upcoming: true,
             last: true,
           ),
@@ -312,11 +319,11 @@ class IssuanceHistoryTimeline extends StatelessWidget {
     );
   }
 
-  static String _when(IssuanceHistoryEntry entry) {
-    final String date = issuanceDate(entry.at);
+  static String _when(AppStrings strings, IssuanceHistoryEntry entry) {
+    final String date = issuanceDate(entry.at, strings.localeName);
     return switch (entry.by) {
-      IssuanceActor.resident => '$date · You',
-      IssuanceActor.office => '$date · Office',
+      IssuanceActor.resident => strings.issuanceHistoryByYou(date),
+      IssuanceActor.office => strings.issuanceHistoryByOffice(date),
       IssuanceActor.unknown => date,
     };
   }
@@ -334,7 +341,7 @@ class _HistoryRow extends StatelessWidget {
     this.current = false,
     this.upcoming = false,
     this.words,
-    this.wordsLabel = 'From the office',
+    this.wordsLabel,
     super.key,
   });
 
@@ -344,7 +351,9 @@ class _HistoryRow extends StatelessWidget {
   final bool current;
   final bool upcoming;
   final String? words;
-  final String wordsLabel;
+
+  /// Null is "From the office", in the resident's language.
+  final String? wordsLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -409,7 +418,12 @@ class _HistoryRow extends StatelessWidget {
                   ),
                   if (words != null) ...<Widget>[
                     const SizedBox(height: Spacing.sm),
-                    IssuanceQuote(label: wordsLabel, text: words),
+                    IssuanceQuote(
+                      label:
+                          wordsLabel ??
+                          AppStrings.of(context).issuanceFromOffice,
+                      text: words,
+                    ),
                   ],
                 ],
               ),
@@ -432,21 +446,19 @@ class IssuanceAccessNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final (String title, String body, String action, AppRoute route)? copy =
         switch (decision) {
           AccessNeedsAuthentication() => (
-            'Sign in to request a document',
-            'You can read what each document needs now. To send a request, '
-                'sign in with a verified Taytay account.',
-            'Sign in',
+            strings.issuanceAccessSignInTitle,
+            strings.issuanceAccessSignInBody,
+            strings.actionSignIn,
             AppRoute.signIn,
           ),
           AccessNeedsVerification() => (
-            'Verify your account first',
-            'Only verified Taytay residents can send a document request, '
-                'because the office issues it in your name. You can read what '
-                'each document needs now.',
-            'Go to verification',
+            strings.issuanceAccessVerifyTitle,
+            strings.issuanceAccessVerifyBody,
+            strings.applyGoToVerification,
             AppRoute.verification,
           ),
           AccessAllowed() || AccessPending() => null,
@@ -515,29 +527,30 @@ class IssuanceLoadFailure extends StatelessWidget {
   const IssuanceLoadFailure({
     required this.failure,
     required this.onRetry,
-    this.what = 'this',
+    this.failedTitle,
     super.key,
   });
 
   final AppFailure failure;
   final VoidCallback onRetry;
-  final String what;
+
+  /// "Could not load …", naming what did not load. Null is "Could not load
+  /// this".
+  final String? failedTitle;
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final bool offline = failure is NetworkFailure || failure is TimeoutFailure;
     final String title = switch (failure) {
-      NetworkFailure() || TimeoutFailure() => 'You are offline',
-      NotFoundFailure() => 'Not found',
-      _ => 'Could not load $what',
+      NetworkFailure() || TimeoutFailure() => strings.applyOfflineTitle,
+      NotFoundFailure() => strings.issuanceLoadNotFoundTitle,
+      _ => failedTitle ?? strings.issuanceLoadFailedThis,
     };
     final String body = switch (failure) {
-      NetworkFailure() || TimeoutFailure() =>
-        'Taytay LGU could not be reached. Check your connection and try again.',
-      NotFoundFailure() =>
-        'This is not available. It may have been removed, or it belongs to '
-            'another account.',
-      _ => failure.residentMessage,
+      NetworkFailure() || TimeoutFailure() => strings.issuanceLoadOfflineBody,
+      NotFoundFailure() => strings.issuanceLoadNotFoundBody,
+      _ => localisedResidentMessage(context, failure),
     };
     return ListView(
       padding: issuanceListPadding(context),
@@ -551,7 +564,7 @@ class IssuanceLoadFailure extends StatelessWidget {
           details: <Widget>[
             if (failure.requestId case final String reference)
               SelectableText(
-                'Reference: $reference',
+                strings.applyFailureReference(reference),
                 textAlign: TextAlign.center,
                 style: AppTypography.small.copyWith(color: BrandColors.muted),
               ),

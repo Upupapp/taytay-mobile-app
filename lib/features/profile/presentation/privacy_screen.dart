@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/notice_panel.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/surface_cards.dart';
-import '../domain/profile_fields.dart';
 
 /// Privacy and your data.
 ///
@@ -39,50 +39,33 @@ class PrivacyScreen extends StatelessWidget {
     final TextStyle body = AppTypography.bodyStyle.copyWith(
       color: BrandColors.text,
     );
+    final strings = AppStrings.of(context);
 
     return AuthFormPage(
-      title: 'Privacy and your data',
+      title: strings.profPrivacyRow,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const NoticePanel(
-            title: 'Taytay LGU is responsible for your information',
+          NoticePanel(
+            title: strings.profPrivacyResponsibleTitle,
             icon: TaytayIcons.shieldCheck,
-            intro:
-                'This app is one way to reach the Municipality of Taytay, '
-                'Rizal. Your information belongs to your municipal record, not '
-                'to the app on your phone.',
+            intro: strings.profPrivacyResponsibleIntro,
             points: <NoticePoint>[
               NoticePoint(
-                title: 'What this app keeps on your phone',
-                body:
-                    'Only what is needed to keep you signed in: a sign-in '
-                    'token in your phone’s secure keystore, your first name for '
-                    'the greeting, and whether Taytay LGU has verified you. '
-                    'Signing out removes all of it from this device.',
+                title: strings.profPrivacyKeptTitle,
+                body: strings.profPrivacyKeptBody,
               ),
               NoticePoint(
-                title: 'What this app never keeps',
-                body:
-                    'Your address, date of birth, ID images and household '
-                    'details are not stored on your phone. Screens fetch them '
-                    'when they show them, and nothing is written to a file or a '
-                    'cache.',
+                title: strings.profPrivacyNeverKeptTitle,
+                body: strings.profPrivacyNeverKeptBody,
               ),
               NoticePoint(
-                title: 'What Taytay LGU holds',
-                body:
-                    'Your municipal resident record: your name, date of birth, '
-                    'address and barangay, together with anything you have '
-                    'applied for. Staff see only what their work requires.',
+                title: strings.profPrivacyLguHoldsTitle,
+                body: strings.profPrivacyLguHoldsBody,
               ),
               NoticePoint(
-                title: 'Who else can see it',
-                body:
-                    'Nobody outside Taytay LGU, and no advertiser. Your '
-                    'information is not sold or shared for marketing. Sharing '
-                    'with another government office happens only where the law '
-                    'requires it.',
+                title: strings.profPrivacyWhoElseTitle,
+                body: strings.profPrivacyWhoElseBody,
               ),
             ],
           ),
@@ -96,7 +79,7 @@ class PrivacyScreen extends StatelessWidget {
                 Semantics(
                   header: true,
                   child: Text(
-                    'Your rights',
+                    strings.profPrivacyRightsTitle,
                     style: AppTypography.listTitle.copyWith(
                       fontWeight: AppTypography.strong,
                       color: BrandColors.ink,
@@ -104,48 +87,30 @@ class PrivacyScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: Spacing.sm),
-                Text(
-                  'Under the Data Privacy Act of 2012 you can ask Taytay LGU '
-                  'what it holds about you, ask for a copy, ask for a mistake '
-                  'to be corrected, object to how it is used, and complain to '
-                  'the National Privacy Commission.',
-                  style: body,
-                ),
+                Text(strings.profPrivacyRightsBody, style: body),
                 const SizedBox(height: Spacing.md),
-                Text(
-                  'Ask at the Taytay municipal hall with a valid ID. Staff '
-                  'there can act on your record directly. You do not need '
-                  'this app or your phone to do it.',
-                  style: body,
-                ),
+                Text(strings.profPrivacyRightsHow, style: body),
               ],
             ),
           ),
           const SizedBox(height: Spacing.lg),
 
           // Honest about the two things this screen deliberately does not do.
-          const SoftNote(
-            title: 'Changing what you agreed to. ',
-            message:
-                'The permissions you gave when you registered are held with '
-                'your Taytay LGU record, not in this app. To change or '
-                'withdraw one, ask at the municipal hall — that way the '
-                'change is recorded where it counts.',
+          SoftNote(
+            title: '${strings.profPrivacyConsentTitle} ',
+            message: strings.profPrivacyConsentBody,
           ),
           const SizedBox(height: Spacing.md),
-          const SoftNote(
-            title: 'Deleting your record. ',
-            message:
-                'A municipal resident record is kept for as long as the law '
-                'requires, so it is not deleted on request. Taytay LGU can '
-                'deactivate an account and correct what is wrong.',
+          SoftNote(
+            title: '${strings.profPrivacyDeleteTitle} ',
+            message: strings.profPrivacyDeleteBody,
           ),
           const SizedBox(height: Spacing.xl),
 
           Semantics(
             header: true,
             child: Text(
-              CanonicalCorrection.title,
+              strings.profCanonicalTitle,
               style: AppTypography.sectionTitle.copyWith(
                 color: BrandColors.ink,
               ),
@@ -153,7 +118,7 @@ class PrivacyScreen extends StatelessWidget {
           ),
           const SizedBox(height: Spacing.sm),
           Text(
-            CanonicalCorrection.explanation,
+            strings.profCanonicalExplanation,
             style: body.copyWith(color: BrandColors.muted),
           ),
         ],

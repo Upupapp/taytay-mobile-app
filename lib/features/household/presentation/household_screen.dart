@@ -14,6 +14,7 @@ import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/resident_capability.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/failure_view.dart';
@@ -134,13 +135,14 @@ class _HouseholdScreenState extends State<HouseholdScreen>
   @override
   Widget build(BuildContext context) {
     final summary = _summary;
+    final strings = AppStrings.of(context);
 
     return Scaffold(
       backgroundColor: BrandColors.background,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const BlueHeader(title: 'Household and family', showBack: true),
+          BlueHeader(title: strings.hhTitle, showBack: true),
           const OfflineBanner(),
           Expanded(
             child: CapabilityGate(
@@ -157,9 +159,9 @@ class _HouseholdScreenState extends State<HouseholdScreen>
                   ),
                   children: <Widget>[
                     if (_loading)
-                      const LoadingSkeleton(
+                      LoadingSkeleton(
                         count: 4,
-                        semanticLabel: 'Loading your household record',
+                        semanticLabel: strings.hhLoading,
                       )
                     else if (summary == null) ...<Widget>[
                       // `GET /households/current` is served: a failure other
@@ -206,27 +208,32 @@ class _HouseholdSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String? label = summary.label;
+    final strings = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const SettingsSectionTitle('Your household'),
+        SettingsSectionTitle(strings.hhSectionHousehold),
         SettingsList(
           children: <Widget>[
             if (label != null)
-              _Row(icon: TaytayIcons.house, label: 'Household', value: label),
+              _Row(
+                icon: TaytayIcons.house,
+                label: strings.hhRowHousehold,
+                value: label,
+              ),
             _Row(
               icon: TaytayIcons.landmark,
-              label: 'Barangay',
+              label: strings.profileFieldBarangay,
               value: summary.barangay,
             ),
             _Row(
               icon: TaytayIcons.mapPin,
-              label: 'Street address',
+              label: strings.profileFieldStreetAddress,
               value: summary.streetAddress,
             ),
             _Row(
               icon: TaytayIcons.users,
-              label: 'People recorded here',
+              label: strings.hhRowPeople,
               // An aggregate, and the only thing shown about the others. It
               // lets a resident notice the office is serving the wrong number
               // of people while naming nobody.
@@ -249,10 +256,11 @@ class _FamilySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const SettingsSectionTitle('Your family record'),
+        SettingsSectionTitle(strings.hhSectionFamily),
         SoftCard(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,13 +280,8 @@ class _FamilySection extends StatelessWidget {
                     const SizedBox(height: Spacing.xs),
                     Text(
                       switch (summary.role) {
-                        HouseholdRole.head =>
-                          'Taytay LGU records you as the person who answers '
-                              'for this household. The office keeps that '
-                              'record. This app does not take applications.',
-                        HouseholdRole.member =>
-                          'Taytay LGU records you as part of this household. '
-                              'This app does not take applications.',
+                        HouseholdRole.head => strings.hhRoleHeadBody,
+                        HouseholdRole.member => strings.hhRoleMemberBody,
                       },
                       style: AppTypography.bodyStyle.copyWith(
                         color: BrandColors.text,
@@ -302,6 +305,7 @@ class _WhatIsNotShown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return SoftCard(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,7 +319,7 @@ class _WhatIsNotShown extends StatelessWidget {
                 Semantics(
                   header: true,
                   child: Text(
-                    'Why you cannot see the other people here',
+                    strings.hhHiddenTitle,
                     style: AppTypography.listTitle.copyWith(
                       color: BrandColors.ink,
                     ),
@@ -323,11 +327,7 @@ class _WhatIsNotShown extends StatelessWidget {
                 ),
                 const SizedBox(height: Spacing.xs),
                 Text(
-                  'The details of everyone else in your household belong to '
-                  'them, not to your account — so this app does not show '
-                  'their names, their situation or anything they have applied '
-                  'for. Taytay LGU staff can go through the household record '
-                  'with you in person.',
+                  strings.hhHiddenBody,
                   style: AppTypography.bodyStyle.copyWith(
                     color: BrandColors.text,
                   ),
@@ -348,12 +348,10 @@ class _NoHousehold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const EmptyState(
-      title: 'No household on your account yet',
-      message:
-          'Your account is not part of a household in this app, and this '
-          'version of the app cannot set one up. The municipal hall keeps its '
-          'own household record, and staff can go through it with you.',
+    final strings = AppStrings.of(context);
+    return EmptyState(
+      title: strings.hhNoneTitle,
+      message: strings.hhNoneBody,
       boxed: true,
     );
   }
@@ -368,14 +366,14 @@ class _CorrectionEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!hasRecord) return const SizedBox.shrink();
+    final strings = AppStrings.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const SettingsSectionTitle('Is something wrong?'),
+        SettingsSectionTitle(strings.hhCorrectionHeading),
         Text(
-          'Tell Taytay LGU what looks wrong and they will check the record. '
-          'Nothing changes until staff review it.',
+          strings.hhCorrectionLead,
           style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
         ),
         const SizedBox(height: Spacing.md),
@@ -383,7 +381,7 @@ class _CorrectionEntry extends StatelessWidget {
           style: TaytayButtonStyles.soft(),
           onPressed: () =>
               context.goNamed(AppRoute.householdCorrection.routeName),
-          child: const Text('Report an error'),
+          child: Text(strings.hhReportError),
         ),
       ],
     );
@@ -408,7 +406,7 @@ class _Row extends StatelessWidget {
       title: label,
       // Never a blank or a dash: an empty row on a government record reads as
       // data loss, and a resident cannot tell it from a screen that failed.
-      detail: known ? value : 'Not on file',
+      detail: known ? value : AppStrings.of(context).hhNotOnFile,
       detailStyle: AppTypography.bodyStyle.copyWith(
         color: known ? BrandColors.ink : BrandColors.muted,
         fontStyle: known ? null : FontStyle.italic,

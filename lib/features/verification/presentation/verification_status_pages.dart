@@ -4,6 +4,7 @@ import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/profile_copy.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/network_status_views.dart';
 import '../../../shared/widgets/settings_list.dart';
@@ -12,7 +13,6 @@ import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../platform/domain/verification_review_time.dart';
-import '../../profile/domain/name_lock.dart';
 import '../domain/field_correction_note.dart';
 import 'review_time_copy.dart';
 import 's3_chrome.dart';
@@ -65,9 +65,10 @@ class PendingStatusPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String? reviewSentence = ReviewTimeCopy.sentence(reviewTime);
+    final AppStrings s = AppStrings.of(context);
+    final String? reviewSentence = ReviewTimeCopy.sentence(reviewTime, s);
     return _StatusScaffold(
-      title: 'Verification status',
+      title: s.verifStatusTitle,
       onBack: onBack,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -75,16 +76,16 @@ class PendingStatusPage extends StatelessWidget {
           _StatusCard(
             icon: TaytayIcons.hourglass,
             tone: TileTone.gold,
-            title: "We're reviewing your account",
-            chip: const StatusChip(
-              label: 'Pending review',
+            title: s.verifPendingTitle,
+            chip: StatusChip(
+              label: s.verifPendingChip,
               tone: StatusTone.pending,
             ),
             body: <String>[
               <String>[
-                'Taytay LGU staff are checking your valid ID and selfie.',
+                s.verifPendingBody,
                 ?reviewSentence,
-                if (selfieNotice == null) 'No action needed.',
+                if (selfieNotice == null) s.verifNoActionNeeded,
               ].join(' '),
               if (residentMessage.isNotEmpty) residentMessage,
             ],
@@ -98,59 +99,52 @@ class PendingStatusPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                const _CardTitle('Progress'),
+                _CardTitle(s.verifProgress),
                 const SizedBox(height: Spacing.xs),
                 Timeline(
                   steps: <TimelineStep>[
                     TimelineStep(
                       icon: TaytayIcons.check,
-                      title: 'Account created',
+                      title: s.verifStepAccountCreated,
                       detail: _orDash(accountCreated),
                       tone: TimelineTone.done,
                     ),
                     TimelineStep(
                       icon: TaytayIcons.check,
-                      title: 'Email confirmed',
+                      title: s.verifStepEmailConfirmed,
                       detail: _orDash(email),
                       tone: TimelineTone.done,
                     ),
                     TimelineStep(
                       icon: TaytayIcons.check,
-                      title: 'Valid ID and selfie received',
+                      title: s.verifStepIdReceived,
                       detail: _orDash(idType),
                       tone: TimelineTone.done,
                     ),
-                    const TimelineStep(
+                    TimelineStep(
                       icon: TaytayIcons.clock,
-                      title: 'LGU review',
-                      detail: 'In queue',
+                      title: s.verifStepLguReview,
+                      detail: s.verifStepInQueue,
                       tone: TimelineTone.current,
                     ),
-                    const TimelineStep(
+                    TimelineStep(
                       icon: TaytayIcons.badgeCheck,
-                      title: 'Verified',
-                      detail:
-                          'Unlocks document requests, messaging offices and '
-                          'applying for Tulong',
+                      title: s.verifyStageVerifiedLabel,
+                      detail: s.verifStepVerifiedDetail,
                       tone: TimelineTone.upcoming,
                     ),
                   ],
                 ),
                 if (submittedOn.isNotEmpty) ...<Widget>[
                   const SizedBox(height: Spacing.sm),
-                  _Small('Submitted $submittedOn'),
+                  _Small(s.verifSubmittedOn(submittedOn)),
                 ],
                 if (categories.isNotEmpty) _Categories(labels: categories),
               ],
             ),
           ),
           const SizedBox(height: Spacing.section),
-          const SoftNote(
-            live: false,
-            message:
-                'While pending you can browse services, news and events, and '
-                'use emergency hotlines.',
-          ),
+          SoftNote(live: false, message: s.verifPendingBrowseNote),
         ],
       ),
     );
@@ -212,16 +206,15 @@ class VerifiedStatusPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String body = verifiedOn.isEmpty
-        ? 'You now have full access to resident services.'
-        : 'Verified by Taytay LGU on $verifiedOn. You now '
-              'have full access to resident services.';
-    final int? percent = completeness;
     final AppStrings s = AppStrings.of(context);
+    final String body = verifiedOn.isEmpty
+        ? s.verifVerifiedBody
+        : s.verifVerifiedBodyOn(verifiedOn);
+    final int? percent = completeness;
     return _StatusScaffold(
-      title: 'Verification status',
+      title: s.verifStatusTitle,
       onBack: onBack,
-      footer: 'Go to Home',
+      footer: s.verifGoHome,
       onFooter: onHome,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -229,9 +222,9 @@ class VerifiedStatusPage extends StatelessWidget {
           _StatusCard(
             icon: TaytayIcons.badgeCheck,
             tone: TileTone.green,
-            title: 'Your account is verified',
-            chip: const StatusChip(
-              label: 'Verified',
+            title: s.verifVerifiedTitle,
+            chip: StatusChip(
+              label: s.verifyStageVerifiedLabel,
               tone: StatusTone.verified,
             ),
             body: <String>[
@@ -245,28 +238,28 @@ class VerifiedStatusPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                const _CardTitle('You can now'),
+                _CardTitle(s.verifYouCanNow),
                 const SizedBox(height: Spacing.xs),
                 Timeline(
                   steps: <TimelineStep>[
                     TimelineStep(
                       icon: TaytayIcons.check,
-                      title: 'Request documents',
-                      detail: 'Certificates, clearances and permits',
+                      title: s.verifCanRequestDocuments,
+                      detail: s.verifCanRequestDocumentsDetail,
                       tone: TimelineTone.navy,
                       onTap: onRequestDocuments,
                     ),
                     TimelineStep(
                       icon: TaytayIcons.check,
-                      title: 'Message municipal offices',
-                      detail: 'Ask questions and follow up requests',
+                      title: s.verifCanMessage,
+                      detail: s.verifCanMessageDetail,
                       tone: TimelineTone.navy,
                       onTap: onMessage,
                     ),
                     TimelineStep(
                       icon: TaytayIcons.check,
-                      title: 'Use your Taytay digital ID',
-                      detail: 'Show it at the municipal hall',
+                      title: s.verifCanUseId,
+                      detail: s.verifCanUseIdDetail,
                       tone: TimelineTone.navy,
                       onTap: onDigitalId,
                     ),
@@ -304,8 +297,10 @@ class VerifiedStatusPage extends StatelessWidget {
             children: <Widget>[
               SettingsRow(
                 icon: TaytayIcons.user,
-                title: 'Complete your Resident Profile',
-                detail: percent == null ? null : '$percent% complete',
+                title: s.verifCompleteProfile,
+                detail: percent == null
+                    ? null
+                    : s.verifPercentComplete(percent),
                 progress: percent == null ? null : percent / 100,
                 onTap: onProfile,
               ),
@@ -329,9 +324,9 @@ class NeedsCorrectionPage extends StatelessWidget {
     this.submittedOn = '',
     this.residentMessage = '',
     this.categories = const <String>[],
-    this.frontValue = 'Upload new photo',
-    this.backValue = 'Add',
-    this.selfieValue = 'Previous selfie kept',
+    this.frontValue,
+    this.backValue,
+    this.selfieValue,
     this.selfieKept = true,
     this.onFront,
     this.onBackPhoto,
@@ -355,9 +350,12 @@ class NeedsCorrectionPage extends StatelessWidget {
   final String submittedOn;
   final String residentMessage;
   final List<String> categories;
-  final String frontValue;
-  final String backValue;
-  final String selfieValue;
+
+  /// What each photo slot says. Null says the design's words, in the
+  /// resident's language: "Upload new photo", "Add", "Previous selfie kept".
+  final String? frontValue;
+  final String? backValue;
+  final String? selfieValue;
 
   /// The design's kept-selfie row. False draws an upload row instead, for a
   /// resident who has not sent one.
@@ -372,14 +370,18 @@ class NeedsCorrectionPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
     final String shown = reason.trim().isEmpty
-        ? 'Taytay LGU needs a correction before it can finish checking.'
+        ? s.verifCorrectionFallbackReason
         : reason.trim();
     final String reviewed = reviewedOn.trim();
+    final String front = frontValue ?? s.verifUploadNewPhoto;
+    final String back = backValue ?? s.verifAddPhoto;
+    final String selfie = selfieValue ?? s.verifPreviousSelfieKept;
     return _StatusScaffold(
-      title: 'Verification status',
+      title: s.verifStatusTitle,
       onBack: onBack,
-      footer: 'Resubmit for verification',
+      footer: s.verifResubmit,
       onFooter: onResubmit,
       notice: notice,
       child: Column(
@@ -401,14 +403,14 @@ class NeedsCorrectionPage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Text(
-                            'Needs correction',
+                            s.verifNeedsCorrection,
                             style: AppTypography.sectionTitle.copyWith(
                               color: BrandColors.ink,
                             ),
                           ),
                           const SizedBox(height: Spacing.xs),
-                          const StatusChip(
-                            label: 'Needs correction',
+                          StatusChip(
+                            label: s.verifNeedsCorrection,
                             tone: StatusTone.correction,
                           ),
                         ],
@@ -425,7 +427,7 @@ class NeedsCorrectionPage extends StatelessWidget {
                 if (residentMessage.isNotEmpty) ...<Widget>[
                   const SizedBox(height: Spacing.md),
                   Text(
-                    'Your message',
+                    s.verifYourMessage,
                     style: AppTypography.listTitle.copyWith(
                       color: BrandColors.ink,
                     ),
@@ -435,7 +437,7 @@ class NeedsCorrectionPage extends StatelessWidget {
                 ],
                 if (submittedOn.isNotEmpty) ...<Widget>[
                   const SizedBox(height: Spacing.sm),
-                  _Small('Submitted $submittedOn'),
+                  _Small(s.verifSubmittedOn(submittedOn)),
                 ],
                 if (categories.isNotEmpty) _Categories(labels: categories),
               ],
@@ -452,32 +454,32 @@ class NeedsCorrectionPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                const _CardTitle('Send a new valid ID'),
+                _CardTitle(s.verifSendNewValidId),
                 S3Field(
-                  label: 'Type of ID',
+                  label: s.verifIdType,
                   asterisk: true,
                   value: _orDash(idType),
                   chevron: true,
                 ),
                 S3Field(
-                  label: 'Front of ID',
+                  label: s.verifIdFront,
                   asterisk: true,
-                  value: frontValue,
+                  value: front,
                   dashed: true,
                   onTap: onFront,
                   leading: const _Plus(),
                 ),
                 S3Field(
-                  label: 'Back of ID (optional)',
-                  value: backValue,
+                  label: s.verifIdBackOptional,
+                  value: back,
                   dashed: true,
                   onTap: onBackPhoto,
                   leading: const _Plus(),
                 ),
                 if (selfieKept)
                   S3Field(
-                    label: 'Selfie',
-                    value: selfieValue,
+                    label: s.verifSelfie,
+                    value: selfie,
                     readOnly: true,
                     onTap: onRetake,
                     leading: const TaytayIcon(
@@ -488,7 +490,7 @@ class NeedsCorrectionPage extends StatelessWidget {
                       color: BrandColors.green,
                     ),
                     trailing: Text(
-                      'Retake',
+                      s.verifRetake,
                       style: AppTypography.listTitle.copyWith(
                         color: BrandColors.blue,
                       ),
@@ -496,8 +498,8 @@ class NeedsCorrectionPage extends StatelessWidget {
                   )
                 else
                   S3Field(
-                    label: 'Selfie',
-                    value: selfieValue,
+                    label: s.verifSelfie,
+                    value: selfie,
                     dashed: true,
                     onTap: onRetake,
                     leading: const _Plus(),
@@ -531,6 +533,7 @@ class UnverifiedStatusPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
     final Widget card = SoftCard(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -542,17 +545,13 @@ class UnverifiedStatusPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  'Not verified',
+                  s.verifNotVerified,
                   style: AppTypography.sectionTitle.copyWith(
                     color: BrandColors.ink,
                   ),
                 ),
                 const SizedBox(height: Spacing.xs),
-                const _Body(
-                  'Taytay LGU has not confirmed this account. You can browse '
-                  'services while you send your valid ID and selfie, or '
-                  'verify in person.',
-                ),
+                _Body(s.verifNotVerifiedBody),
               ],
             ),
           ),
@@ -561,9 +560,9 @@ class UnverifiedStatusPage extends StatelessWidget {
     );
     final Widget? extra = below;
     return _StatusScaffold(
-      title: 'Verification status',
+      title: s.verifStatusTitle,
       onBack: onBack,
-      footer: 'Start verification',
+      footer: s.verifyActionStart,
       onFooter: onStart,
       notice: notice,
       child: extra == null
@@ -598,6 +597,7 @@ class NameCheckNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final VoidCallback? open = onCheckName;
+    final copy = nameCheckCopy(context);
     return SoftCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -612,13 +612,13 @@ class NameCheckNote extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      NameCheckCopy.beforeSendingTitle,
+                      copy.beforeSendingTitle,
                       style: AppTypography.listTitle.copyWith(
                         color: BrandColors.ink,
                       ),
                     ),
                     const SizedBox(height: Spacing.xs),
-                    const _Body(NameCheckCopy.beforeSending),
+                    _Body(copy.beforeSending),
                   ],
                 ),
               ),
@@ -628,7 +628,7 @@ class NameCheckNote extends StatelessWidget {
             const SizedBox(height: Spacing.md),
             SecondaryButton(
               key: const Key('verification-check-name'),
-              label: NameCheckCopy.checkName,
+              label: copy.checkName,
               onPressed: open,
             ),
           ],
@@ -749,7 +749,7 @@ class _Categories extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            'What Taytay LGU has from you',
+            AppStrings.of(context).verifHeldFromYou,
             style: AppTypography.listTitle.copyWith(color: BrandColors.ink),
           ),
           for (final String label in labels)
@@ -791,7 +791,7 @@ class _ReasonBox extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              'REASON FROM TAYTAY LGU',
+              AppStrings.of(context).verifReasonHeading,
               style: AppTypography.category.copyWith(color: BrandColors.redInk),
             ),
             const SizedBox(height: Spacing.xs),
@@ -801,7 +801,7 @@ class _ReasonBox extends StatelessWidget {
             ),
             if (reviewed.isNotEmpty) ...<Widget>[
               const SizedBox(height: Spacing.xs),
-              _Small('Reviewed $reviewed'),
+              _Small(AppStrings.of(context).verifReviewedOn(reviewed)),
             ],
           ],
         ),

@@ -8,12 +8,16 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/forms/field_error.dart';
 import '../../../core/haptics/app_haptics.dart';
+import '../../../core/l10n/app_locales.dart';
+import '../../../core/l10n/core_copy.dart';
+import '../../../core/l10n/events_copy.dart';
 import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/consent_check_card.dart';
 import '../../../shared/widgets/error_state.dart';
@@ -126,9 +130,12 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen>
       backgroundColor: BrandColors.white,
       body: switch ((_idIsValid, controller)) {
         (false, _) => _Unavailable(
-          message: DeepLinkRejection.invalidIdentifier.residentMessage,
+          message: deepLinkRejectionMessage(
+            context,
+            DeepLinkRejection.invalidIdentifier,
+          ),
         ),
-        (_, null) => const _Waiting(label: 'Opening the registration form…'),
+        (_, null) => _Waiting(label: AppStrings.of(context).eventsOpeningForm),
         (_, final EventRegistrationController active) => _Body(
           controller: active,
           errorFocus: _errorFocus,
@@ -155,8 +162,9 @@ class _Body extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     if (controller.isLoadingForm) {
-      return const _Waiting(label: 'Opening the registration form…');
+      return _Waiting(label: strings.eventsOpeningForm);
     }
 
     final form = controller.form;
@@ -174,18 +182,14 @@ class _Body extends StatelessWidget {
       );
     }
     if (form == null) {
-      return const _Unavailable(
-        message:
-            'Registering in this app is not switched on yet. The Taytay office '
-            'running this event can tell you how to join.',
-      );
+      return _Unavailable(message: strings.eventsRegistrationNotSwitchedOn);
     }
 
     final block = controller.block;
     if (block != null) return _Blocked(block: block, eventId: eventId);
 
     if (controller.step == RegistrationStep.submitting) {
-      return const _Waiting(label: 'Registering you…');
+      return _Waiting(label: strings.eventsRegisteringYou);
     }
     if (controller.step == RegistrationStep.outcome) {
       return _Outcome(controller: controller, eventId: eventId);
@@ -209,7 +213,10 @@ class _StatePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AuthFormPage(title: 'Register', child: child);
+    return AuthFormPage(
+      title: AppStrings.of(context).eventsRegister,
+      child: child,
+    );
   }
 }
 
@@ -240,6 +247,7 @@ class _Blocked extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final (
       String title,
       String message,
@@ -247,32 +255,27 @@ class _Blocked extends StatelessWidget {
       AppRoute route,
     ) = switch (block) {
       RegistrationBlock.alreadyRegistered => (
-        'You are already registered',
-        'Taytay LGU has your place for this event. Your reference is on the '
-            'event page.',
-        'Back to the event',
+        strings.eventsBlockedAlreadyTitle,
+        strings.eventsBlockedAlreadyBody,
+        strings.eventsBackToEvent,
         AppRoute.eventDetail,
       ),
       RegistrationBlock.needsVerification => (
-        'This event needs a verified account',
-        'Taytay LGU asks for a confirmed identity before registering for '
-            'this one. Verifying takes a few steps and only has to be done '
-            'once.',
-        'Verify my identity',
+        strings.eventsBlockedVerifyTitle,
+        strings.eventsBlockedVerifyBody,
+        strings.gateActionVerify,
         AppRoute.verification,
       ),
       RegistrationBlock.unsupportedForm => (
-        'This registration needs the office',
-        'Taytay LGU has added something to this form that this version of '
-            'the app cannot show. Updating the app may help. Until then the '
-            'office running the event can register you in person.',
-        'Back to the event',
+        strings.eventsBlockedUnsupportedTitle,
+        strings.eventsBlockedUnsupportedBody,
+        strings.eventsBackToEvent,
         AppRoute.eventDetail,
       ),
       RegistrationBlock.notOpen => (
-        'Registration is not open',
-        'Taytay LGU is not taking registrations for this event right now.',
-        'Back to the event',
+        strings.eventsBlockedNotOpenTitle,
+        strings.eventsBlockedNotOpenBody,
+        strings.eventsBackToEvent,
         AppRoute.eventDetail,
       ),
     };
@@ -313,19 +316,22 @@ class _Wizard extends StatelessWidget {
     final total = controller.progressSteps.length;
     final isLast = controller.step == controller.progressSteps.last;
     final bool stepped = position != null && total > 1;
+    final AppStrings strings = AppStrings.of(context);
 
     return AuthFormPage(
-      title: controller.step.title,
-      subtitle: 'Event registration',
-      stepLabel: stepped ? 'Step $position of $total' : null,
+      title: controller.step.titleIn(strings),
+      subtitle: strings.eventsRegistrationSubtitle,
+      stepLabel: stepped ? strings.applyStepOf(position, total) : null,
       progress: stepped ? position / total : null,
-      progressSemanticLabel: stepped ? 'Step $position of $total' : null,
+      progressSemanticLabel: stepped
+          ? strings.applyStepOf(position, total)
+          : null,
       footer: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           AppButton(
-            label: isLast ? 'Register' : 'Continue',
+            label: isLast ? strings.eventsRegister : strings.gateActionContinue,
             loading: controller.busy,
             hapticIntent: isLast
                 ? HapticIntent.confirm
@@ -337,7 +343,7 @@ class _Wizard extends StatelessWidget {
           if (controller.canGoBack) ...<Widget>[
             const SizedBox(height: Spacing.sm),
             AppButton(
-              label: 'Back',
+              label: strings.applyBack,
               variant: AppButtonVariant.text,
               onPressed: controller.busy ? null : controller.back,
             ),
@@ -375,6 +381,7 @@ class _ConfirmStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String? notice = form.notice;
+    final AppStrings strings = AppStrings.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -385,7 +392,7 @@ class _ConfirmStep extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
-                'You are registering for',
+                strings.eventsRegisteringFor,
                 style: AppTypography.small.copyWith(
                   fontWeight: AppTypography.medium,
                   color: BrandColors.muted,
@@ -407,18 +414,14 @@ class _ConfirmStep extends StatelessWidget {
         // resident's record and the registration is filed against the account —
         // repeating personal details here would copy them into a second screen
         // for reassurance alone.
-        Text(
-          'This registration will be filed against the account you are signed '
-          'in with.',
-          style: _body,
-        ),
+        Text(strings.eventsFiledAgainstAccount, style: _body),
 
         if (notice != null) ...<Widget>[
           const SizedBox(height: Spacing.formGap),
           // The heading is its own line so the office's sentence stays
           // exactly as it sent it.
           Text(
-            'From the office',
+            strings.eventsFromTheOffice,
             style: AppTypography.small.copyWith(
               fontWeight: AppTypography.medium,
               color: BrandColors.muted,
@@ -430,11 +433,7 @@ class _ConfirmStep extends StatelessWidget {
 
         const SizedBox(height: Spacing.formGap),
         // Said before they commit, not after.
-        Text(
-          'Taytay LGU decides whether a place is available. You will see the '
-          'answer on the next screen.',
-          style: _muted,
-        ),
+        Text(strings.eventsLguDecidesNextScreen, style: _muted),
       ],
     );
   }
@@ -458,7 +457,7 @@ class _QuestionsStep extends StatelessWidget {
             child: _Field(
               field: field,
               controller: controller,
-              error: _errorFor(controller.errors, field.key),
+              error: _errorFor(context, controller.errors, field.key),
             ),
           ),
       ],
@@ -481,6 +480,7 @@ class _Field extends StatelessWidget {
   Widget build(BuildContext context) {
     final answer = controller.answers[field.key];
     final String? error = this.error;
+    final AppStrings strings = AppStrings.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -495,17 +495,17 @@ class _Field extends StatelessWidget {
           ServerFieldKind.yesNo => RadioGroup<bool>(
             groupValue: answer is bool ? answer : null,
             onChanged: (value) => controller.answer(field.key, value),
-            child: const Column(
+            child: Column(
               children: <Widget>[
                 RadioListTile<bool>(
                   value: true,
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Yes'),
+                  title: Text(strings.eventsAnswerYes),
                 ),
                 RadioListTile<bool>(
                   value: false,
                   contentPadding: EdgeInsets.zero,
-                  title: Text('No'),
+                  title: Text(strings.eventsAnswerNo),
                 ),
               ],
             ),
@@ -614,11 +614,17 @@ class _ConsentStep extends StatelessWidget {
                       controller.toggleConsent(consent.key, given: checked),
                   label: consent.isRequired
                       ? consent.label
-                      : '${consent.label} (optional)',
+                      : AppStrings.of(
+                          context,
+                        ).eventsConsentOptional(consent.label),
                   // The office's own sentence, never a paraphrase.
                   description: consent.statement,
                 ),
-                if (_errorFor(controller.errors, 'consent_${consent.key}')
+                if (_errorFor(
+                      context,
+                      controller.errors,
+                      'consent_${consent.key}',
+                    )
                     case final String message) ...<Widget>[
                   const SizedBox(height: Spacing.xs),
                   Text(
@@ -646,7 +652,8 @@ class _Outcome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final attempt = controller.attempt;
-    if (attempt == null) return const _Waiting(label: 'Registering you…');
+    final AppStrings strings = AppStrings.of(context);
+    if (attempt == null) return _Waiting(label: strings.eventsRegisteringYou);
 
     final reference = attempt.registration?.reference;
     final position = attempt.registration?.waitlistPosition;
@@ -654,26 +661,31 @@ class _Outcome extends StatelessWidget {
     final String? requestId = attempt.requestId;
 
     final String title = switch (attempt.outcome) {
-      RegistrationOutcome.registered => 'You are registered',
-      RegistrationOutcome.waitlisted => 'You are on the waitlist',
-      RegistrationOutcome.full => 'This event is full',
-      RegistrationOutcome.closed => 'Registration has closed',
-      RegistrationOutcome.refused => 'Taytay LGU could not register you',
+      RegistrationOutcome.registered => strings.eventsStateRegistered,
+      RegistrationOutcome.waitlisted => strings.eventsStateWaitlisted,
+      RegistrationOutcome.full => strings.eventsOutcomeFullTitle,
+      RegistrationOutcome.closed => strings.eventsOutcomeClosedTitle,
+      RegistrationOutcome.refused => strings.eventsOutcomeRefusedTitle,
       // A send whose answer was lost may have registered the resident, so
       // its heading never says they are not registered (D-188, D-191).
       RegistrationOutcome.couldNotSend =>
         controller.isUnconfirmed
-            ? 'Registration not confirmed'
-            : 'Not registered',
+            ? strings.eventsOutcomeUnconfirmedTitle
+            : strings.eventsOutcomeNotRegisteredTitle,
     };
     final String message = <String?>[
-      attempt.residentMessage,
-      if (reference != null) 'Reference: $reference',
+      registrationAttemptMessage(
+        context,
+        attempt,
+        failure: controller.failure,
+        unconfirmed: controller.isUnconfirmed,
+      ),
+      if (reference != null) strings.applyFailureReference(reference),
       // Only when the office publishes it — a position is a statement about
       // other people as much as about this resident.
-      if (position != null) 'You are number $position on the waitlist.',
+      if (position != null) strings.eventsWaitlistNumber(position),
       instructions,
-      if (requestId != null) 'If you contact the office, quote $requestId.',
+      if (requestId != null) strings.eventsQuoteRequestId(requestId),
     ].whereType<String>().join('\n\n');
 
     void backToEvent() => context.goNamed(
@@ -688,7 +700,7 @@ class _Outcome extends StatelessWidget {
         mark: SuccessMarkStyle.medal,
         title: title,
         message: message,
-        primaryLabel: 'Back to the event',
+        primaryLabel: strings.eventsBackToEvent,
         onPrimary: backToEvent,
         showBack: true,
       ),
@@ -700,7 +712,7 @@ class _Outcome extends StatelessWidget {
           details: <Widget>[
             TextButton(
               onPressed: backToEvent,
-              child: const Text('Back to the event'),
+              child: Text(strings.eventsBackToEvent),
             ),
           ],
         ),
@@ -711,7 +723,7 @@ class _Outcome extends StatelessWidget {
         child: EmptyState(
           title: title,
           message: message,
-          actionLabel: 'Back to the event',
+          actionLabel: strings.eventsBackToEvent,
           primaryAction: true,
           onAction: backToEvent,
         ),
@@ -727,11 +739,12 @@ class _Unavailable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return _StatePage(
       child: EmptyState(
-        title: 'You cannot register here yet',
+        title: strings.eventsCannotRegisterHere,
         message: message,
-        actionLabel: 'See all events',
+        actionLabel: strings.eventsSeeAll,
         primaryAction: true,
         onAction: () => context.goNamed(AppRoute.events.routeName),
       ),
@@ -739,9 +752,9 @@ class _Unavailable extends StatelessWidget {
   }
 }
 
-String? _errorFor(List<FieldError> errors, String field) {
+String? _errorFor(BuildContext context, List<FieldError> errors, String field) {
   for (final error in errors) {
-    if (error.field == field) return error.message;
+    if (error.field == field) return localisedFieldError(context, error);
   }
   return null;
 }

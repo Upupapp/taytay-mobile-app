@@ -13,6 +13,7 @@ import '../../../core/session/access_level.dart';
 import '../../../core/session/access_policy.dart';
 import '../../../core/session/resident_capability.dart';
 import '../../../core/session/session_state.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/blue_header.dart';
@@ -160,7 +161,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final Widget header = BlueHeader(
           leading: widget.showBack ? null : const HeaderSeal(),
           showBack: widget.showBack,
-          title: widget.showBack ? 'Profile' : 'My Account',
+          title: widget.showBack
+              ? AppStrings.of(context).profTitle
+              : AppStrings.of(context).navProfile,
           subtitle: 'Bayan ng Taytay · Rizal',
           overlap: glass,
         );
@@ -213,6 +216,7 @@ class _IdentityCard extends StatelessWidget {
     // and a level — nothing else — so there is nothing more here to show even
     // by mistake, and the account id is never rendered.
     final name = session.residentOrNull?.displayName;
+    final strings = AppStrings.of(context);
 
     final (
       String title,
@@ -221,23 +225,20 @@ class _IdentityCard extends StatelessWidget {
       AppRoute? route,
     ) = switch (session.accessLevel) {
       AccessLevel.guest => (
-        'You are browsing as a guest',
-        'Sign in with your mobile number to hold your digital ID. '
-            'Browsing stays open either way. Programme pages are information '
-            'only.',
-        'Sign in',
+        strings.profGuestTitle,
+        strings.profGuestBody,
+        strings.actionSignIn,
         AppRoute.signIn,
       ),
       AccessLevel.unverified => (
-        name ?? 'Your account',
-        'Taytay LGU has not confirmed your identity yet. Verifying unlocks '
-            'your digital ID and applying for Tulong in the app.',
-        'Verify my identity',
+        name ?? strings.profYourAccount,
+        strings.profUnverifiedBody,
+        strings.gateActionVerify,
         AppRoute.verification,
       ),
       AccessLevel.verified => (
-        name ?? 'Verified resident',
-        'Taytay LGU has confirmed your identity.',
+        name ?? strings.profVerifiedResident,
+        strings.verifyStageVerifiedBody,
         null,
         null,
       ),
@@ -313,10 +314,11 @@ class _ShortcutSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const SettingsSectionTitle('Your account'),
+        SettingsSectionTitle(strings.profYourAccount),
         SettingsList(
           glass: glass,
           children: <Widget>[
@@ -331,20 +333,20 @@ class _ShortcutSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: Spacing.xl),
-        const SettingsSectionTitle('Privacy and help'),
+        SettingsSectionTitle(strings.profSectionPrivacyHelp),
         SettingsList(
           glass: glass,
           children: <Widget>[
             SettingsRow(
               icon: TaytayIcons.lock,
-              title: 'Privacy and your data',
-              detail: 'What Taytay LGU holds, why, and your rights over it.',
+              title: strings.profPrivacyRow,
+              detail: strings.profPrivacyRowDetail,
               onTap: () => context.goNamed(AppRoute.profilePrivacy.routeName),
             ),
             SettingsRow(
               icon: TaytayIcons.info,
-              title: 'Help and support',
-              detail: 'Trouble signing in, and where to get help.',
+              title: strings.profHelpRow,
+              detail: strings.profHelpRowDetail,
               onTap: () => context.goNamed(AppRoute.signInHelp.routeName),
             ),
           ],
@@ -432,10 +434,10 @@ class _DocumentRequestTile extends StatelessWidget {
     return SettingsRow(
       key: const Key('profile-document-requests'),
       icon: TaytayIcons.fileText,
-      title: 'Request documents',
+      title: AppStrings.of(context).profRequestDocuments,
       detail: decision is AccessAllowed
           ? null
-          : 'Sending a request needs a verified account',
+          : AppStrings.of(context).profRequestDocumentsNeedsVerified,
       onTap: () => context.pushNamed(AppRoute.issuanceCatalogue.routeName),
     );
   }
@@ -451,7 +453,7 @@ class _MessageOfficeTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return SettingsRow(
       icon: TaytayIcons.messageSquare,
-      title: 'Message an office',
+      title: AppStrings.of(context).profMessageOffice,
       onTap: () {
         final decision = AccessPolicy.evaluate(
           session: session,

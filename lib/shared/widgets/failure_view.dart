@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_environment.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/design/taytay_icons.dart';
+import '../../core/l10n/shared_copy.dart';
 import '../../core/result/result.dart';
 import 'error_state.dart';
 
@@ -55,7 +56,8 @@ class FailureView extends StatelessWidget {
       // error body precisely so a resident can quote it to the support desk, and
       // a reference somebody has to transcribe by hand off a phone screen is one
       // they get wrong.
-      if (requestId != null) 'Reference: $requestId',
+      if (requestId != null)
+        sharedStrings(context).applyFailureReference(requestId),
       if (environment.allowsDiagnosticsUi && failure.debugMessage != null)
         '[${environment.badgeLabel}] ${failure.kind}: ${failure.debugMessage}',
     ];
@@ -63,7 +65,7 @@ class FailureView extends StatelessWidget {
     final bool canRetry =
         onRetry != null && failure.affordance == FailureAffordance.retryNow;
     final Widget state = ErrorState(
-      title: failure.residentMessage,
+      title: sharedResidentMessage(context, failure),
       offline: isOffline(failure),
       boxed: boxed,
       icon: _iconFor(failure),

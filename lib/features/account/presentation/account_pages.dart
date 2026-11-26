@@ -12,11 +12,14 @@ import '../../../core/design/typography.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
 import '../../../core/l10n/app_locales.dart';
+import '../../../core/l10n/profile_copy.dart';
+import '../../../core/l10n/settings_copy.dart';
 import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/barangay_picker.dart';
@@ -33,7 +36,6 @@ import '../../profile/domain/resident_profile_detail.dart';
 import '../../registration/domain/registration_domain.dart';
 import '../domain/account_password_client.dart';
 import 'account_canvas.dart';
-import 'account_copy.dart';
 import 'change_password_form.dart';
 import 'office_record_section.dart';
 
@@ -169,7 +171,7 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen>
         _pages++;
         _pageError = null;
       } else if (result case Err(:final failure)) {
-        _pageError = failure.residentMessage;
+        _pageError = localisedResidentMessage(context, failure);
       }
     });
   }
@@ -190,10 +192,11 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen>
 
   @override
   Widget build(BuildContext context) {
+    final String title = AppStrings.of(context).acctMessages;
     if (_loading) {
       return AccountCanvas(
         frame: AccountFrame.inbox,
-        title: 'Messages',
+        title: title,
         showBack: true,
         loading: true,
         onBack: () => context.goNamed(AppRoute.profile.routeName),
@@ -207,7 +210,7 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen>
         : AccountFrame.inbox;
     return AccountCanvas(
       frame: frame,
-      title: 'Messages',
+      title: title,
       showBack: true,
       showSampleNote: AppDependencies.of(context).config.usesMockData,
       onBack: () => context.goNamed(AppRoute.profile.routeName),
@@ -264,7 +267,10 @@ class _AccountThreadScreenState extends State<AccountThreadScreen>
   bool _loadingMore = false;
   bool _hasMore = false;
   String? _cursor;
-  String _title = 'Messages';
+
+  /// The office's name once the thread is read; until then the header says
+  /// Messages in the phone's language.
+  String? _title;
   String _subtitle = 'Bayan ng Taytay · Rizal';
   String _ownerAccountId = '';
   String? _error;
@@ -338,14 +344,14 @@ class _AccountThreadScreenState extends State<AccountThreadScreen>
         _closed = value.status == 'closed';
       } else if (thread case Err(:final failure)) {
         failed = true;
-        error = failure.residentMessage;
+        error = localisedResidentMessage(context, failure);
       }
       if (messages case Ok(:final value)) {
         _messages = _uniqueMessages(value.items.reversed.toList());
         _remember(value);
       } else if (messages case Err(:final failure)) {
         failed = true;
-        error ??= failure.residentMessage;
+        error ??= localisedResidentMessage(context, failure);
       }
       _failed = failed;
       _error = error;
@@ -432,7 +438,7 @@ class _AccountThreadScreenState extends State<AccountThreadScreen>
         _remember(value);
         _pageError = null;
       } else if (result case Err(:final failure)) {
-        _pageError = failure.residentMessage;
+        _pageError = localisedResidentMessage(context, failure);
       }
     });
   }
@@ -455,7 +461,8 @@ class _AccountThreadScreenState extends State<AccountThreadScreen>
     final DocumentPicker picker = AppDependencies.of(context).documentPicker;
     const UploadPolicy policy = UploadPolicy.fallback;
     if (!picker.supports(DocumentSource.file)) {
-      setState(() => _error = 'This phone cannot attach a file.');
+      final String message = AppStrings.of(context).acctCannotAttach;
+      setState(() => _error = message);
       return;
     }
     final CapturedDocument? picked = await picker.pick(
@@ -500,7 +507,8 @@ class _AccountThreadScreenState extends State<AccountThreadScreen>
     if (_sending || _closed || _failed || !_ready) return;
     final String body = _composer.text.trim();
     if (body.isEmpty) {
-      setState(() => _error = 'Write a message before sending.');
+      final String message = AppStrings.of(context).acctWriteBeforeSending;
+      setState(() => _error = message);
       return;
     }
     setState(() => _sending = true);
@@ -546,7 +554,8 @@ class _AccountThreadScreenState extends State<AccountThreadScreen>
           if (failure is ConflictFailure) _closed = true;
           // Once an answer was lost, a later failure is never "not sent"
           // until a reply goes through (D-192).
-          _error = messageSendFailure(
+          _error = localisedMessageSendFailure(
+            context,
             failure,
             act: MessageAct.reply,
             unconfirmed: _sendKey.unconfirmed,
@@ -556,7 +565,7 @@ class _AccountThreadScreenState extends State<AccountThreadScreen>
   }
 
   Future<void> _openMenu() async {
-    final String title = _title;
+    final String title = _title ?? AppStrings.of(context).acctMessages;
     await AppSheet.show<void>(
       context: context,
       title: title,
@@ -572,11 +581,12 @@ class _AccountThreadScreenState extends State<AccountThreadScreen>
   }
 
   Future<void> _close() async {
+    final AppStrings strings = AppStrings.of(context);
     final bool? confirmed = await AppDialog.confirm(
       context: context,
-      title: AccountCopy.closeConversationTitle,
-      message: AccountCopy.closeConversation,
-      confirmLabel: AccountCopy.closeConversationAction,
+      title: strings.acctCloseConversationTitle,
+      message: strings.acctCloseConversationBody,
+      confirmLabel: strings.acctCloseConversationAction,
       destructive: true,
     );
     if (confirmed != true || !mounted) return;
@@ -595,13 +605,14 @@ class _AccountThreadScreenState extends State<AccountThreadScreen>
       case Err(:final failure):
         setState(() {
           if (failure is ConflictFailure) _closed = true;
-          _error = failure.residentMessage;
+          _error = localisedResidentMessage(context, failure);
         });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final dependencies = AppDependencies.of(context);
     final bool mock = dependencies.config.usesMockData;
     final String? accountId =
@@ -615,8 +626,10 @@ class _AccountThreadScreenState extends State<AccountThreadScreen>
         _ownerAccountId.isNotEmpty &&
         _ownerAccountId == accountId;
     final bool showComposer = _ready && !_failed && !_closed;
+    final String title = _title ?? strings.acctMessages;
     final String? label = showComposer
-        ? (_file?.fileName ?? (_mediaId == null ? null : 'Attachment'))
+        ? (_file?.fileName ??
+              (_mediaId == null ? null : strings.acctAttachment))
         : null;
     return Scaffold(
       backgroundColor: BrandColors.background,
@@ -628,7 +641,7 @@ class _AccountThreadScreenState extends State<AccountThreadScreen>
               // A skeleton until the first read answers, never a blank
               // conversation (DESIGN_SYSTEM.md §5).
               loading: !_ready,
-              title: _title,
+              title: title,
               subtitle: _subtitle,
               subtitleLines: _subtitle.length > 42 ? 2 : 1,
               showBack: true,
@@ -691,7 +704,7 @@ class _AccountThreadScreenState extends State<AccountThreadScreen>
                         wrap: true,
                         actions: <PillAction>[
                           PillAction(
-                            label: 'Try again',
+                            label: strings.actionTryAgain,
                             primary: true,
                             onPressed: _retry,
                           ),
@@ -714,11 +727,12 @@ class _CloseConversationAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String label = AppStrings.of(context).acctCloseConversationAction;
     // One label, read once; the words wrap at 200% text rather than
     // overflowing a fixed height, and the target never drops under 48 dp.
     return Semantics(
       button: true,
-      label: 'Close conversation',
+      label: label,
       excludeSemantics: true,
       child: GestureDetector(
         key: const Key('account-thread-close'),
@@ -738,7 +752,7 @@ class _CloseConversationAction extends StatelessWidget {
               const SizedBox(width: Spacing.md),
               Flexible(
                 child: Text(
-                  'Close conversation',
+                  label,
                   style: AppTypography.sectionTitle.copyWith(
                     fontWeight: AppTypography.strong,
                     color: BrandColors.redInk,
@@ -948,7 +962,11 @@ class _EditProfileScreenState extends State<EditProfileScreen>
   }
 
   Future<void> _save() async {
+    final AppStrings strings = AppStrings.of(context);
+    final nameCopy = nameCheckCopy(context);
+    final barangayCopy = barangayLockCopy(context);
     final Map<String, Object?> changes = <String, Object?>{};
+
     final String name = _name.text.trim();
     final String mobile = _mobile.text.trim();
     final String email = _email.text.trim();
@@ -957,14 +975,14 @@ class _EditProfileScreenState extends State<EditProfileScreen>
     // drawn as text, so nothing typed reaches here (D-195).
     if (_nameLock.allowsChange && name != _nameOriginal) {
       final String? problem = name.isEmpty
-          ? NameCheckCopy.emptyName
+          ? nameCopy.emptyName
           : name.length > NameLock.maxLength
-          ? NameCheckCopy.tooLong
+          ? nameCopy.tooLong
           : null;
       if (problem != null) {
         await AppDialog.acknowledge(
           context: context,
-          title: AccountCopy.nothingChangedTitle,
+          title: strings.acctNothingChangedTitle,
           message: problem,
         );
         return;
@@ -982,8 +1000,8 @@ class _EditProfileScreenState extends State<EditProfileScreen>
     if (changes.isEmpty) {
       await AppDialog.acknowledge(
         context: context,
-        title: AccountCopy.nothingChangedTitle,
-        message: AccountCopy.nothingChanged,
+        title: strings.acctNothingChangedTitle,
+        message: strings.acctNothingChangedBody,
       );
       return;
     }
@@ -1002,8 +1020,8 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       if (failure.outcomeUnknown) {
         await AppDialog.acknowledge(
           context: context,
-          title: AccountCopy.notConfirmedTitle,
-          message: AccountCopy.notConfirmed,
+          title: strings.acctNotConfirmedTitle,
+          message: strings.acctNotConfirmedBody,
         );
         return;
       }
@@ -1018,11 +1036,10 @@ class _EditProfileScreenState extends State<EditProfileScreen>
         });
         await AppDialog.acknowledge(
           context: context,
-          title: BarangayLock.refusedTitle,
-          message: AccountCopy.barangayNotChanged(
-            BarangayLock.refused,
-            otherChanges: changes.length > 1,
-          ),
+          title: barangayCopy.refusedTitle,
+          message: changes.length > 1
+              ? strings.acctRefusedNothingSavedKeepOthers(barangayCopy.refused)
+              : barangayCopy.refused,
         );
         return;
       }
@@ -1033,21 +1050,21 @@ class _EditProfileScreenState extends State<EditProfileScreen>
           changes.containsKey('name') &&
           await _nameLockedSinceLoad()) {
         if (!mounted) return;
+        final String explanation = nameLockExplanation(context, _nameLock);
         await AppDialog.acknowledge(
           context: context,
-          title: AccountCopy.nameNotChangedTitle,
-          message: AccountCopy.nameNotChanged(
-            _nameLock.explanation,
-            otherChanges: changes.length > 1,
-          ),
+          title: strings.acctNameNotChangedTitle,
+          message: changes.length > 1
+              ? strings.acctRefusedNothingSavedKeepOthers(explanation)
+              : strings.acctRefusedNothingSaved(explanation),
         );
         return;
       }
       if (!mounted) return;
       await AppDialog.acknowledge(
         context: context,
-        title: AccountCopy.nothingChangedTitle,
-        message: AccountCopy.nothingChanged,
+        title: strings.acctNothingChangedTitle,
+        message: strings.acctNothingChangedBody,
       );
       return;
     }
@@ -1057,11 +1074,14 @@ class _EditProfileScreenState extends State<EditProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
+    final String nameLabel = nameCheckCopy(context).fieldLabel;
+    final String nameNote = nameLockExplanation(context, _nameLock);
     return AccountCanvas(
       frame: AccountFrame.editProfile,
       // A skeleton until `GET /me` answers, never a blank form.
       loading: !_nameRead,
-      title: 'Edit profile',
+      title: strings.acctEditProfile,
       initials: _initialsOf(_name.text),
       showBack: true,
       showBell: false,
@@ -1070,39 +1090,39 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       fields: <AccountField>[
         if (_nameLock.allowsChange)
           AccountField(
-            label: NameCheckCopy.fieldLabel,
+            label: nameLabel,
             value: _name.text,
             controller: _name,
-            note: _nameLock.explanation,
+            note: nameNote,
           )
         else
           AccountField(
-            label: NameCheckCopy.fieldLabel,
+            label: nameLabel,
             value: _name.text,
             locked: _nameRead,
-            note: _nameRead ? _nameLock.explanation : null,
+            note: _nameRead ? nameNote : null,
           ),
         AccountField(
-          label: 'Mobile number',
+          label: strings.fieldMobileNumber,
           value: _mobile.text,
           controller: _mobile,
         ),
         AccountField(
-          label: 'Email',
+          label: strings.acctFieldEmail,
           value: _email.text,
           controller: _email,
           verified: _emailVerified,
         ),
         if (_barangayLocked)
           AccountField(
-            label: 'Barangay',
+            label: strings.fieldBarangay,
             value: _barangay,
             locked: true,
-            note: BarangayLock.heldNote,
+            note: barangayLockCopy(context).heldNote,
           )
         else
           AccountField(
-            label: 'Barangay',
+            label: strings.fieldBarangay,
             value: _barangay,
             chevron: true,
             onTap: _pickBarangay,
@@ -1133,9 +1153,10 @@ class AccountSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return AccountCanvas(
       frame: AccountFrame.settings,
-      title: 'Settings & privacy',
+      title: strings.acctSettingsTitle,
       showBack: true,
       showBell: false,
       onBack: () => context.goNamed(AppRoute.profile.routeName),
@@ -1145,8 +1166,8 @@ class AccountSettingsScreen extends StatelessWidget {
       showDataExport: false,
       onLanguage: () => AppDialog.acknowledge(
         context: context,
-        title: AccountCopy.languageTitle,
-        message: AccountCopy.language,
+        title: strings.acctLanguageTitle,
+        message: strings.acctLanguageBody,
       ),
       onChangePassword: () => _changePassword(context),
       onPrivacy: () => context.goNamed(AppRoute.profileNotice.routeName),
@@ -1159,9 +1180,10 @@ Future<void> _changePassword(BuildContext context) async {
   final AccountPasswordClient client = AppDependencies.of(
     context,
   ).accountPasswordClient;
+  final AppStrings strings = AppStrings.of(context);
   await AppDialog.show<void>(
     context: context,
-    title: 'Change password',
+    title: strings.acctChangePassword,
     builder: (BuildContext dialogContext) => ChangePasswordForm(
       client: client,
       onCancel: () => Navigator.of(dialogContext).pop(),
@@ -1169,8 +1191,8 @@ Future<void> _changePassword(BuildContext context) async {
         Navigator.of(dialogContext).pop();
         AppDialog.acknowledge(
           context: context,
-          title: AccountCopy.passwordUpdatedTitle,
-          message: AccountCopy.passwordUpdated,
+          title: strings.acctPasswordUpdatedTitle,
+          message: strings.acctPasswordUpdatedBody,
         );
       },
     ),
@@ -1240,10 +1262,11 @@ class _PrivacyNoticeScreenState extends State<PrivacyNoticeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final String title = AppStrings.of(context).acctPrivacyNotice;
     if (!_ready) {
       return AccountCanvas(
         frame: AccountFrame.privacy,
-        title: 'Privacy Notice',
+        title: title,
         showBack: true,
         showBell: false,
         loading: true,
@@ -1252,7 +1275,7 @@ class _PrivacyNoticeScreenState extends State<PrivacyNoticeScreen> {
     }
     return AccountCanvas(
       frame: AccountFrame.privacy,
-      title: 'Privacy Notice',
+      title: title,
       showBack: true,
       showBell: false,
       onBack: () => context.goNamed(AppRoute.profile.routeName),
@@ -1274,7 +1297,7 @@ class PhotoCreditsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return AccountCanvas(
       frame: AccountFrame.about,
-      title: 'Photo credits & about',
+      title: AppStrings.of(context).acctMenuCredits,
       showBack: true,
       showBell: false,
       onBack: () => context.goNamed(AppRoute.profile.routeName),
@@ -1291,7 +1314,7 @@ class OfficeBannersScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return AccountCanvas(
       frame: AccountFrame.banners,
-      title: 'Office banner photos',
+      title: AppStrings.of(context).acctOfficeBannerPhotos,
       showBack: true,
       showBell: false,
       onBack: () => context.goNamed(AppRoute.photoCredits.routeName),

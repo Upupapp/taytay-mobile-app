@@ -29,6 +29,10 @@ const String messageNotSent = 'Nothing was sent.';
 
 /// What a resident reads under the composer when a message did not go through.
 ///
+/// This is the no-context English; a screen says it through
+/// `localisedMessageSendFailure` (`core/l10n/settings_copy.dart`), which
+/// follows the same branches.
+///
 /// Every line is this app's own; the server's `message` never reaches the
 /// screen (Article 5.5). It says whether the message reached the office only
 /// where the app knows (D-188): "nothing was sent" for a connection that

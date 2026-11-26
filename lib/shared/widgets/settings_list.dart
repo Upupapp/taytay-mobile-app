@@ -6,6 +6,7 @@ import '../../core/design/design_tokens.dart';
 import '../../core/design/taytay_icons.dart';
 import '../../core/design/typography.dart';
 import '../../core/haptics/app_haptics.dart';
+import '../../core/l10n/shared_copy.dart';
 import '../../core/motion/motion_tokens.dart';
 import 'surface_cards.dart';
 import 'taytay_icon.dart';
@@ -308,7 +309,8 @@ class SettingsRow extends StatelessWidget {
         <String>[
           title,
           if (detail != null && detail.isNotEmpty) detail,
-          if (hasBadge) '$badgeCount new',
+          if (badgeCount != null && badgeCount > 0)
+            sharedStrings(context).sharedBadgeNew(badgeCount),
         ].join(', ');
     final bool reduced = Motion.reduced(context);
     return Semantics(

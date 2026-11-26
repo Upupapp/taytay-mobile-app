@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
 import '../../core/design/typography.dart';
+import '../../core/l10n/shared_copy.dart';
 import '../../core/result/result.dart';
 import '../../features/registration/domain/registration_domain.dart';
+import '../../l10n/app_localizations.dart';
 import 'app_button.dart';
 import 'app_sheet.dart';
 import 'loading_skeleton.dart';
@@ -24,7 +26,7 @@ Future<Barangay?> showBarangayPicker(
 }) {
   return AppSheet.show<Barangay>(
     context: context,
-    title: BarangayPicker.title,
+    title: sharedStrings(context).sharedBarangayPickerTitle,
     builder: (BuildContext sheet) =>
         BarangayPicker(load: load, selectedId: selectedId),
   );
@@ -39,7 +41,8 @@ Future<Barangay?> showBarangayPicker(
 class BarangayPicker extends StatefulWidget {
   const BarangayPicker({required this.load, this.selectedId, super.key});
 
-  /// The sheet's title.
+  /// The sheet's title, in English; the sheet shows
+  /// `sharedBarangayPickerTitle` in the reader's language.
   static const String title = 'Choose your barangay';
 
   final Future<Result<List<Barangay>>> Function() load;
@@ -67,15 +70,16 @@ class _BarangayPickerState extends State<BarangayPicker> {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = sharedStrings(context);
     final TextStyle note = AppTypography.listDetail.copyWith(
       color: BrandColors.muted,
       height: 1.45,
     );
     final Result<List<Barangay>>? result = _result;
     final Widget body = switch (result) {
-      null => const LoadingSkeleton(
+      null => LoadingSkeleton(
         layout: SkeletonLayout.text,
-        semanticLabel: 'Loading barangays',
+        semanticLabel: strings.sharedBarangayPickerLoading,
       ),
       Ok<List<Barangay>>(:final value) when value.isNotEmpty => Column(
         mainAxisSize: MainAxisSize.min,
@@ -97,14 +101,13 @@ class _BarangayPickerState extends State<BarangayPicker> {
             liveRegion: true,
             child: Text(
               result is Ok<List<Barangay>>
-                  ? 'No barangays are listed yet. Please try again later.'
-                  : 'We could not load the list of barangays. Check your '
-                        'connection and try again.',
+                  ? strings.sharedBarangayPickerEmpty
+                  : strings.sharedBarangayPickerFailed,
               style: note,
             ),
           ),
           const SizedBox(height: Spacing.md),
-          AppButton(label: 'Try again', onPressed: _fetch),
+          AppButton(label: strings.actionTryAgain, onPressed: _fetch),
         ],
       ),
     };

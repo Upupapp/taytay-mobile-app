@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'verification_decision.dart';
+
 /// The registry record the MSWDO office keeps about the resident, as `GET /me`
 /// sends it in `office_record` (backend ADR 0016, D-235).
 ///
@@ -54,7 +56,13 @@ class OfficeRecord {
   /// is not a `YYYY-MM-DD` date. Written out rather than numeric, as the
   /// decision date is (`manilaDecisionDate`), so `03/04/1990` cannot be read
   /// two ways.
-  String get birthDateLabel {
+  String get birthDateLabel => birthDateLabelIn('en');
+
+  /// [birthDateLabel] with the month named in [languageCode] (`fil` gives
+  /// `Ago 5, 1990` for `Aug 5, 1990`); the order never changes (D-237). A
+  /// screen comes through `officeRecordBirthDate` in
+  /// `core/l10n/profile_copy.dart`.
+  String birthDateLabelIn(String languageCode) {
     final RegExpMatch? match = RegExp(
       r'^(\d{4})-(\d{2})-(\d{2})$',
     ).firstMatch(birthDate);
@@ -63,23 +71,9 @@ class OfficeRecord {
     final int month = int.parse(match.group(2)!);
     final int day = int.parse(match.group(3)!);
     if (month < 1 || month > 12 || day < 1 || day > 31) return birthDate;
-    return '${_months[month - 1]} $day, $year';
+    final String name = monthAbbreviation(month, languageCode: languageCode);
+    return '$name $day, $year';
   }
-
-  static const List<String> _months = <String>[
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
 
   /// Redacted in full: every value here is personal data about a named
   /// resident.
@@ -108,8 +102,9 @@ enum OfficeRecordSex {
   }
 }
 
-/// What the resident reads about her record at the office (D-235). Literal
-/// English, as the account screens are.
+/// What the resident reads about her record at the office (D-235). The
+/// English, kept as the no-context fallback; a screen reads it in the
+/// resident's language through `core/l10n/profile_copy.dart` (D-237).
 abstract final class OfficeRecordCopy {
   static const String title = 'Your record at the MSWDO office';
 

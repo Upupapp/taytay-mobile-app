@@ -8,17 +8,18 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/issuance_copy.dart';
 import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/detail_page.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
-import '../domain/issuance_terms.dart';
 import '../domain/issuance_type.dart';
 import 'issuance_widgets.dart';
 
@@ -104,13 +105,14 @@ class _IssuanceTypeScreenState extends State<IssuanceTypeScreen>
           session: dependencies.session.state,
           requirement: AccessRequirement.verified,
         );
+        final AppStrings strings = AppStrings.of(context);
         return IssuanceScaffold(
-          title: 'Document details',
+          title: strings.issuanceTypeTitle,
           white: failure == null,
           footer: type != null && decision is AccessAllowed
               ? PrimaryButton(
                   key: const Key('issuance-start-request'),
-                  label: 'Request this document',
+                  label: strings.issuanceRequestThis,
                   onPressed: () => context.pushNamed(
                     AppRoute.issuanceForm.routeName,
                     pathParameters: <String, String>{'typeId': type.id},
@@ -121,16 +123,16 @@ class _IssuanceTypeScreenState extends State<IssuanceTypeScreen>
               ? IssuanceLoadFailure(
                   failure: failure,
                   onRetry: _load,
-                  what: 'this document',
+                  failedTitle: strings.issuanceLoadFailedDocument,
                 )
               : type == null
               ? ListView(
                   padding: const EdgeInsets.all(Spacing.lg),
-                  children: const <Widget>[
+                  children: <Widget>[
                     LoadingSkeleton(
                       layout: SkeletonLayout.detail,
                       count: 1,
-                      semanticLabel: 'Opening this document',
+                      semanticLabel: strings.issuanceTypeLoading,
                     ),
                   ],
                 )
@@ -155,6 +157,7 @@ class IssuanceTypeDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final String? description = type.description;
     final String? claim = type.claimInstructions;
     return ListView(
@@ -200,32 +203,31 @@ class IssuanceTypeDetails extends StatelessWidget {
             const SizedBox(height: Spacing.sm),
             DetailFactRow(
               icon: TaytayIcons.handCoins,
-              label: 'Fee',
-              value: issuanceFeeLine(type.feeCentavos),
+              label: strings.issuanceFeeLabel,
+              value: issuanceFeeText(strings, type.feeCentavos),
             ),
             DetailFactRow(
               icon: TaytayIcons.clock,
-              label: 'Processing time',
-              value: issuanceProcessingLine(type.processingDays),
+              label: strings.issuanceProcessingLabel,
+              value: issuanceProcessingText(strings, type.processingDays),
               divider: false,
             ),
             const SizedBox(height: Spacing.formGap),
             IssuanceCard(
-              title: 'What you need to send',
+              title: strings.issuanceWhatToSend,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   if (type.requirements.isEmpty)
-                    const IssuanceText(
-                      'No files. The purpose of your request is enough.',
-                    ),
+                    IssuanceText(strings.issuanceNoFilesNeeded),
                   for (final IssuanceRequirement requirement
                       in type.requirements)
                     _RequirementLine(requirement: requirement),
                   const SizedBox(height: Spacing.md),
                   IssuanceText(
-                    'Send each one as a photo or a file: '
-                    '${acceptedFilesLine(type.uploadPolicy)}.',
+                    strings.issuanceSendEachAs(
+                      acceptedFilesText(strings, type.uploadPolicy),
+                    ),
                     color: BrandColors.muted,
                     small: true,
                   ),
@@ -233,12 +235,8 @@ class IssuanceTypeDetails extends StatelessWidget {
               ),
             ),
             IssuanceCard(
-              title: 'How to claim it',
-              child: IssuanceText(
-                claim ??
-                    'The office will tell you here when and where to claim '
-                        'it, once it is ready.',
-              ),
+              title: strings.issuanceHowToClaim,
+              child: IssuanceText(claim ?? strings.issuanceClaimFallback),
             ),
           ],
         ),
@@ -254,7 +252,11 @@ class _RequirementLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final String? hint = requirement.hint;
+    final String need = requirement.required
+        ? strings.applyObligationRequired
+        : strings.applyObligationOptional;
     return Padding(
       padding: const EdgeInsets.only(top: Spacing.sm),
       child: Row(
@@ -276,8 +278,7 @@ class _RequirementLine extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  '${requirement.label} · '
-                  '${requirement.required ? 'Required' : 'Optional'}',
+                  '${requirement.label} · $need',
                   style: AppTypography.listTitle.copyWith(
                     color: BrandColors.ink,
                     height: 1.5,

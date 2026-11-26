@@ -12,12 +12,14 @@ import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/core/documents/document_capture.dart';
 import 'package:taytay_resident/core/documents/upload_policy.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/motion/motion_tokens.dart';
 import 'package:taytay_resident/features/auth/presentation/account_wizard_screen.dart';
 import 'package:taytay_resident/features/auth/presentation/forgot_password_screen.dart';
 import 'package:taytay_resident/features/auth/presentation/reset_flow_screens.dart';
 import 'package:taytay_resident/features/auth/presentation/sign_in_screen.dart';
 import 'package:taytay_resident/features/auth/presentation/too_many_attempts_screen.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/legal_text_sheet.dart';
 
 import '../features/auth_screens_test.dart' show boot;
@@ -55,6 +57,8 @@ Future<void> _paint(WidgetTester tester, Widget child, String path) async {
   await tester.pumpWidget(
     MaterialApp(
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: AppStrings.localizationsDelegates,
+      supportedLocales: AppLocales.supported,
       theme: AppTheme.light(),
       home: RepaintBoundary(
         key: const ValueKey<String>('s2-frame'),

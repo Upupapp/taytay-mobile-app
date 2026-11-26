@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/verification_copy.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/network_status_views.dart';
 import '../../../shared/widgets/settings_list.dart';
@@ -67,6 +69,7 @@ class ProfileWizardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final DateTime? sent = submittedAt;
+    final AppStrings s = AppStrings.of(context);
     switch (step) {
       case ProfileWizardStep.overview:
         return Scaffold(
@@ -75,7 +78,7 @@ class ProfileWizardPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               S3Header(
-                title: 'Resident Profile',
+                title: s.verifProfileTitle,
                 subtitle: 'Bayan ng Taytay · Rizal',
                 onBack: onBack,
               ),
@@ -107,17 +110,15 @@ class ProfileWizardPage extends StatelessWidget {
         return Scaffold(
           body: SuccessScreen(
             mark: SuccessMarkStyle.medal,
-            title: 'Profile submitted',
-            message:
-                "Your resident profile was sent to Taytay LGU. We'll notify you "
-                'when it has been reviewed.',
+            title: s.verifProfileSubmittedTitle,
+            message: s.verifProfileSubmittedMessage,
             showBack: true,
             onBack: onBack,
             body: _Submitted(
-              submittedAt: sent == null ? '' : formatManilaStamp(sent),
+              submittedAt: sent == null ? '' : formatManilaStamp(sent, s),
               reviewTime: reviewTime,
             ),
-            primaryLabel: 'Back to profile',
+            primaryLabel: s.verifBackToProfile,
             onPrimary: onContinue,
           ),
         );
@@ -131,22 +132,22 @@ class ProfileWizardPage extends StatelessWidget {
           String cta,
         ) = switch (step) {
           ProfileWizardStep.personal => (
-            'Personal information',
-            'Step 1 of 2',
+            s.verifPersonalInfo,
+            s.welcomeStep(1, 2),
             0.5,
-            'Save & continue',
+            s.verifSaveAndContinue,
           ),
           ProfileWizardStep.household => (
-            'Household & address',
-            'Step 2 of 2',
+            s.verifHouseholdAddress,
+            s.welcomeStep(2, 2),
             1.0,
-            'Save & continue',
+            s.verifSaveAndContinue,
           ),
-          _ => ('Review & submit', null, null, 'Submit to Taytay LGU'),
+          _ => (s.verifReviewSubmit, null, null, s.verifSubmitToLgu),
         };
         return AuthFormPage(
           title: title,
-          subtitle: 'Resident Profile',
+          subtitle: s.verifProfileTitle,
           stepLabel: stepLabel,
           progress: progress,
           progressSemanticLabel: stepLabel,
@@ -188,14 +189,15 @@ class _Overview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
     final String name = <String>[
       record.givenName.trim(),
       record.familyName.trim(),
     ].where((String part) => part.isNotEmpty).join(' ');
     final (String chip, StatusTone tone) = switch (record.verificationTier) {
-      'verified' => ('Verified', StatusTone.verified),
-      'rejected' => ('Needs correction', StatusTone.correction),
-      _ => ('Pending review', StatusTone.pending),
+      'verified' => (s.verifyStageVerifiedLabel, StatusTone.verified),
+      'rejected' => (s.verifNeedsCorrection, StatusTone.correction),
+      _ => (s.verifPendingChip, StatusTone.pending),
     };
     final String place = <String>[
       if (record.barangayName.isNotEmpty) 'Brgy. ${record.barangayName}',
@@ -218,7 +220,7 @@ class _Overview extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          name.isEmpty ? 'Your name' : name,
+                          name.isEmpty ? s.verifYourName : name,
                           style: AppTypography.sectionTitle.copyWith(
                             color: BrandColors.ink,
                           ),
@@ -244,7 +246,7 @@ class _Overview extends StatelessWidget {
                 children: <Widget>[
                   Expanded(
                     child: Text(
-                      'Profile completeness',
+                      s.verifProfileCompleteness,
                       style: AppTypography.label.copyWith(
                         color: BrandColors.text,
                       ),
@@ -262,7 +264,7 @@ class _Overview extends StatelessWidget {
               _Bar(value: record.completeness / 100),
               const SizedBox(height: Spacing.sm),
               Text(
-                'Complete all sections to submit your profile to Taytay LGU.',
+                s.verifCompleteAllSections,
                 style: AppTypography.small.copyWith(color: BrandColors.muted),
               ),
             ],
@@ -273,8 +275,10 @@ class _Overview extends StatelessWidget {
           children: <Widget>[
             _SectionRow(
               icon: TaytayIcons.user,
-              title: 'Personal information',
-              chip: record.personalComplete ? 'Complete' : 'Not started',
+              title: s.verifPersonalInfo,
+              chip: record.personalComplete
+                  ? s.verifSectionComplete
+                  : s.verifyStageNotStartedLabel,
               tone: record.personalComplete
                   ? StatusTone.verified
                   : StatusTone.neutral,
@@ -282,23 +286,25 @@ class _Overview extends StatelessWidget {
             ),
             _SectionRow(
               icon: TaytayIcons.house,
-              title: 'Household & address',
-              chip: record.householdStarted ? 'In progress' : 'Not started',
+              title: s.verifHouseholdAddress,
+              chip: record.householdStarted
+                  ? s.verifyStageInProgressLabel
+                  : s.verifyStageNotStartedLabel,
               tone: record.householdStarted
                   ? StatusTone.pending
                   : StatusTone.neutral,
               onTap: onHousehold,
             ),
-            const _SectionRow(
+            _SectionRow(
               icon: TaytayIcons.paperclip,
-              title: 'Supporting documents',
-              chip: 'Optional',
+              title: s.verifSupportingDocuments,
+              chip: s.applyObligationOptional,
               tone: StatusTone.neutral,
             ),
             _SectionRow(
               icon: TaytayIcons.circleCheck,
-              title: 'Review & submit',
-              chip: 'Not started',
+              title: s.verifReviewSubmit,
+              chip: s.verifyStageNotStartedLabel,
               tone: StatusTone.neutral,
               onTap: onReview,
             ),
@@ -408,31 +414,32 @@ class _Personal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
     final String suffix = record.suffix.trim();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         _Pair(
           left: S3Field(
-            label: 'First name',
+            label: s.fieldFirstName,
             asterisk: true,
             value: _shown(record.givenName),
             top: 0,
           ),
           right: S3Field(
-            label: 'Middle name',
+            label: s.fieldMiddleName,
             value: _shown(record.middleName),
             top: 0,
           ),
         ),
         _Pair(
           left: S3Field(
-            label: 'Last name',
+            label: s.fieldLastName,
             asterisk: true,
             value: _shown(record.familyName),
           ),
           right: S3Field(
-            label: 'Suffix',
+            label: s.verifSuffix,
             value: suffix.isEmpty ? '—' : suffix,
             readOnly: suffix.isEmpty,
           ),
@@ -440,15 +447,15 @@ class _Personal extends StatelessWidget {
         ),
         _Pair(
           left: S3Field(
-            label: 'Sex',
+            label: s.fieldSex,
             asterisk: true,
-            value: _shown(record.sex),
+            value: _shown(localisedSexLabel(s, record.sex)),
             chevron: true,
           ),
           right: S3Field(
-            label: 'Birthdate',
+            label: s.verifBirthdate,
             asterisk: true,
-            value: _birth(record.birthdate),
+            value: _birth(record.birthdate, s),
             trailing: const TaytayIcon(
               icon: TaytayIcons.calendar,
               semanticLabel: '',
@@ -460,28 +467,35 @@ class _Personal extends StatelessWidget {
         ),
         _Pair(
           left: S3Field(
-            label: 'Civil status',
+            label: s.fieldCivilStatus,
             asterisk: true,
             value: _shown(record.civilStatus),
             chevron: true,
           ),
           right: S3Field(
-            label: 'Age',
+            label: s.verifAge,
             value: _age(record.birthdate),
             readOnly: true,
           ),
         ),
         const SizedBox(height: Spacing.formGap),
-        const _SectionTitle('Contact'),
+        _SectionTitle(s.verifContact),
         S3Field(
-          label: 'Mobile number',
+          label: s.fieldMobileNumber,
           asterisk: true,
           value: _shown(record.mobile),
           trailing: record.mobileVerified
-              ? const StatusChip(label: 'Verified', tone: StatusTone.verified)
+              ? StatusChip(
+                  label: s.verifyStageVerifiedLabel,
+                  tone: StatusTone.verified,
+                )
               : null,
         ),
-        S3Field(label: 'Email', value: _shown(record.email), readOnly: true),
+        S3Field(
+          label: s.verifEmail,
+          value: _shown(record.email),
+          readOnly: true,
+        ),
       ],
     );
   }
@@ -494,12 +508,13 @@ class _Household extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const _SectionTitle('Address'),
+        _SectionTitle(s.verifAddress),
         S3Field(
-          label: 'Barangay',
+          label: s.fieldBarangay,
           asterisk: true,
           value: _shown(record.barangayName),
           chevron: true,
@@ -507,15 +522,15 @@ class _Household extends StatelessWidget {
         ),
         _Pair(
           left: S3Field(
-            label: 'House no. / Street',
+            label: s.verifHouseNoStreet,
             asterisk: true,
             value: _shown(record.street),
           ),
-          right: S3Field(label: 'Purok / Sitio', value: _purok(record.purok)),
+          right: S3Field(label: s.verifPurokSitio, value: _purok(record.purok)),
           narrowRight: true,
         ),
         S3Field(
-          label: 'Municipality / Province',
+          label: s.verifMunicipalityProvince,
           value: '${record.municipality}, ${record.province}',
           readOnly: true,
         ),
@@ -540,22 +555,22 @@ class _Household extends StatelessWidget {
           ),
         ),
         const SizedBox(height: Spacing.formGap),
-        const _SectionTitle('Household'),
+        _SectionTitle(s.verifHousehold),
         _Pair(
           left: S3Field(
-            label: 'Years at this address',
+            label: s.verifYearsAtThisAddress,
             asterisk: true,
             value: _shown(record.yearsAtAddress),
             top: 0,
           ),
           right: S3Field(
-            label: 'Household members',
+            label: s.verifHouseholdMembers,
             value: _shown(record.memberCount),
             top: 0,
           ),
         ),
         S3Field(
-          label: 'Residence type',
+          label: s.verifResidenceType,
           value: _shown(record.residenceType),
           chevron: true,
         ),
@@ -583,6 +598,7 @@ class _Review extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
     final ValueChanged<bool>? change = onCertified;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -592,17 +608,16 @@ class _Review extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              _EditHeader(
-                title: 'Personal information',
-                onEdit: onEditPersonal,
-              ),
-              _Line(label: 'Name', value: record.displayName),
+              _EditHeader(title: s.verifPersonalInfo, onEdit: onEditPersonal),
+              _Line(label: s.verifName, value: record.displayName),
               _Line(
-                label: 'Sex · Birthdate',
-                value: '${record.sex} · ${_birth(record.birthdate)}',
+                label: s.verifSexBirthdate,
+                value:
+                    '${localisedSexLabel(s, record.sex)} · '
+                    '${_birth(record.birthdate, s)}',
               ),
-              _Line(label: 'Civil status', value: record.civilStatus),
-              _Line(label: 'Mobile', value: record.mobile),
+              _Line(label: s.fieldCivilStatus, value: record.civilStatus),
+              _Line(label: s.verifMobile, value: record.mobile),
             ],
           ),
         ),
@@ -613,30 +628,23 @@ class _Review extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               _EditHeader(
-                title: 'Household & address',
+                title: s.verifHouseholdAddress,
                 onEdit: onEditHousehold,
               ),
-              _Line(label: 'Address', value: _shortAddress(record)),
+              _Line(label: s.verifAddress, value: _shortAddress(record)),
               _Line(
-                label: 'Barangay',
+                label: s.fieldBarangay,
                 value:
                     '${record.barangayName}, ${record.municipality}, '
                     '${record.province}',
               ),
-              _Line(label: 'Years at address', value: record.yearsAtAddress),
-              _Line(label: 'Household members', value: record.memberCount),
+              _Line(label: s.verifYearsAtAddress, value: record.yearsAtAddress),
+              _Line(label: s.verifHouseholdMembers, value: record.memberCount),
             ],
           ),
         ),
         const SizedBox(height: Spacing.section),
-        _Certify(
-          checked: certified,
-          onChanged: change,
-          label:
-              'I certify that the information is true and correct, and I '
-              'consent to its processing under the Data Privacy Act of 2012 '
-              "per Taytay LGU's Privacy Notice.",
-        ),
+        _Certify(checked: certified, onChanged: change, label: s.verifCertify),
       ],
     );
   }
@@ -732,11 +740,15 @@ class _Submitted extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const Center(
-          child: StatusChip(label: 'Pending review', tone: StatusTone.pending),
+        Center(
+          child: StatusChip(
+            label: s.verifPendingChip,
+            tone: StatusTone.pending,
+          ),
         ),
         const SizedBox(height: Spacing.section),
         SoftCard(
@@ -745,19 +757,19 @@ class _Submitted extends StatelessWidget {
             steps: <TimelineStep>[
               TimelineStep(
                 icon: TaytayIcons.check,
-                title: 'Submitted',
+                title: s.verifSubmitted,
                 detail: submittedAt.isEmpty ? '—' : submittedAt,
                 tone: TimelineTone.done,
               ),
               TimelineStep(
                 icon: TaytayIcons.clock,
-                title: 'LGU review',
-                detail: ReviewTimeCopy.timelineDetail(reviewTime) ?? '',
+                title: s.verifStepLguReview,
+                detail: ReviewTimeCopy.timelineDetail(reviewTime, s) ?? '',
                 tone: TimelineTone.current,
               ),
-              const TimelineStep(
+              TimelineStep(
                 icon: TaytayIcons.badgeCheck,
-                title: 'Profile verified',
+                title: s.verifProfileVerified,
                 tone: TimelineTone.upcoming,
               ),
             ],
@@ -809,10 +821,10 @@ class _EditHeader extends StatelessWidget {
           ),
         ),
         if (edit != null)
-          AuthLink('Edit', onPressed: edit)
+          AuthLink(AppStrings.of(context).verifEdit, onPressed: edit)
         else
           Text(
-            'Edit',
+            AppStrings.of(context).verifEdit,
             style: AppTypography.listTitle.copyWith(color: BrandColors.muted),
           ),
       ],
@@ -919,27 +931,19 @@ String _shortAddress(ResidentRecord record) {
   return parts.join(', ');
 }
 
-String _birth(String iso) {
+/// A `YYYY-MM-DD` birth date as "Oct 22, 1990", the month named in the
+/// resident's language (`verifDate`). A value that is not such a date is shown
+/// as it came.
+String _birth(String iso, AppStrings strings) {
   final List<String> parts = iso.split('-');
   if (parts.length != 3) return iso.isEmpty ? '—' : iso;
-  const List<String> months = <String>[
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
+  final int? year = int.tryParse(parts[0]);
   final int? month = int.tryParse(parts[1]);
   final int? day = int.tryParse(parts[2]);
-  if (month == null || day == null || month < 1 || month > 12) return iso;
-  return '${months[month - 1]} $day, ${parts[0]}';
+  if (year == null || month == null || day == null || month < 1 || month > 12) {
+    return iso;
+  }
+  return strings.verifDate(DateTime.utc(year, month, day));
 }
 
 String _age(String iso) {

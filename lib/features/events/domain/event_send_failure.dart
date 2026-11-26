@@ -1,4 +1,58 @@
 import '../../../core/result/result.dart';
+import 'event_registration.dart';
+
+// ── Answers the server gave ─────────────────────────────────────────────────
+//
+// This app's own sentences, chosen by the outcome or the refusal — never the
+// server's `words` or `error.message` (Article 5.5). English, kept here as the
+// no-context fallback; `core/l10n/events_copy.dart` says them in the
+// resident's language.
+//
+// "Nothing was registered" is said for `full` and `closed` because the server
+// answers them only when this resident holds no place: a key it has seen
+// answers with what that send did, and a place already held is reported
+// before either.
+
+/// `registered`.
+const String registrationHeldCopy =
+    'Taytay LGU has your place. Quote your reference at the door.';
+
+/// `waitlisted`.
+const String registrationWaitlistedCopy =
+    'Taytay LGU has you on the waitlist. The office moves people up when a '
+    'place opens, and you will see a notice in the app if it does.';
+
+/// `full`.
+const String registrationFullCopy =
+    'Every place was taken before your registration arrived, and this event '
+    'keeps no waitlist. Nothing was registered.';
+
+/// `closed`.
+const String registrationClosedCopy =
+    'Registration for this event closed before your registration arrived. '
+    'Nothing was registered.';
+
+/// A refusal (`403`, `404`, `409`, `422`).
+///
+/// None of these says "nothing was registered": a refusal says this send was
+/// turned away, not what an earlier send under the same key did.
+String registrationRefusalCopy(RegistrationRefusal refusal) =>
+    switch (refusal) {
+      RegistrationRefusal.needsVerification =>
+        'This event takes registrations from verified accounts. Verify your '
+            'account first, then register.',
+      RegistrationRefusal.notAllowed =>
+        'Event registration is not available for this account in the app.',
+      RegistrationRefusal.notListed =>
+        'This event is no longer listed, so Taytay LGU could not take a '
+            'registration for it.',
+      RegistrationRefusal.notTaking =>
+        'Taytay LGU is not taking registrations for this event right now. The '
+            'event page says whether registration opens later.',
+      RegistrationRefusal.notAccepted =>
+        'Taytay LGU could not accept this registration as it was sent. If it '
+            'happens again, quote the reference below to the office.',
+    };
 
 /// The sentence for a registration that may have reached Taytay LGU.
 ///

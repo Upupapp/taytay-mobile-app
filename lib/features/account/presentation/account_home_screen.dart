@@ -5,6 +5,8 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/haptics/app_haptics.dart';
+import '../../../core/l10n/app_locales.dart';
+import '../../../core/l10n/profile_copy.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
@@ -15,11 +17,9 @@ import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../profile/domain/profile_fields.dart';
 import '../../profile/domain/resident_profile_detail.dart';
-import '../../profile/domain/verification_decision.dart';
 import '../../registration/domain/registration_domain.dart';
 import '../domain/profile_completion.dart';
 import 'account_canvas.dart';
-import 'account_copy.dart';
 
 /// My Account.
 ///
@@ -41,7 +41,10 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
   bool _failed = false;
   AppFailure? _failure;
   ResidentProfileDetail? _detail;
-  String _messagesLine = 'Office replies';
+
+  /// The office of the newest thread. Null until a thread was read: the
+  /// Messages row then says "Office replies".
+  String? _latestOffice;
   int _unread = 0;
 
   /// `GET /barangays`, to name the barangay `GET /me` gives as an id. Null
@@ -113,21 +116,19 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
           (int sum, thread) => sum + thread.unreadCount,
         );
         _unread = unread;
-        final office = value.items.first.officeName;
-        _messagesLine = unread > 0
-            ? '$unread new ${unread == 1 ? 'reply' : 'replies'} from $office'
-            : 'No new replies';
+        _latestOffice = value.items.first.officeName;
       }
     });
   }
 
   Future<void> _signOut() async {
     final dependencies = AppDependencies.of(context);
+    final AppStrings strings = AppStrings.of(context);
     final confirmed = await AppDialog.confirm(
       context: context,
-      title: AccountCopy.signOutTitle,
-      message: AccountCopy.signOut,
-      confirmLabel: AccountCopy.signOutAction,
+      title: strings.acctSignOutTitle,
+      message: strings.acctSignOutBody,
+      confirmLabel: strings.actionSignOut,
       destructive: true,
     );
     if (confirmed != true || !mounted) return;
@@ -169,7 +170,7 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
         final String name =
             detail?.valueOf(ResidentProfileField.fullName) ??
             session.residentOrNull?.displayName ??
-            'Verified resident';
+            AppStrings.of(context).acctVerifiedResident;
         // `GET /me` gives `barangay_id`; the name is the directory's. An id
         // the list does not name, or a list that could not be read, says the
         // town alone rather than a UUID (D-228).
@@ -185,7 +186,7 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
           name: name,
           initials: _initials(name),
           location: location,
-          verifiedLabel: 'Verified',
+          verifiedLabel: AppStrings.of(context).verifyStageVerifiedLabel,
           menu: _menu(context),
           onBell: () => context.goNamed(AppRoute.notifications.routeName),
           onSignOut: _signOut,
@@ -198,13 +199,17 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
   List<AccountMenuRow> _menu(BuildContext context) {
     final AppStrings strings = AppStrings.of(context);
     final ResidentProfileDetail? detail = _detail;
-    final String? decided = manilaDecisionDate(_detail?.verificationDecidedAt);
+    final String? decided = verificationDecisionDate(
+      context,
+      _detail?.verificationDecidedAt,
+    );
+    final String? office = _latestOffice;
     return <AccountMenuRow>[
       AccountMenuRow(
-        title: 'Resident Profile',
+        title: strings.acctMenuProfile,
         subtitle: detail == null
-            ? 'Name, contact, barangay'
-            : '${profileCompletionPercent(detail)}% complete',
+            ? strings.acctMenuProfileDetail
+            : strings.acctMenuProfileComplete(profileCompletionPercent(detail)),
         progress: detail == null
             ? null
             : profileCompletionPercent(detail) / 100,
@@ -216,7 +221,7 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
       // `/sectors` is a top-level route, pushed like documents and household
       // so back returns here (D-215).
       AccountMenuRow(
-        title: 'Sectors and benefits',
+        title: strings.acctMenuSectors,
         // A general list, worded so it is not read as her own sectors
         // (D-231); the page itself shows which are on her record.
         subtitle: strings.accountSectorsSubtitle,
@@ -226,8 +231,12 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
         onTap: () => context.pushNamed(AppRoute.sectors.routeName),
       ),
       AccountMenuRow(
-        title: 'Messages',
-        subtitle: _messagesLine,
+        title: strings.acctMessages,
+        subtitle: office == null
+            ? strings.notifSwitchOfficeReplies
+            : _unread > 0
+            ? strings.acctMessagesUnread(_unread, office)
+            : strings.acctMessagesNoneUnread,
         icon: TaytayIcons.messageSquare,
         tile: BrandColors.blue50,
         iconColor: BrandColors.blue,
@@ -235,8 +244,10 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
         onTap: () => context.goNamed(AppRoute.messagesInbox.routeName),
       ),
       AccountMenuRow(
-        title: 'Verification status',
-        subtitle: decided == null ? 'Verified' : 'Verified · $decided',
+        title: strings.acctMenuVerification,
+        subtitle: decided == null
+            ? strings.verifyStageVerifiedLabel
+            : strings.acctVerifiedOn(decided),
         icon: TaytayIcons.shield,
         tile: BrandColors.green50,
         iconColor: BrandColors.green,
@@ -253,40 +264,40 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
         onTap: () => context.pushNamed(AppRoute.myRequests.routeName),
       ),
       AccountMenuRow(
-        title: 'Request documents',
-        subtitle: 'Certificates and copies from offices',
+        title: strings.acctMenuRequestDocuments,
+        subtitle: strings.acctMenuRequestDocumentsDetail,
         icon: TaytayIcons.fileText,
         tile: BrandColors.blue50,
         iconColor: BrandColors.blue,
         onTap: () => context.pushNamed(AppRoute.issuanceCatalogue.routeName),
       ),
       AccountMenuRow(
-        title: 'Household',
-        subtitle: 'Address and your place in it',
+        title: strings.acctMenuHousehold,
+        subtitle: strings.acctMenuHouseholdDetail,
         icon: TaytayIcons.house,
         tile: BrandColors.blue50,
         iconColor: BrandColors.blue,
         onTap: () => context.pushNamed(AppRoute.household.routeName),
       ),
       AccountMenuRow(
-        title: 'Settings',
-        subtitle: 'Notifications, language',
+        title: strings.acctMenuSettings,
+        subtitle: strings.acctMenuSettingsDetail,
         icon: TaytayIcons.settings,
         tile: BrandColors.blue50,
         iconColor: BrandColors.blue,
         onTap: () => context.goNamed(AppRoute.profileSettings.routeName),
       ),
       AccountMenuRow(
-        title: 'Privacy & data',
-        subtitle: 'Privacy Notice, your data rights',
+        title: strings.acctMenuPrivacy,
+        subtitle: strings.acctMenuPrivacyDetail,
         icon: TaytayIcons.lock,
         tile: BrandColors.blue50,
         iconColor: BrandColors.blue,
         onTap: () => context.goNamed(AppRoute.profileNotice.routeName),
       ),
       AccountMenuRow(
-        title: 'Photo credits & about',
-        subtitle: 'Licences, app version',
+        title: strings.acctMenuCredits,
+        subtitle: strings.acctMenuCreditsDetail,
         icon: TaytayIcons.image,
         tile: BrandColors.blue50,
         iconColor: BrandColors.blue,
@@ -310,6 +321,7 @@ class _RecordUnavailable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final String? requestId = failure.requestId;
     return ColoredBox(
       color: BrandColors.background,
@@ -318,7 +330,7 @@ class _RecordUnavailable extends StatelessWidget {
         children: <Widget>[
           const SizedBox(height: Spacing.xl),
           ErrorState(
-            title: failure.residentMessage,
+            title: localisedResidentMessage(context, failure),
             icon: TaytayIcons.badgeCheck,
             offline: failure is NetworkFailure || failure is TimeoutFailure,
             onRetry: failure.affordance == FailureAffordance.retryNow
@@ -326,8 +338,9 @@ class _RecordUnavailable extends StatelessWidget {
                 : null,
             boxed: true,
             details: <Widget>[
-              const Text('Verified by Taytay LGU'),
-              if (requestId != null) SelectableText('Reference: $requestId'),
+              Text(strings.acctVerifiedByLgu),
+              if (requestId != null)
+                SelectableText(strings.applyFailureReference(requestId)),
             ],
           ),
         ],

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
 import '../../core/design/typography.dart';
+import '../../core/l10n/shared_copy.dart';
 import '../../core/time/manila_time.dart';
+import '../../l10n/app_localizations.dart';
 
 /// One day's opening, in Manila wall-clock minutes after midnight.
 ///
@@ -132,8 +134,8 @@ class NextOpening {
   final int opensAt;
 }
 
-/// The words [StatusLine] uses. English by default; a screen passes its
-/// localised copy.
+/// The words [StatusLine] uses. English by default; a [StatusLine] given no
+/// labels speaks the reader's language through [StatusLineLabels.of].
 @immutable
 class StatusLineLabels {
   const StatusLineLabels({
@@ -153,6 +155,25 @@ class StatusLineLabels {
       'Sunday',
     ],
   });
+
+  /// The same words from the app's strings, weekdays included.
+  factory StatusLineLabels.of(AppStrings strings) => StatusLineLabels(
+    open: strings.sharedHoursOpen,
+    closed: strings.sharedHoursClosed,
+    closes: strings.sharedHoursCloses,
+    opensToday: strings.sharedHoursOpensToday,
+    opensTomorrow: strings.sharedHoursOpensTomorrow,
+    opensOn: strings.sharedHoursOpensOn,
+    weekdays: <String>[
+      strings.sharedWeekdayMonday,
+      strings.sharedWeekdayTuesday,
+      strings.sharedWeekdayWednesday,
+      strings.sharedWeekdayThursday,
+      strings.sharedWeekdayFriday,
+      strings.sharedWeekdaySaturday,
+      strings.sharedWeekdaySunday,
+    ],
+  );
 
   final String open;
   final String closed;
@@ -181,7 +202,7 @@ class StatusLine extends StatelessWidget {
     required this.hours,
     required this.now,
     this.compact = false,
-    this.labels = const StatusLineLabels(),
+    this.labels,
     super.key,
   });
 
@@ -193,13 +214,17 @@ class StatusLine extends StatelessWidget {
 
   /// 12.5 px, for a list row. The default 13.5 px is the detail page's.
   final bool compact;
-  final StatusLineLabels labels;
+
+  /// Null speaks the reader's language ([StatusLineLabels.of]).
+  final StatusLineLabels? labels;
 
   @override
   Widget build(BuildContext context) {
     final WeeklyHours? hours = this.hours;
     if (hours == null) return const SizedBox.shrink();
 
+    final StatusLineLabels labels =
+        this.labels ?? StatusLineLabels.of(sharedStrings(context));
     final OpenStatus status = hours.statusAt(now);
     final (String state, Color stateColor, String? detail) = switch (status) {
       OpenNow(:final closesAt) => (
@@ -210,7 +235,7 @@ class StatusLine extends StatelessWidget {
       ClosedNow(:final nextOpening) => (
         labels.closed,
         BrandColors.redInk,
-        nextOpening == null ? null : _opens(nextOpening),
+        nextOpening == null ? null : _opens(labels, nextOpening),
       ),
     };
 
@@ -241,7 +266,7 @@ class StatusLine extends StatelessWidget {
     );
   }
 
-  String _opens(NextOpening next) {
+  String _opens(StatusLineLabels labels, NextOpening next) {
     final String time = formatMinutes(next.opensAt);
     return switch (next.daysAhead) {
       0 => labels.opensToday(time),

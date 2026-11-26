@@ -70,20 +70,6 @@ abstract final class AppLocales {
   }
 }
 
-/// Resident-facing copy for a failure, in the reader's language.
-///
-/// ---
-///
-/// **Chosen by the failure's kind, never taken from the server.** That rule is
-/// Article 5.5 and it survives localisation intact: the server's `message` is
-/// operator-facing, written once in one language, and would arrive untranslated
-/// in front of a Filipino-reading resident even if it were safe to show — which
-/// it is not.
-///
-/// [AppFailure.residentMessage] stays as the English default for the places
-/// that have no `BuildContext` — a log line, a controller under test, a value
-/// captured before a widget exists. This is the widget-side door, and every
-/// surface a resident actually reads should take it.
 /// The resident-facing copy for a sign-in outcome, in the device's language.
 ///
 /// Sign-in is where the largest number of residents meet this app, including
@@ -102,31 +88,70 @@ String localisedSignInMessage(BuildContext context, SignInMessage message) {
     SignInMessage.timedOut => strings.signInTimedOut,
     SignInMessage.serviceUnavailable => strings.signInServiceUnavailable,
     SignInMessage.unexpected => strings.signInUnexpected,
-    SignInMessage.credentialsRejected => message.text,
-    SignInMessage.passwordNeedsEmail => message.text,
+    SignInMessage.credentialsRejected => strings.coreSignInCredentialsRejected,
+    SignInMessage.passwordNeedsEmail => strings.coreSignInPasswordNeedsEmail,
   };
 }
 
+/// Resident-facing copy for a failure, in the reader's language.
+///
+/// ---
+///
+/// **Chosen by the failure's kind, never taken from the server.** That rule is
+/// Article 5.5 and it survives localisation intact: the server's `message` is
+/// operator-facing, written once in one language, and would arrive untranslated
+/// in front of a Filipino-reading resident even if it were safe to show — which
+/// it is not.
+///
+/// [AppFailure.residentMessage] stays as the English default for the places
+/// that have no `BuildContext` — a log line, a controller under test, a value
+/// captured before a widget exists. This is the widget-side door, and every
+/// surface a resident actually reads should take it.
+///
+/// ---
+///
+/// **One sentence per variant**, the same variants [AppFailure.residentMessage]
+/// tells apart — never one per kind. **The English here is the getter's English, word for word.** Until D-237
+/// this collapsed each kind to one sentence, so a refused selfie read "This is
+/// not available for your account" in place of "agree to the selfie text, or
+/// verify in person", and a verified resident changing barangay read "That has
+/// already been done". A screen moving from the getter to this door must not
+/// change what an English reader sees, or what the variant tells them to do.
 String localisedResidentMessage(BuildContext context, AppFailure failure) {
   final strings = AppStrings.of(context);
   return switch (failure) {
-    NetworkFailure() => strings.failureNetwork,
-    TimeoutFailure() => strings.failureTimeout,
-    UnauthenticatedFailure() => strings.failureUnauthenticated,
-    ForbiddenFailure() => strings.failureForbidden,
+    NetworkFailure() => strings.signInOffline,
+    TimeoutFailure() => strings.coreFailureTimeout,
+    UnauthenticatedFailure() => strings.coreFailureUnauthenticated,
+    ForbiddenFailure(requiresBiometricConsent: true) =>
+      strings.coreFailureBiometricConsent,
+    ForbiddenFailure(requiresVerification: true) =>
+      strings.coreFailureVerificationRequired,
+    ForbiddenFailure() => strings.coreFailureForbidden,
     NotFoundFailure() => strings.failureNotFound,
-    ValidationFailure() => strings.failureValidation,
-    CodeExchangeFailure(:final exchangeKind) =>
-      exchangeKind == CodeExchangeKind.locked
-          ? strings.failureRateLimited
-          : strings.failureValidation,
+    ValidationFailure() => strings.coreFailureValidation,
+    CodeExchangeFailure(:final exchangeKind) => switch (exchangeKind) {
+      CodeExchangeKind.invalid => strings.coreFailureCodeInvalid,
+      CodeExchangeKind.expired => strings.coreFailureCodeExpired,
+      CodeExchangeKind.locked => strings.coreFailureCodeLocked,
+    },
     UnacceptableUploadFailure(isTooLarge: final tooLarge) =>
-      tooLarge ? strings.failureFileTooLarge : strings.failureFileType,
-    ConflictFailure() => strings.failureConflict,
-    RateLimitedFailure() => strings.failureRateLimited,
-    ServerFailure() => strings.failureServer,
-    ContractFailure() => strings.failureContract,
-    UnexpectedFailure() => strings.failureUnexpected,
+      tooLarge ? strings.coreFailureFileTooLarge : strings.failureFileType,
+    ConflictFailure(isBarangayHeldByOffice: true) =>
+      strings.coreFailureBarangayHeldByOffice,
+    ConflictFailure(isInvalidStateTransition: true) =>
+      strings.coreFailureInvalidStateTransition,
+    ConflictFailure() => strings.coreFailureConflict,
+    RateLimitedFailure(:final retryAfter) => switch (retryAfter?.inSeconds) {
+      final int seconds when seconds > 0 => strings.coreFailureRateLimitedFor(
+        seconds,
+      ),
+      _ => strings.failureRateLimited,
+    },
+    ServerFailure(isTemporary: true) => strings.coreFailureServiceUnavailable,
+    ServerFailure() => strings.coreFailureServer,
+    ContractFailure() => strings.coreFailureContract,
+    UnexpectedFailure() => strings.coreFailureUnexpected,
   };
 }
 

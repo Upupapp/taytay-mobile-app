@@ -7,6 +7,11 @@
 /// the resident no notice, and the card's term and the code's lifetime are
 /// the server's to state on the card once it exists (`expires_at`,
 /// `qr.expires_at`), not the app's to promise before it does.
+///
+/// These constants are the English, no-context fallback that tests read. The
+/// page shows the same sentences in the resident's language
+/// (`digitalIdPreparing…`, `digitalIdStep…`, `digitalIdAbout…` in the ARB
+/// files); a change here is a change there too.
 abstract final class CardPreparingCopy {
   static const String title = 'Your card is being prepared';
   static const String body =

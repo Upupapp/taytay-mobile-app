@@ -12,6 +12,8 @@ import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/l10n/app_locales.dart';
+import '../../../core/l10n/core_copy.dart';
+import '../../../core/l10n/events_copy.dart';
 import '../../../core/links/external_link_service.dart';
 import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
@@ -20,6 +22,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
 import '../../../core/sharing/share_service.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
@@ -34,9 +37,7 @@ import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_states.dart';
 import '../domain/event_repository.dart';
-import '../domain/event_send_failure.dart';
-import 'events_screen.dart'
-    show EventCover, calledOffLabel, registrationStateLabel;
+import 'events_screen.dart' show EventCover;
 
 /// One LGU event, opened from the list or from a notification.
 ///
@@ -157,15 +158,13 @@ class _EventDetailScreenState extends State<EventDetailScreen>
     final registrationId = registration.id;
     if (registrationId == null || _cancelling) return;
 
+    final AppStrings strings = AppStrings.of(context);
     final confirmed = await ConfirmSheet.show(
       context: context,
-      title: 'Give up your place?',
-      consequence:
-          'Taytay LGU will offer your place to the next person waiting. If you '
-          'change your mind you will have to register again, and the event may '
-          'be full by then.',
-      confirmLabel: 'Give up my place',
-      cancelLabel: 'Keep my place',
+      title: strings.eventsGiveUpTitle,
+      consequence: strings.eventsGiveUpConsequence,
+      confirmLabel: strings.eventsGiveUpConfirm,
+      cancelLabel: strings.eventsGiveUpKeep,
     );
     if (!confirmed || !mounted) return;
 
@@ -191,19 +190,17 @@ class _EventDetailScreenState extends State<EventDetailScreen>
 
     switch (result) {
       case Ok<EventRegistration>():
-        Outcome.succeeded(
-          context,
-          'Your place has been given up. Taytay LGU has been told.',
-        );
+        Outcome.succeeded(context, strings.eventsGiveUpDone);
       case Err<EventRegistration>(failure: final failure):
         // Copy from the failure kind, never the server's operator-facing text.
         // "You still have your place" only when no send may have arrived.
+        // The English is `cancellationUnconfirmed` / `cancellationTooLate`.
         Outcome.problem(context, switch (failure) {
-          _ when _cancelKey.unconfirmed => cancellationUnconfirmed,
-          ConflictFailure() => cancellationTooLate,
-          _ =>
-            '${localisedResidentMessage(context, failure)} '
-                'You still have your place.',
+          _ when _cancelKey.unconfirmed => strings.eventsGiveUpUnconfirmed,
+          ConflictFailure() => strings.eventsGiveUpTooLate,
+          _ => strings.eventsGiveUpFailedStillHeld(
+            localisedResidentMessage(context, failure),
+          ),
         });
     }
   }
@@ -214,26 +211,32 @@ class _EventDetailScreenState extends State<EventDetailScreen>
     ).externalLinks.open(venue.directionsUrl!);
     if (!mounted || outcome == LinkOutcome.opened) return;
 
+    final AppStrings strings = AppStrings.of(context);
     Outcome.problem(
       context,
       outcome == LinkOutcome.refused
           // The app declined the link rather than the device failing, and
           // saying so plainly beats blaming the phone.
-          ? 'That map link could not be opened safely.'
-          : 'No app on this device can open a map.',
+          ? strings.eventsMapRefused
+          : strings.eventsMapNoApp,
     );
   }
 
   Future<void> _share(LguEvent event) async {
+    final AppStrings strings = AppStrings.of(context);
     final outcome = await AppDependencies.of(context).shareService.share(
       ShareableContent(
         title: event.title,
         body: <String>[
           event.title,
           if (event.startsAt != null)
-            ManilaTime.formatRange(event.startsAt!, event.endsAt),
+            ManilaTime.formatRange(
+              event.startsAt!,
+              event.endsAt,
+              languageCode: Localizations.localeOf(context).languageCode,
+            ),
           if (event.venue != null) event.venue!.name,
-          'From Taytay LGU',
+          strings.balitaShareFooter,
         ].join('\n'),
         // The server's link or none. This app does not compose a public URL.
         url: event.shareUrl,
@@ -243,9 +246,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
 
     final message = switch (outcome) {
       ShareOutcome.shared || ShareOutcome.dismissed => null,
-      ShareOutcome.copiedToClipboard =>
-        'Copied. You can paste this into any app.',
-      ShareOutcome.unavailable => 'Sharing is not available on this device.',
+      ShareOutcome.copiedToClipboard => strings.balitaShareCopied,
+      ShareOutcome.unavailable => strings.balitaShareUnavailable,
     };
     if (message != null) {
       outcome == ShareOutcome.copiedToClipboard
@@ -278,18 +280,24 @@ class _EventDetailScreenState extends State<EventDetailScreen>
           bottom: Spacing.xl + MediaQuery.paddingOf(context).bottom,
         ),
         children: <Widget>[
-          const BlueHeader(title: 'Event', showBack: true),
+          BlueHeader(
+            title: AppStrings.of(context).eventsEventTitle,
+            showBack: true,
+          ),
           const OfflineBanner(),
           Padding(
             padding: const EdgeInsets.all(Spacing.lg),
             child: switch ((_idIsValid, _loading, _failure)) {
               (false, _, _) => _NotAvailable(
-                message: DeepLinkRejection.invalidIdentifier.residentMessage,
+                message: deepLinkRejectionMessage(
+                  context,
+                  DeepLinkRejection.invalidIdentifier,
+                ),
               ),
-              (_, true, _) => const LoadingSkeleton(
+              (_, true, _) => LoadingSkeleton(
                 layout: SkeletonLayout.detail,
                 count: 1,
-                semanticLabel: 'Opening event…',
+                semanticLabel: AppStrings.of(context).eventsOpening,
               ),
               // A read that trying again could fix says so, with Try again;
               // a refusal or an unknown id keeps "not available" (D-220).
@@ -300,7 +308,10 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                   onRetry: _load,
                 ),
               _ => _NotAvailable(
-                message: DeepLinkRejection.unknownTarget.residentMessage,
+                message: deepLinkRejectionMessage(
+                  context,
+                  DeepLinkRejection.unknownTarget,
+                ),
               ),
             },
           ),
@@ -339,6 +350,7 @@ class _Detail extends StatelessWidget {
     final String? rules = event.registrationRules;
     final String? bring = event.whatToBring;
     final bool hasCover = (event.coverImageUrl ?? '').isNotEmpty;
+    final AppStrings strings = AppStrings.of(context);
 
     final Widget sheet = DetailSheet(
       children: <Widget>[
@@ -384,12 +396,10 @@ class _Detail extends StatelessWidget {
         // its date and venue, and somebody skimming those would go.
         if (event.isCalledOff) ...<Widget>[
           const SizedBox(height: Spacing.formGap),
-          const _Notice(
+          _Notice(
             tone: _NoticeTone.warning,
-            title: calledOffLabel,
-            message:
-                'Taytay LGU has called this event off. It will not take '
-                'place as listed. Ask the office if you have questions.',
+            title: strings.eventsCalledOff,
+            message: strings.eventsCalledOffBody,
           ),
         ],
 
@@ -402,13 +412,13 @@ class _Detail extends StatelessWidget {
             // willing to open. See `ExternalLink.isSafe`.
             if (venue != null && venue.hasSafeDirections)
               PillAction(
-                label: 'Open directions',
+                label: strings.eventsOpenDirections,
                 glyph: TaytayGlyph.pin,
                 primary: true,
                 onPressed: () => onDirections(venue),
               ),
             PillAction(
-              label: 'Share this event',
+              label: strings.eventsShareEvent,
               glyph: TaytayGlyph.send,
               onPressed: onShare,
             ),
@@ -426,10 +436,11 @@ class _Detail extends StatelessWidget {
           const SizedBox(height: Spacing.formGap),
           _Notice(
             tone: _NoticeTone.success,
-            title: registrationStateLabel(event.registrationState?.known),
-            message:
-                'Taytay LGU has your registration for this event. Bring a '
-                'valid ID.',
+            title: eventRegistrationStateLabel(
+              context,
+              event.registrationState?.known,
+            ),
+            message: strings.eventsRegisteredNotice,
           ),
         ],
 
@@ -439,27 +450,31 @@ class _Detail extends StatelessWidget {
         if (startsAt != null)
           DetailFactRow(
             icon: TaytayIcons.clock,
-            label: 'When',
+            label: strings.eventsFactWhen,
             // Stated with the clock it belongs to. A phone set to another
             // timezone cannot make somebody arrive on the wrong day.
-            value: ManilaTime.formatRange(startsAt, event.endsAt),
+            value: ManilaTime.formatRange(
+              startsAt,
+              event.endsAt,
+              languageCode: Localizations.localeOf(context).languageCode,
+            ),
           ),
         if (venue != null)
           DetailFactRow(
             icon: TaytayIcons.mapPin,
-            label: 'Where',
+            label: strings.eventsFactWhere,
             value: <String>[venue.name, ?venue.address].join('\n'),
           ),
         if (organiser != null)
           DetailFactRow(
             icon: TaytayIcons.landmark,
-            label: 'Organised by',
+            label: strings.eventsFactOrganiser,
             value: organiser,
           ),
         if (contact != null)
           DetailFactRow(
             icon: TaytayIcons.phone,
-            label: 'Questions',
+            label: strings.eventsFactQuestions,
             value: contact,
           ),
 
@@ -468,12 +483,13 @@ class _Detail extends StatelessWidget {
 
         if (rules != null) ...<Widget>[
           const SizedBox(height: Spacing.formGap),
-          _Section(title: 'Who can join', body: rules),
+          _Section(title: strings.eventsWhoCanJoin, body: rules),
         ],
 
-        if (openToWords(event) case final String openTo) ...<Widget>[
+        if (eventOpenToWords(context, event)
+            case final String openTo) ...<Widget>[
           const SizedBox(height: Spacing.formGap),
-          _Section(title: 'Who can register', body: openTo),
+          _Section(title: strings.eventsWhoCanRegister, body: openTo),
         ],
 
         if (event.capacity.isStated) ...<Widget>[
@@ -483,7 +499,7 @@ class _Detail extends StatelessWidget {
 
         if (bring != null) ...<Widget>[
           const SizedBox(height: Spacing.formGap),
-          _Section(title: 'What to bring', body: bring),
+          _Section(title: strings.eventsWhatToBring, body: bring),
         ],
 
         const SizedBox(height: Spacing.xl),
@@ -495,7 +511,7 @@ class _Detail extends StatelessWidget {
         // rather than being pre-emptively refused.
         if (_canOfferRegistration(event)) ...<Widget>[
           AppButton(
-            label: 'Register for this event',
+            label: strings.eventsRegisterForEvent,
             onPressed: () => context.goNamed(
               AppRoute.eventRegistration.routeName,
               pathParameters: <String, String>{'eventId': event.id},
@@ -503,7 +519,7 @@ class _Detail extends StatelessWidget {
           ),
           const SizedBox(height: Spacing.sm),
           Text(
-            'Taytay LGU decides whether a place is available.',
+            strings.eventsLguDecides,
             textAlign: TextAlign.center,
             style: _muted,
           ),
@@ -511,7 +527,10 @@ class _Detail extends StatelessWidget {
           // Says plainly what this screen does and does not do, so a
           // resident does not leave believing they have a place.
           Text(
-            registrationStateLabel(event.registrationState?.known),
+            eventRegistrationStateLabel(
+              context,
+              event.registrationState?.known,
+            ),
             style: _muted,
           ),
       ],
@@ -532,7 +551,7 @@ class _Detail extends StatelessWidget {
           ),
           GlassOverlap(amount: Radii.sheetLarge, child: sheet),
         ] else ...<Widget>[
-          const BlueHeader(title: 'Event', showBack: true),
+          BlueHeader(title: strings.eventsEventTitle, showBack: true),
           const OfflineBanner(),
           sheet,
         ],
@@ -582,6 +601,7 @@ class MyRegistrationCard extends StatelessWidget {
     final int? position = registration.waitlistPosition;
     final String? instructions = registration.instructions;
     final Future<void> Function()? cancel = onCancel;
+    final AppStrings strings = AppStrings.of(context);
 
     return SoftCard(
       filled: true,
@@ -604,7 +624,10 @@ class MyRegistrationCard extends StatelessWidget {
                 child: Semantics(
                   header: true,
                   child: Text(
-                    registrationStateLabel(registration.state.known),
+                    eventRegistrationStateLabel(
+                      context,
+                      registration.state.known,
+                    ),
                     style: AppTypography.sectionTitle.copyWith(
                       color: BrandColors.ink,
                     ),
@@ -617,7 +640,7 @@ class MyRegistrationCard extends StatelessWidget {
           if (reference != null)
             DetailFactRow(
               icon: TaytayIcons.fileText,
-              label: 'Reference',
+              label: strings.eventsReference,
               value: reference,
               divider: false,
             ),
@@ -628,7 +651,7 @@ class MyRegistrationCard extends StatelessWidget {
           if (registration.isWaitlisted && position != null)
             DetailFactRow(
               icon: TaytayIcons.users,
-              label: 'Waitlist position',
+              label: strings.eventsWaitlistPosition,
               value: '$position',
               divider: false,
             ),
@@ -642,15 +665,7 @@ class MyRegistrationCard extends StatelessWidget {
           // `notRecorded` says so rather than implying absence.
           if (attendance != null) ...<Widget>[
             const SizedBox(height: Spacing.md),
-            Text(switch (attendance) {
-              AttendanceResult.attended =>
-                'Taytay LGU recorded you as having attended.',
-              AttendanceResult.absent =>
-                'Taytay LGU did not record you as attending. If that is '
-                    'wrong, contact the office.',
-              AttendanceResult.notRecorded =>
-                'Attendance for this event has not been recorded yet.',
-            }, style: _muted),
+            Text(eventAttendanceWords(context, attendance), style: _muted),
           ],
 
           // Only when the server says this place can still be given up. The
@@ -662,7 +677,7 @@ class MyRegistrationCard extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: AppButton(
-                label: 'Give up my place',
+                label: strings.eventsGiveUpConfirm,
                 variant: AppButtonVariant.text,
                 fullWidth: false,
                 loading: cancelling,
@@ -687,27 +702,31 @@ class _Capacity extends StatelessWidget {
   Widget build(BuildContext context) {
     final remaining = capacity.remaining;
     final total = capacity.capacity;
+    final AppStrings strings = AppStrings.of(context);
 
     final line = switch ((remaining, total)) {
-      (final int r, final int t) when r > 0 => '$r of $t places left',
-      (final int r, null) when r > 0 => '$r places left',
-      (final int r, _) when r <= 0 => 'No places left',
-      (null, final int t) => 'Room for $t people',
+      (final int r, final int t) when r > 0 => strings.eventsCapacityOfTotal(
+        r,
+        t,
+      ),
+      (final int r, null) when r > 0 => strings.eventsCapacityLeft(r),
+      (final int r, _) when r <= 0 => strings.eventsCapacityNone,
+      (null, final int t) => strings.eventsCapacityRoomFor(t),
       _ => null,
     };
     if (line == null) return const SizedBox.shrink();
 
     return _Notice(
       tone: capacity.isFull ? _NoticeTone.warning : _NoticeTone.info,
-      title: 'Places',
-      message: capacity.isFull
-          ? '$line. The office can tell you whether a waitlist is open.'
-          : line,
+      title: strings.eventsCapacityTitle,
+      message: capacity.isFull ? strings.eventsCapacityFull(line) : line,
     );
   }
 }
 
-/// Who the office opened registration to, in this app's words (D-194).
+/// Who the office opened registration to, in this app's words (D-194), in
+/// English: the no-context fallback the tests read. The page says it through
+/// `eventOpenToWords` (`core/l10n/events_copy.dart`).
 ///
 /// Nothing for a walk-in event, which takes no registration, and nothing for a
 /// value this build does not know: the form's own flag still decides whether
@@ -847,10 +866,11 @@ class _NotAvailable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return EmptyState(
-      title: 'This event is not available',
+      title: strings.eventsNotAvailableTitle,
       message: message,
-      actionLabel: 'See all events',
+      actionLabel: strings.eventsSeeAll,
       onAction: () => context.goNamed(AppRoute.events.routeName),
       primaryAction: true,
       boxed: true,

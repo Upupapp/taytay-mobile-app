@@ -5,7 +5,9 @@ import '../../../core/config/app_version.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/account_copy.dart';
 import '../../../core/result/result.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/conversation.dart';
 import '../../../shared/widgets/error_state.dart';
@@ -177,7 +179,7 @@ class AccountToggle {
 class AccountCanvas extends StatelessWidget {
   const AccountCanvas({
     required this.frame,
-    this.title = 'My Account',
+    this.title,
     this.subtitle = 'Bayan ng Taytay · Rizal',
     this.subtitleLines = 1,
     this.showBack = false,
@@ -187,7 +189,7 @@ class AccountCanvas extends StatelessWidget {
     this.name = '',
     this.initials = '',
     this.location = '',
-    this.verifiedLabel = 'Verified',
+    this.verifiedLabel,
     this.sample = false,
     this.menu = const <AccountMenuRow>[],
     this.onSignOut,
@@ -241,7 +243,9 @@ class AccountCanvas extends StatelessWidget {
   });
 
   final AccountFrame frame;
-  final String title;
+
+  /// The header's title. Null says My Account in the phone's language.
+  final String? title;
   final String subtitle;
 
   /// Kept for callers; the header wraps a long subtitle on its own.
@@ -253,7 +257,10 @@ class AccountCanvas extends StatelessWidget {
   final String name;
   final String initials;
   final String location;
-  final String verifiedLabel;
+
+  /// The verification line under the name. Null says Verified in the phone's
+  /// language; an empty string draws no line and no tick.
+  final String? verifiedLabel;
 
   /// Marks the home name as a design specimen.
   final bool sample;
@@ -354,6 +361,8 @@ class AccountCanvas extends StatelessWidget {
   /// Try again for a privacy notice whose read failed. The inbox's is
   /// [onInboxRetry].
   final VoidCallback? onRetry;
+
+  String _titleIn(AppStrings strings) => title ?? strings.navProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -566,6 +575,7 @@ class _HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final VoidCallback? onBell = canvas.onBell;
     return GlassBackground(
       child: ListView(
@@ -581,14 +591,14 @@ class _HomePage extends StatelessWidget {
         children: <Widget>[
           BlueHeader(
             leading: const HeaderSeal(),
-            title: canvas.title,
+            title: canvas._titleIn(strings),
             subtitle: canvas.subtitle,
             overlap: true,
             actions: <Widget>[
               if (canvas.showBell)
                 HeaderIconButton(
                   icon: TaytayIcons.bell,
-                  semanticLabel: 'Notifications',
+                  semanticLabel: strings.acctNotifications,
                   onPressed: onBell,
                 ),
             ],
@@ -598,9 +608,9 @@ class _HomePage extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
               child: canvas.loading
-                  ? const GlassCard(
+                  ? GlassCard(
                       child: LoadingSkeleton(
-                        semanticLabel: 'Loading your account',
+                        semanticLabel: strings.acctLoadingAccount,
                       ),
                     )
                   : Column(
@@ -620,11 +630,11 @@ class _HomePage extends StatelessWidget {
                           glass: true,
                           children: <Widget>[
                             SettingsRow(
-                              title: 'Sign out',
+                              title: strings.actionSignOut,
                               icon: TaytayIcons.logOut,
                               destructive: true,
                               onTap: canvas.onSignOut,
-                              semanticLabel: 'Sign out',
+                              semanticLabel: strings.actionSignOut,
                             ),
                           ],
                         ),
@@ -670,7 +680,9 @@ class _ProfileBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final VoidCallback? onDigitalId = canvas.onDigitalId;
-    final bool verified = canvas.verifiedLabel.isNotEmpty;
+    final String verifiedLabel =
+        canvas.verifiedLabel ?? AppStrings.of(context).verifyStageVerifiedLabel;
+    final bool verified = verifiedLabel.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -709,7 +721,7 @@ class _ProfileBlock extends StatelessWidget {
                     const SizedBox(height: Spacing.xxs),
                     _HeaderLine(
                       icon: TaytayIcons.badgeCheck,
-                      text: canvas.verifiedLabel,
+                      text: verifiedLabel,
                       color: BrandColors.onHeaderSuccess,
                       strong: true,
                     ),
@@ -848,9 +860,10 @@ class _IdButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String label = AppStrings.of(context).acctMyTaytayId;
     return Semantics(
       button: true,
-      label: 'My Taytay ID',
+      label: label,
       child: ExcludeSemantics(
         child: Material(
           color: BrandColors.gold,
@@ -876,7 +889,7 @@ class _IdButton extends StatelessWidget {
                     const SizedBox(width: Spacing.sm + Spacing.xxs),
                     Expanded(
                       child: Text(
-                        'My Taytay ID',
+                        label,
                         style: AppTypography.listTitle.copyWith(
                           fontWeight: AppTypography.black,
                           color: BrandColors.navy,
@@ -910,13 +923,14 @@ class _BackPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final VoidCallback? onBell = canvas.onBell;
     final VoidCallback? onMenu = canvas.onThreadMenu;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         BlueHeader(
-          title: canvas.title,
+          title: canvas._titleIn(strings),
           subtitle: canvas.subtitle.isEmpty ? null : canvas.subtitle,
           showBack: canvas.showBack,
           onBack: canvas.onBack,
@@ -925,28 +939,28 @@ class _BackPage extends StatelessWidget {
             if (canvas.showBell)
               HeaderIconButton(
                 icon: TaytayIcons.bell,
-                semanticLabel: 'Notifications',
+                semanticLabel: strings.acctNotifications,
                 onPressed: onBell,
               ),
             if (onMenu != null)
               HeaderIconButton(
                 key: const Key('account-thread-menu'),
                 icon: TaytayIcons.moreVertical,
-                semanticLabel: 'More',
+                semanticLabel: strings.acctMore,
                 onPressed: onMenu,
               ),
           ],
         ),
-        Expanded(child: _body()),
+        Expanded(child: _body(strings)),
       ],
     );
   }
 
-  Widget _body() {
+  Widget _body(AppStrings strings) {
     if (canvas.loading) {
       return ListView(
         padding: const EdgeInsets.all(Spacing.lg),
-        children: const <Widget>[LoadingSkeleton(semanticLabel: 'Loading')],
+        children: <Widget>[LoadingSkeleton(semanticLabel: strings.a11yLoading)],
       );
     }
     final AccountCanvas c = canvas;
@@ -1057,7 +1071,7 @@ class _InboxBody extends StatelessWidget {
               children: <Widget>[
                 const SampleTag(),
                 Text(
-                  'messages for illustration',
+                  AppStrings.of(context).acctSampleMessages,
                   style: AppTypography.small.copyWith(color: BrandColors.muted),
                 ),
               ],
@@ -1103,7 +1117,8 @@ class _InboxRow extends StatelessWidget {
         row.office,
         row.preview,
         row.when,
-        if (unread) '$count new',
+        if (count != null && count > 0)
+          AppStrings.of(context).acctUnreadCount(count),
       ].join(', '),
       trailing: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -1139,6 +1154,7 @@ class _MoreRetry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String retry = AppStrings.of(context).acctRetry;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -1149,7 +1165,7 @@ class _MoreRetry extends StatelessWidget {
           alignment: AlignmentDirectional.centerStart,
           child: Semantics(
             button: true,
-            label: 'Retry',
+            label: retry,
             excludeSemantics: true,
             child: GestureDetector(
               key: retryKey,
@@ -1165,7 +1181,7 @@ class _MoreRetry extends StatelessWidget {
                   child: Center(
                     widthFactor: 1,
                     child: Text(
-                      'Retry',
+                      retry,
                       style: AppTypography.link.copyWith(
                         color: BrandColors.blue,
                         decoration: TextDecoration.underline,
@@ -1190,22 +1206,21 @@ class _EmptyInbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return ListView(
       padding: const EdgeInsets.all(Spacing.lg),
       children: <Widget>[
         EmptyState(
-          title: 'No messages yet',
-          message:
-              'Questions you send to municipal offices and their replies '
-              'will appear here.',
-          actionLabel: 'Message an office',
+          title: strings.acctInboxEmptyTitle,
+          message: strings.acctInboxEmptyBody,
+          actionLabel: strings.acctMessageAnOffice,
           onAction: onMessageOffice,
           boxed: true,
           primaryAction: true,
         ),
         const SizedBox(height: Spacing.md),
         Text(
-          'Messaging is available to verified residents.',
+          strings.acctMessagingVerifiedOnly,
           textAlign: TextAlign.center,
           style: AppTypography.small.copyWith(color: BrandColors.muted),
         ),
@@ -1224,6 +1239,7 @@ class _InboxError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppFailure? failure = this.failure;
+    final AppStrings strings = AppStrings.of(context);
     return ListView(
       padding: const EdgeInsets.all(Spacing.lg),
       children: <Widget>[
@@ -1236,10 +1252,10 @@ class _InboxError extends StatelessWidget {
           )
         else
           ErrorState(
-            title: 'Messages did not load',
-            message: 'Taytay LGU could not be reached. You can try again.',
+            title: strings.acctInboxErrorTitle,
+            message: strings.acctInboxErrorBody,
             onRetry: onRetry,
-            retryLabel: 'Retry',
+            retryLabel: strings.acctRetry,
             offline: true,
             boxed: true,
           ),
@@ -1257,23 +1273,24 @@ class _EditPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final List<AccountField> fields = canvas.fields;
     final bool legalLine =
         canvas.showLegalNameNote &&
         !fields.any((AccountField field) => field.label == 'Display name');
     return AuthFormPage(
-      title: canvas.title,
+      title: canvas._titleIn(strings),
       onBack: canvas.onBack,
       footer: canvas.loading
           ? null
           : FilledButton(
               onPressed: canvas.onSave,
-              child: const Text('Save changes'),
+              child: Text(strings.acctSaveChanges),
             ),
       child: canvas.loading
-          ? const LoadingSkeleton(
+          ? LoadingSkeleton(
               layout: SkeletonLayout.detail,
-              semanticLabel: 'Loading your profile',
+              semanticLabel: strings.acctLoadingProfile,
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1311,6 +1328,7 @@ class _PhotoNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return SoftCard(
       filled: true,
       padding: const EdgeInsets.all(Spacing.md),
@@ -1318,7 +1336,7 @@ class _PhotoNote extends StatelessWidget {
         children: <Widget>[
           Semantics(
             image: true,
-            label: 'Profile photo',
+            label: strings.acctProfilePhoto,
             child: Container(
               width: ComponentSizes.avatar,
               height: ComponentSizes.avatar,
@@ -1341,7 +1359,7 @@ class _PhotoNote extends StatelessWidget {
           const SizedBox(width: Spacing.md),
           Expanded(
             child: Text(
-              'Profile photo · reviewed by LGU before it appears on your ID',
+              strings.acctProfilePhotoNote,
               style: AppTypography.listDetail.copyWith(
                 color: BrandColors.muted,
               ),
@@ -1432,11 +1450,11 @@ class _ValueBox extends StatelessWidget {
             ],
             if (field.locked) ...<Widget>[
               const SizedBox(width: Spacing.sm),
-              const TaytayIcon(
+              TaytayIcon(
                 icon: TaytayIcons.lock,
                 size: IconSizes.sm,
                 color: BrandColors.chevron,
-                semanticLabel: 'Cannot be changed here',
+                semanticLabel: AppStrings.of(context).acctCannotChangeHere,
               ),
             ],
             if (field.chevron) ...<Widget>[
@@ -1487,7 +1505,7 @@ class _VerifiedPill extends StatelessWidget {
           vertical: Spacing.xxs,
         ),
         child: Text(
-          'Verified',
+          AppStrings.of(context).verifyStageVerifiedLabel,
           style: AppTypography.pill.copyWith(color: BrandColors.green),
         ),
       ),
@@ -1503,7 +1521,8 @@ class _LegalNameNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Widget text = Text(
-      'Legal name changes go through Resident Profile and re-verification.',
+      AppStrings.of(context).acctLegalNameNote,
+
       style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
     );
     final VoidCallback? onTap = this.onTap;
@@ -1552,6 +1571,7 @@ class _SettingsBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         Spacing.lg,
@@ -1561,11 +1581,11 @@ class _SettingsBody extends StatelessWidget {
       ),
       children: <Widget>[
         if (togglesPlaceholder case final Widget placeholder) ...<Widget>[
-          const SettingsSectionTitle('Notifications'),
+          SettingsSectionTitle(strings.acctNotifications),
           placeholder,
           const SizedBox(height: Spacing.xl),
         ] else if (toggles.isNotEmpty) ...<Widget>[
-          const SettingsSectionTitle('Notifications'),
+          SettingsSectionTitle(strings.acctNotifications),
           SettingsList(
             children: <Widget>[
               for (final AccountToggle toggle in toggles)
@@ -1582,12 +1602,12 @@ class _SettingsBody extends StatelessWidget {
           ),
           const SizedBox(height: Spacing.xl),
         ] else if (onNotifications != null) ...<Widget>[
-          const SettingsSectionTitle('Notifications'),
+          SettingsSectionTitle(strings.acctNotifications),
           SettingsList(
             children: <Widget>[
               SettingsRow(
-                title: 'Notification settings',
-                detail: 'What Taytay LGU tells you about',
+                title: strings.acctNotificationSettings,
+                detail: strings.acctNotificationSettingsDetail,
                 icon: TaytayIcons.bell,
                 onTap: onNotifications,
               ),
@@ -1595,17 +1615,17 @@ class _SettingsBody extends StatelessWidget {
           ),
           const SizedBox(height: Spacing.xl),
         ],
-        const SettingsSectionTitle('App'),
+        SettingsSectionTitle(strings.acctSectionApp),
         SettingsList(
           children: <Widget>[
             SettingsRow(
-              title: 'Language',
-              detail: 'English · Filipino',
+              title: strings.acctLanguageTitle,
+              detail: strings.acctLanguageOptions,
               icon: TaytayIcons.languages,
               onTap: onLanguage,
             ),
             SettingsRow(
-              title: 'Change password',
+              title: strings.acctChangePassword,
               detail: changePasswordSubtitle,
               icon: TaytayIcons.lock,
               onTap: onChangePassword,
@@ -1613,26 +1633,26 @@ class _SettingsBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: Spacing.xl),
-        const SettingsSectionTitle('Privacy'),
+        SettingsSectionTitle(strings.acctSectionPrivacy),
         SettingsList(
           children: <Widget>[
             SettingsRow(
-              title: 'Privacy Notice',
-              detail: 'Data Privacy Act of 2012 · LGU-approved text pending',
+              title: strings.acctPrivacyNotice,
+              detail: strings.acctPrivacyNoticeDetail,
               icon: TaytayIcons.fileText,
               onTap: onPrivacy,
             ),
             if (onConsents != null)
               SettingsRow(
-                title: 'Your consents',
-                detail: 'Review or withdraw what you agreed to',
+                title: strings.acctYourConsents,
+                detail: strings.acctYourConsentsDetail,
                 icon: TaytayIcons.shieldCheck,
                 onTap: onConsents,
               ),
             if (showDataExport)
               SettingsRow(
-                title: 'Request a copy of my data',
-                detail: 'Right to access',
+                title: strings.acctRequestDataCopy,
+                detail: strings.acctRightToAccess,
                 icon: TaytayIcons.download,
                 onTap: onExport,
               ),
@@ -1660,6 +1680,7 @@ class _AboutBody extends StatelessWidget {
     final List<PhotoCredit> banners = credits
         .where((PhotoCredit credit) => credit.officeBanner)
         .toList(growable: false);
+    final AppStrings strings = AppStrings.of(context);
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         Spacing.lg,
@@ -1672,13 +1693,13 @@ class _AboutBody extends StatelessWidget {
           padding: const EdgeInsets.all(Spacing.xl),
           child: Column(
             children: <Widget>[
-              const SizedBox(
+              SizedBox(
                 width: ComponentSizes.tileLarge,
                 height: ComponentSizes.tileLarge,
                 child: Image(
-                  image: AssetImage('assets/brand/taytay_seal.png'),
+                  image: const AssetImage('assets/brand/taytay_seal.png'),
                   fit: BoxFit.contain,
-                  semanticLabel: 'Seal of Taytay, Rizal',
+                  semanticLabel: strings.acctSealLabel,
                 ),
               ),
               const SizedBox(height: Spacing.md),
@@ -1692,7 +1713,7 @@ class _AboutBody extends StatelessWidget {
               ),
               const SizedBox(height: Spacing.xs),
               Text(
-                'Municipality of Taytay, Rizal · version $appVersion',
+                strings.acctAboutVersion(appVersion),
                 textAlign: TextAlign.center,
                 style: AppTypography.listDetail.copyWith(
                   color: BrandColors.muted,
@@ -1703,7 +1724,7 @@ class _AboutBody extends StatelessWidget {
         ),
         if (welcome.isNotEmpty) ...<Widget>[
           const SizedBox(height: Spacing.xl),
-          const SettingsSectionTitle('Photo credits'),
+          SettingsSectionTitle(strings.acctPhotoCredits),
           SettingsList(
             children: <Widget>[
               for (final PhotoCredit credit in welcome)
@@ -1716,8 +1737,8 @@ class _AboutBody extends StatelessWidget {
           SettingsList(
             children: <Widget>[
               SettingsRow(
-                title: 'Office banner photos',
-                detail: PhotoCredits.bannerSummaryOf(banners),
+                title: strings.acctOfficeBannerPhotos,
+                detail: strings.acctBannerSummary(banners.length),
                 icon: TaytayIcons.images,
                 onTap: onBanners,
               ),
@@ -1725,12 +1746,12 @@ class _AboutBody extends StatelessWidget {
           ),
         ],
         const SizedBox(height: Spacing.xl),
-        const SettingsSectionTitle('About'),
-        const SettingsList(
+        SettingsSectionTitle(strings.acctSectionAbout),
+        SettingsList(
           children: <Widget>[
             SettingsRow(
-              title: 'Municipal seal',
-              detail: 'Described on taytayrizal.gov.ph/seal · Wikimedia',
+              title: strings.acctMunicipalSeal,
+              detail: strings.acctMunicipalSealDetail,
               icon: TaytayIcons.shield,
             ),
           ],
@@ -1749,7 +1770,11 @@ class _CreditRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SettingsRow(
-      title: credit.title,
+      title: photoCreditTitle(
+        AppStrings.of(context),
+        assetKey: credit.assetKey,
+        title: credit.title,
+      ),
       detail: credit.byline,
       icon: TaytayIcons.image,
       trailing: const TaytayIcon(
@@ -1774,13 +1799,14 @@ class _PrivacyPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final String? markdown = canvas.noticeMarkdown;
     final AppFailure? failure = canvas.failure;
     final Widget body;
     if (canvas.loading) {
-      body = const LoadingSkeleton(
+      body = LoadingSkeleton(
         layout: SkeletonLayout.detail,
-        semanticLabel: 'Loading the privacy notice',
+        semanticLabel: strings.acctLoadingPrivacyNotice,
       );
     } else if (failure != null) {
       // The read failed: said as a failure with Try again, never as "will
@@ -1802,7 +1828,7 @@ class _PrivacyPage extends StatelessWidget {
       body = const _NoticePending();
     }
     return AuthFormPage(
-      title: canvas.title,
+      title: canvas._titleIn(strings),
       onBack: canvas.onBack,
       child: body,
     );
@@ -1821,39 +1847,32 @@ class _PrivacyBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const NoticePanel(
-          title: 'Privacy Notice',
+        NoticePanel(
+          title: strings.acctPrivacyNotice,
           subtitle: _noticeSource,
           icon: TaytayIcons.shieldCheck,
-          badge: DraftPill('DRAFT · LGU-approved text to be inserted'),
+          badge: DraftPill(strings.acctDraftPill),
           points: <NoticePoint>[
             NoticePoint(
-              title: 'What we collect',
-              body:
-                  'Name, contact details, address, valid ID and selfie, and '
-                  'messages you send to offices.',
+              title: strings.acctNoticeCollectTitle,
+              body: strings.acctNoticeCollectBody,
             ),
             NoticePoint(
-              title: 'Why',
-              body:
-                  'To verify that you are a Taytay resident and to deliver '
-                  'the services you request.',
+              title: strings.acctNoticeWhyTitle,
+              body: strings.acctNoticeWhyBody,
             ),
             NoticePoint(
-              title: 'Who can see it',
-              body:
-                  'Authorised LGU staff of the office you deal with. Not sold '
-                  'or shared for marketing.',
+              title: strings.acctNoticeWhoTitle,
+              body: strings.acctNoticeWhoBody,
             ),
             NoticePoint(
-              title: 'Your rights',
-              body:
-                  'Access, correction, objection and erasure. Contact the LGU '
-                  'Data Protection Officer',
-              trailing: SampleTag(),
+              title: strings.acctNoticeRightsTitle,
+              body: strings.acctNoticeRightsBody,
+              trailing: const SampleTag(),
               suffix: '.',
             ),
           ],
@@ -1868,7 +1887,7 @@ class _PrivacyBody extends StatelessWidget {
               excludeSemantics: true,
               size: IconSizes.sm,
             ),
-            label: const Text('Request a copy of my data'),
+            label: Text(strings.acctRequestDataCopy),
           ),
         ],
       ],
@@ -1894,7 +1913,7 @@ class _PublishedNotice extends StatelessWidget {
       color: BrandColors.ink,
     );
     return NoticePanel(
-      title: 'Privacy Notice',
+      title: AppStrings.of(context).acctPrivacyNotice,
       subtitle: _noticeSource,
       icon: TaytayIcons.shieldCheck,
       footer: SoftCard(
@@ -1939,12 +1958,12 @@ class _NoticePending extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const NoticePanel(
-      title: 'Privacy Notice',
+    final AppStrings strings = AppStrings.of(context);
+    return NoticePanel(
+      title: strings.acctPrivacyNotice,
       subtitle: _noticeSource,
       icon: TaytayIcons.shieldCheck,
-      intro:
-          'The privacy notice will appear here when Taytay LGU publishes it.',
+      intro: strings.acctNoticePending,
     );
   }
 }
@@ -1962,6 +1981,7 @@ class _BannersBody extends StatelessWidget {
     final TextStyle intro = AppTypography.bodyStyle.copyWith(
       color: BrandColors.text,
     );
+    final AppStrings strings = AppStrings.of(context);
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         Spacing.lg,
@@ -1973,17 +1993,13 @@ class _BannersBody extends StatelessWidget {
         Text.rich(
           TextSpan(
             style: intro,
-            children: const <InlineSpan>[
-              TextSpan(text: 'All from Wikimedia Commons. Photos marked '),
-              WidgetSpan(
+            children: <InlineSpan>[
+              TextSpan(text: strings.acctBannersIntroBefore),
+              const WidgetSpan(
                 alignment: PlaceholderAlignment.middle,
                 child: _ReplaceMark(),
               ),
-              TextSpan(
-                text:
-                    ' show people and are placeholders until Taytay LGU '
-                    'supplies its own consented photos.',
-              ),
+              TextSpan(text: strings.acctBannersIntroAfter),
             ],
           ),
         ),
@@ -2025,7 +2041,11 @@ class _BannerRow extends StatelessWidget {
                 ),
                 const SizedBox(height: Spacing.xxs),
                 Text(
-                  credit.title,
+                  photoCreditTitle(
+                    AppStrings.of(context),
+                    assetKey: credit.assetKey,
+                    title: credit.title,
+                  ),
                   style: AppTypography.listTitle.copyWith(
                     color: BrandColors.ink,
                   ),
@@ -2067,7 +2087,7 @@ class _ReplaceMark extends StatelessWidget {
           vertical: Spacing.xxs,
         ),
         child: Text(
-          'Replace',
+          AppStrings.of(context).acctReplaceMark,
           style: AppTypography.pill.copyWith(color: BrandColors.goldInk),
         ),
       ),
@@ -2117,9 +2137,10 @@ class _ThreadBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final String? moreMessage = this.moreMessage;
     final VoidCallback? onMoreRetry = this.onMoreRetry;
+    final AppStrings strings = AppStrings.of(context);
     final Widget transcript = Semantics(
       container: true,
-      label: 'Conversation',
+      label: strings.acctConversation,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(
           Spacing.lg,
@@ -2163,7 +2184,7 @@ class _ThreadBody extends StatelessWidget {
                 children: <Widget>[
                   const SampleTag(),
                   Text(
-                    'conversation for illustration',
+                    strings.acctSampleConversation,
                     style: AppTypography.small.copyWith(
                       color: BrandColors.muted,
                     ),
@@ -2239,7 +2260,7 @@ class _ClosedLine extends StatelessWidget {
             const SizedBox(width: Spacing.sm),
             Expanded(
               child: Text(
-                'This conversation is closed.',
+                AppStrings.of(context).acctConversationClosed,
                 style: AppTypography.bodyStyle.copyWith(
                   color: BrandColors.muted,
                 ),
@@ -2264,9 +2285,10 @@ class _MediaChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final ValueChanged<String>? onTap = this.onTap;
     final Color ink = mine ? BrandColors.white : BrandColors.blue;
+    final String label = AppStrings.of(context).acctAttachment;
     return Semantics(
       button: onTap != null,
-      label: 'Attachment',
+      label: label,
       excludeSemantics: true,
       child: GestureDetector(
         key: Key('thread-media-$mediaId'),
@@ -2287,7 +2309,8 @@ class _MediaChip extends StatelessWidget {
               const SizedBox(width: Spacing.sm),
               Flexible(
                 child: Text(
-                  'Attachment',
+                  label,
+
                   style: AppTypography.listTitle.copyWith(
                     color: ink,
                     decoration: TextDecoration.underline,

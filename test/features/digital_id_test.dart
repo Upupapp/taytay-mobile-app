@@ -11,6 +11,7 @@ import 'package:taytay_resident/core/api/api_client.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/router/app_routes.dart';
 import 'package:taytay_resident/features/credential/data/credential_api_repository.dart';
@@ -24,6 +25,7 @@ import 'package:taytay_resident/features/profile/domain/resident_profile_detail.
 import 'package:taytay_resident/features/profile/domain/resident_profile_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 
 import '../support/layout_matrix.dart';
 
@@ -589,7 +591,12 @@ void main() {
       tester.view.physicalSize = const Size(800, 2400);
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
-        MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+        MaterialApp.router(
+          theme: AppTheme.light(),
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
+          routerConfig: router,
+        ),
       );
       await tester.pump();
       await tester.pump();
@@ -648,6 +655,8 @@ Future<void> _pump(WidgetTester tester, Widget child) {
     MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
+      localizationsDelegates: AppStrings.localizationsDelegates,
+      supportedLocales: AppLocales.supported,
       home: child,
     ),
   );

@@ -4,6 +4,7 @@ import '../../core/design/design_tokens.dart';
 import '../../core/design/taytay_glyphs.dart';
 import '../../core/design/taytay_icons.dart';
 import '../../core/design/typography.dart';
+import '../../core/l10n/shared_copy.dart';
 import '../../core/motion/motion_tokens.dart';
 import 'error_state.dart';
 import 'taytay_glyph.dart';
@@ -138,21 +139,24 @@ class EmptyState extends StatelessWidget {
 class OfflineError extends StatelessWidget {
   const OfflineError({
     required this.onRetry,
-    this.title = 'You are offline',
-    this.message =
-        'Taytay LGU could not be reached. Check your connection and try again.',
+    this.title,
+    this.message,
     super.key,
   });
 
-  final String title;
-  final String message;
+  /// Null says "You are offline" in the reader's language.
+  final String? title;
+
+  /// Null says that Taytay LGU could not be reached, in the reader's language.
+  final String? message;
   final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
+    final strings = sharedStrings(context);
     return ErrorState(
-      title: title,
-      message: message,
+      title: title ?? strings.applyOfflineTitle,
+      message: message ?? strings.sharedOfflineMessage,
       onRetry: onRetry,
       offline: true,
     );

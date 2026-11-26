@@ -184,7 +184,7 @@ abstract final class AccessGateSheet {
     final VerifiedOnlyAction action = UnverifiedGateSheet.actionFor(intent);
     return AppDialog.show<GateOutcome>(
       context: context,
-      title: UnverifiedGateSheet.titleFor(action),
+      title: UnverifiedGateSheet.titleIn(AppStrings.of(context), action),
       icon: UnverifiedGateSheet.icon,
       builder: (dialog) => UnverifiedGateSheet(
         action: action,

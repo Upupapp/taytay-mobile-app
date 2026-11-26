@@ -11,6 +11,7 @@ import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/documents/document_capture.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/links/external_link_service.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -35,6 +36,7 @@ import 'package:taytay_resident/features/verification/domain/correctable_field.d
 import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 
 /// Counts every `/me/` read so a test can assert a guest issued none.
 ///
@@ -808,6 +810,8 @@ void main() {
       Future<void> show(int slide) {
         return tester.pumpWidget(
           MaterialApp(
+            localizationsDelegates: AppStrings.localizationsDelegates,
+            supportedLocales: AppLocales.supported,
             home: HomeCanvas(
               greeting: 'Magandang gabi!',
               slides: _slides,
@@ -835,6 +839,8 @@ void main() {
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
         const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
           home: HomeCanvas(
             greeting: 'Magandang gabi, Juana!',
             slides: <HomeSlide>[],
@@ -1079,6 +1085,8 @@ Future<void> _pumpCarousel(
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppStrings.localizationsDelegates,
+      supportedLocales: AppLocales.supported,
       home: MediaQuery(
         data: MediaQueryData.fromView(
           tester.view,

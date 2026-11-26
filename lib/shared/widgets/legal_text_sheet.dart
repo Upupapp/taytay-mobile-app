@@ -2,9 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
 import '../../core/design/typography.dart';
+import '../../core/l10n/shared_copy.dart';
 import '../../features/account/domain/notice_markdown.dart';
 import 'app_dialog.dart';
 import 'loading_skeleton.dart';
+
+// The four sentences below are the English, kept for tests and as the
+// no-context fallback. A screen shows `sharedTermsNotPublishedYet`,
+// `sharedPrivacyNoticeNotPublishedYet`, `sharedTermsConsentLabel` and
+// `sharedPrivacyConsentLabel` from AppStrings, the same words in the reader's
+// language (D-237).
 
 /// What a sheet says when the LGU has not published the Terms of Use.
 const String termsNotPublishedYet =
@@ -92,7 +99,7 @@ class LegalTextSheet extends StatelessWidget {
           return LoadingSkeleton(
             layout: SkeletonLayout.text,
             count: 4,
-            semanticLabel: 'Loading $title',
+            semanticLabel: sharedStrings(context).sharedLegalTextLoading(title),
           );
         }
         final String text = snap.data?.trim() ?? '';

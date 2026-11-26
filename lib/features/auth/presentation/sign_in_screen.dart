@@ -6,6 +6,7 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/haptics/app_haptics.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/session_state.dart';
@@ -104,9 +105,13 @@ class _SignInScreenState extends State<SignInScreen> {
   Future<void> _submit() async {
     final controller = _controller;
     if (controller == null) return;
-    final identifierError = AccountIdentifier.validate(_identifier.text);
+    final AppStrings strings = AppStrings.of(context);
+    final identifierError = AccountIdentifier.validate(
+      _identifier.text,
+      strings,
+    );
     final passwordError = _password.text.isEmpty
-        ? 'Enter your password.'
+        ? strings.authEnterPassword
         : null;
     setState(() {
       _identifierError = identifierError;
@@ -128,6 +133,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final controller = _controller;
     final ended = !_preview && controller != null
         ? _endedReason(context)
@@ -138,17 +144,10 @@ class _SignInScreenState extends State<SignInScreen> {
     final needsEmail = controller?.message == SignInMessage.passwordNeedsEmail;
     final other = !rejected && !needsEmail ? controller?.message : null;
 
-    // Strings are read only when a notice is shown: the design frames are
-    // pumped without the app's localisations.
     final String? notice = switch (ended) {
-      SessionEndedReason.expired => AppStrings.of(context).signInNoticeExpired,
-      SessionEndedReason.signedOut => AppStrings.of(
-        context,
-      ).signInNoticeSignedOut,
-      _ =>
-        widget.returnTo != null
-            ? AppStrings.of(context).signInNoticeReturnTo
-            : null,
+      SessionEndedReason.expired => strings.signInNoticeExpired,
+      SessionEndedReason.signedOut => strings.signInNoticeSignedOut,
+      _ => widget.returnTo != null ? strings.signInNoticeReturnTo : null,
     };
     final bool busy = controller?.busy == true;
     final int attemptsLeft = widget.fixture == SignInFixture.error
@@ -160,32 +159,35 @@ class _SignInScreenState extends State<SignInScreen> {
       child: AuthFormPage(
         pageKey: signInFormSheetKey,
         eyebrow: const AuthBrandRow(),
-        title: 'Maligayang pagbabalik!',
-        subtitle: 'Sign in to your Taytay resident account.',
+        title: strings.authSignInTitle,
+        subtitle: strings.authSignInSubtitle,
         onBack: _back,
         footer: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            PrimaryButton(label: 'Sign in', onPressed: busy ? null : _submit),
+            PrimaryButton(
+              label: strings.actionSignIn,
+              onPressed: busy ? null : _submit,
+            ),
             const SizedBox(height: Spacing.xs),
             Wrap(
               alignment: WrapAlignment.center,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: <Widget>[
                 Text(
-                  'Bago rito?',
+                  strings.authSignInNewHere,
                   style: AppTypography.bodyStyle.copyWith(
                     color: BrandColors.muted,
                   ),
                 ),
                 AuthLink(
-                  'Create an account',
+                  strings.gateSheetCreateAccount,
                   onPressed: () => context.goNamed(AppRoute.register.routeName),
                 ),
               ],
             ),
             AuthLink(
-              'Continue as guest',
+              strings.welcomeContinueAsGuest,
               muted: true,
               onPressed: () => context.goNamed(AppRoute.home.routeName),
             ),
@@ -202,25 +204,27 @@ class _SignInScreenState extends State<SignInScreen> {
               if (rejected) ...<Widget>[
                 SoftNote(
                   tone: NoteTone.error,
-                  title: 'Incorrect email or password. ',
-                  message:
-                      '$attemptsLeft attempts left before a 15-minute pause.',
+                  title: strings.authSignInIncorrectTitle,
+                  message: strings.authSignInAttemptsLeft(attemptsLeft),
                 ),
                 const SizedBox(height: Spacing.formGap),
               ],
               if (needsEmail) ...<Widget>[
                 SoftNote(
                   tone: NoteTone.error,
-                  message: SignInMessage.passwordNeedsEmail.text,
+                  message: strings.coreSignInPasswordNeedsEmail,
                 ),
                 const SizedBox(height: Spacing.formGap),
               ],
               if (other != null) ...<Widget>[
-                SoftNote(tone: NoteTone.error, message: other.text),
+                SoftNote(
+                  tone: NoteTone.error,
+                  message: localisedSignInMessage(context, other),
+                ),
                 const SizedBox(height: Spacing.formGap),
               ],
               AuthField(
-                label: 'Email or mobile number',
+                label: strings.authIdentifierLabel,
                 controller: _identifier,
                 icon: TaytayIcons.mail,
                 error: _identifierError,
@@ -230,23 +234,25 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
               const SizedBox(height: Spacing.formGap),
               AuthField(
-                label: 'Password',
+                label: strings.authPasswordLabel,
                 controller: _password,
                 icon: TaytayIcons.lock,
                 obscure: _obscure,
-                error: rejected ? 'Incorrect password' : _passwordError,
+                error: rejected
+                    ? strings.authSignInIncorrectPassword
+                    : _passwordError,
                 textInputAction: TextInputAction.done,
                 autofillHints: const <String>[AutofillHints.password],
                 trailing: ShowPasswordToggle(
                   shown: !_obscure,
-                  showLabel: 'Show',
-                  hideLabel: 'Hide',
+                  showLabel: strings.authPasswordShow,
+                  hideLabel: strings.authPasswordHide,
                   onPressed: () => setState(() => _obscure = !_obscure),
                 ),
               ),
               const SizedBox(height: Spacing.xs),
               AuthLink(
-                'Forgot password?',
+                strings.authForgotPasswordLink,
                 alignment: AlignmentDirectional.centerStart,
                 onPressed: () =>
                     context.goNamed(AppRoute.forgotPassword.routeName),
@@ -271,11 +277,11 @@ abstract final class AccountIdentifier {
   static final RegExp _email = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
   static final RegExp _mobile = RegExp(r'^09\d{9}$');
 
-  static String? validate(String? value) {
+  static String? validate(String? value, AppStrings strings) {
     final input = value?.trim() ?? '';
-    if (input.isEmpty) return 'Enter your email or mobile number.';
+    if (input.isEmpty) return strings.authIdentifierEmpty;
     final compact = input.replaceAll(' ', '');
     if (_email.hasMatch(input) || _mobile.hasMatch(compact)) return null;
-    return 'Enter an email address or an 11-digit mobile number.';
+    return strings.authIdentifierShape;
   }
 }

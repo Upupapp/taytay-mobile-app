@@ -10,13 +10,13 @@ import '../../../core/motion/motion_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/settings_list.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/soft_page.dart';
 import '../../../shared/widgets/taytay_icon.dart';
-import 'account_copy.dart';
 
 /// Account and preferences for a signed-in resident.
 ///
@@ -62,14 +62,15 @@ class _AccountScreenState extends State<AccountScreen> {
   Future<void> _signOut() async {
     final dependencies = AppDependencies.of(context);
     final reducedMotion = Motion.reduced(context);
+    final AppStrings strings = AppStrings.of(context);
 
     // Confirmed, because it is not undoable without a new one-time code — and
     // the confirmation is where the resident is told what they keep.
     final confirmed = await AppDialog.confirm(
       context: context,
-      title: AccountCopy.signOutTitle,
-      message: AccountCopy.signOut,
-      confirmLabel: AccountCopy.signOutAction,
+      title: strings.acctSignOutTitle,
+      message: strings.acctSignOutBody,
+      confirmLabel: strings.actionSignOut,
     );
     if (confirmed != true) return;
 
@@ -83,6 +84,7 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   Widget build(BuildContext context) {
     final dependencies = AppDependencies.of(context);
+    final AppStrings strings = AppStrings.of(context);
     final session = dependencies.session.state;
     final resident = session.residentOrNull;
     final healthFailure = _healthFailure;
@@ -92,7 +94,7 @@ class _AccountScreenState extends State<AccountScreen> {
     );
 
     return SoftPage(
-      title: 'Account',
+      title: strings.acctAccountTitle,
       offlineBanner: true,
       children: <Widget>[
         SettingsList(
@@ -104,17 +106,17 @@ class _AccountScreenState extends State<AccountScreen> {
                 AccessLevel.guest ||
                 AccessLevel.unverified => SettingsTone.blue,
               },
-              title: resident?.displayName ?? 'Resident',
+              title: resident?.displayName ?? strings.acctResident,
               detail: switch (session.accessLevel) {
-                AccessLevel.guest => 'Not signed in',
-                AccessLevel.unverified => 'Account not yet verified',
-                AccessLevel.verified => 'Verified resident',
+                AccessLevel.guest => strings.acctNotSignedIn,
+                AccessLevel.unverified => strings.acctNotYetVerified,
+                AccessLevel.verified => strings.acctVerifiedResident,
               },
             ),
           ],
         ),
         const SizedBox(height: Spacing.xl),
-        const SettingsSectionTitle('Preferences'),
+        SettingsSectionTitle(strings.acctPreferences),
         SettingsList(
           children: <Widget>[
             SettingsSwitchRow(
@@ -124,34 +126,34 @@ class _AccountScreenState extends State<AccountScreen> {
                 setState(() => _hapticsEnabled = enabled);
               },
               icon: TaytayIcons.smartphone,
-              title: 'Vibration feedback',
-              detail: 'Short vibrations when an action succeeds or fails.',
+              title: strings.acctVibration,
+              detail: strings.acctVibrationDetail,
             ),
           ],
         ),
         const SizedBox(height: Spacing.xl),
-        const SettingsSectionTitle('Security'),
+        SettingsSectionTitle(strings.acctSectionSecurity),
         SettingsList(
           children: <Widget>[
             SettingsRow(
               icon: TaytayIcons.shield,
-              title: 'Sign-in and security',
-              detail: 'App lock, signing out, and where you are signed in.',
+              title: strings.acctSecurityTitle,
+              detail: strings.acctSecurityDetail,
               onTap: () => context.goNamed(AppRoute.security.routeName),
             ),
           ],
         ),
         const SizedBox(height: Spacing.xl),
-        const SettingsSectionTitle('Service status'),
-        Text(
-          'Check whether Taytay LGU services are reachable. This helps tell a '
-          'service outage from a connection problem.',
-          style: lede,
-        ),
+        SettingsSectionTitle(strings.acctServiceStatus),
+        Text(strings.acctServiceStatusLede, style: lede),
         const SizedBox(height: Spacing.md),
         FilledButton.tonal(
           onPressed: _checkingHealth ? null : _checkHealth,
-          child: Text(_checkingHealth ? 'Checking…' : 'Check service status'),
+          child: Text(
+            _checkingHealth
+                ? strings.acctChecking
+                : strings.acctCheckServiceStatus,
+          ),
         ),
         if (healthSummary != null) ...<Widget>[
           const SizedBox(height: Spacing.md),
@@ -174,7 +176,7 @@ class _AccountScreenState extends State<AccountScreen> {
             excludeSemantics: true,
             size: IconSizes.sm,
           ),
-          label: const Text('Sign out'),
+          label: Text(strings.actionSignOut),
         ),
       ],
     );

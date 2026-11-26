@@ -23,6 +23,10 @@ enum OfficeFactIcon {
   siren, // stays split so the copy scan does not read the next class
 }
 
+/// Which fixed fact an API office row carries, so the page can name it in
+/// the resident's language. Null on a fixture fact, whose label is its own.
+enum OfficeFactKind { location, hours, phone, email, head }
+
 /// One public fact on an office page. [sample] keeps the SAMPLE tag.
 @immutable
 class OfficeFact {
@@ -31,12 +35,15 @@ class OfficeFact {
     required this.value,
     required this.icon,
     this.sample = false,
+    this.kind,
   });
 
+  /// The English label: the no-context fallback, and a fixture's own words.
   final String label;
   final String value;
   final OfficeFactIcon icon;
   final bool sample;
+  final OfficeFactKind? kind;
 }
 
 /// A service the office offers. Information only.
@@ -158,6 +165,14 @@ class Office {
   /// The id sent as `office_id`. A live office sends its UUID.
   String get wireId => serverId.isNotEmpty ? serverId : id;
 
+  /// The chip that shows every category. A value, not resident copy: the
+  /// page draws it in the resident's language.
+  static const String allChip = 'All';
+
+  /// The call action on an API office. The page draws it in the resident's
+  /// language; a fixture office may carry its own words.
+  static const String defaultCallLabel = 'Call';
+
   /// The thread `subject` when the office publishes no topics.
   ///
   /// `POST /threads` requires a subject, and the office inbox lists it, so it
@@ -235,7 +250,7 @@ class Office {
   }
 
   bool matches(String query, String chip) {
-    if (chip != 'All' && category != chip) return false;
+    if (chip != allChip && category != chip) return false;
     final String needle = query.trim().toLowerCase();
     if (needle.isEmpty) return true;
     final String haystack = <String>[

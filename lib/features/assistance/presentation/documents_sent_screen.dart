@@ -80,7 +80,10 @@ class DocumentsSentScreen extends StatelessWidget {
         if (sentAt != null)
           SuccessDetail(
             label: s.addDocsDoneSentOn,
-            value: ManilaTime.formatDateTime(sentAt),
+            value: ManilaTime.formatDateTime(
+              sentAt,
+              languageCode: Localizations.localeOf(context).languageCode,
+            ),
           ),
       ],
       note: s.addDocsDoneNote,

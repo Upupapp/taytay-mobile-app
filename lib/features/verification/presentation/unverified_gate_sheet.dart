@@ -5,6 +5,7 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/intent/resident_intent.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/icon_tile.dart';
 
@@ -72,6 +73,15 @@ class UnverifiedGateSheet extends StatelessWidget {
     VerifiedOnlyAction.other => 'Verify your account to continue',
   };
 
+  /// [titleFor] in the resident's language. [titleFor] stays as the English
+  /// no-context fallback its callers and tests name.
+  static String titleIn(AppStrings strings, VerifiedOnlyAction action) =>
+      switch (action) {
+        VerifiedOnlyAction.digitalId => strings.verifGateTitleDigitalId,
+        VerifiedOnlyAction.message => strings.verifGateTitleMessage,
+        VerifiedOnlyAction.other => strings.verifGateTitleOther,
+      };
+
   String get title => titleFor(action);
 
   String get _lead => switch (action) {
@@ -85,20 +95,37 @@ class UnverifiedGateSheet extends StatelessWidget {
   /// The gate's sentence: what the action needs, then [notVerifiedYet].
   String get message => '$_lead $notVerifiedYet';
 
+  /// [message] in the resident's language.
+  String messageIn(AppStrings strings) {
+    final String lead = switch (action) {
+      VerifiedOnlyAction.message => strings.verifGateLeadMessage,
+      VerifiedOnlyAction.digitalId => strings.verifGateLeadDigitalId,
+      VerifiedOnlyAction.other => strings.verifGateLeadOther,
+    };
+    return '$lead ${strings.verifGateNotVerifiedYet}';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Text(
-          message,
+          messageIn(strings),
           textAlign: TextAlign.center,
           style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
         ),
         AppDialogActions(
-          primary: DialogButton(label: goToVerification, onPressed: onContinue),
-          text: DialogButton(label: 'Not now', onPressed: onDismiss),
+          primary: DialogButton(
+            label: strings.applyGoToVerification,
+            onPressed: onContinue,
+          ),
+          text: DialogButton(
+            label: strings.gateSheetNotNow,
+            onPressed: onDismiss,
+          ),
         ),
       ],
     );

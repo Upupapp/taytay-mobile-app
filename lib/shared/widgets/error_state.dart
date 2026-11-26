@@ -4,6 +4,7 @@ import '../../core/design/design_tokens.dart';
 import '../../core/design/taytay_glyphs.dart';
 import '../../core/design/taytay_icons.dart';
 import '../../core/design/typography.dart';
+import '../../core/l10n/shared_copy.dart';
 import 'taytay_glyph.dart';
 import 'taytay_icon.dart';
 
@@ -166,7 +167,7 @@ class ErrorState extends StatelessWidget {
     required this.title,
     this.message,
     this.onRetry,
-    this.retryLabel = 'Try again',
+    this.retryLabel,
     this.offline = false,
     this.icon,
     this.boxed = false,
@@ -179,7 +180,9 @@ class ErrorState extends StatelessWidget {
 
   /// Null hides the button: offer it only when a retry can succeed now.
   final VoidCallback? onRetry;
-  final String retryLabel;
+
+  /// Null says "Try again" in the reader's language.
+  final String? retryLabel;
   final bool offline;
   final IconData? icon;
   final bool boxed;
@@ -199,7 +202,7 @@ class ErrorState extends StatelessWidget {
       action: onRetry == null
           ? null
           : StateActionButton(
-              label: retryLabel,
+              label: retryLabel ?? sharedStrings(context).actionTryAgain,
               onPressed: onRetry,
               primary: true,
               icon: TaytayIcons.refreshCw,

@@ -1,3 +1,6 @@
+import 'package:flutter/widgets.dart';
+
+import '../../../l10n/app_localizations.dart';
 import '../domain/resident_sector.dart';
 
 /// The words of Sectors and benefits and Apply for a sector (D-215).
@@ -171,4 +174,174 @@ abstract final class SectorsCopy {
   static const String failedSend =
       'Nothing was sent. Something went wrong on our side. Try again in a '
       'little while.';
+}
+
+/// The same words in the resident's language (D-237).
+///
+/// [SectorsCopy] stays the English and the no-context fallback: the pure
+/// `sectorSendFailure` and the tests read it as before. Every screen reads
+/// this instead, so a phone set to Filipino shows Filipino. The ID names
+/// (Senior Citizen ID, PWD ID, Solo Parent ID) are the names printed on the
+/// cards, and are kept as they are in both languages.
+final class SectorsText {
+  const SectorsText._(this._s);
+
+  factory SectorsText.of(BuildContext context) =>
+      SectorsText._(AppStrings.of(context));
+
+  /// English, for a caller with no [BuildContext].
+  static const SectorsText english = SectorsText._(null);
+
+  final AppStrings? _s;
+
+  String get title => _s?.sectorsTitle ?? SectorsCopy.title;
+  String get subtitle => _s?.navProfile ?? SectorsCopy.subtitle;
+  String get intro => _s?.sectorsIntro ?? SectorsCopy.intro;
+  String get yoursHeading =>
+      _s?.sectorsYoursHeading ?? SectorsCopy.yoursHeading;
+  String get none => _s?.sectorsNone ?? SectorsCopy.none;
+  String get applyHeading =>
+      _s?.sectorsApplyHeading ?? SectorsCopy.applyHeading;
+  String get nothingToApply =>
+      _s?.sectorsNothingToApply ?? SectorsCopy.nothingToApply;
+  String get inPerson => _s?.sectorsInPerson ?? SectorsCopy.inPerson;
+  String get loading => _s?.sectorsLoading ?? SectorsCopy.loading;
+  String get recorded => _s?.sectorsRecorded ?? SectorsCopy.recorded;
+  String get beingChecked =>
+      _s?.sectorsBeingChecked ?? SectorsCopy.beingChecked;
+  String get returned => _s?.sectorsReturned ?? SectorsCopy.returned;
+  String get lapsed => _s?.sectorsLapsed ?? SectorsCopy.lapsed;
+
+  String label(ResidentSector sector) {
+    final AppStrings? s = _s;
+    if (s == null) return SectorsCopy.label(sector);
+    return switch (sector) {
+      ResidentSector.seniorCitizen => s.sectorsLabelSenior,
+      ResidentSector.pwd => s.sectorsLabelPwd,
+      ResidentSector.soloParent => s.sectorsLabelSoloParent,
+    };
+  }
+
+  String idName(ResidentSector sector) => SectorsCopy.idName(sector);
+
+  String offer(ResidentSector sector) {
+    final AppStrings? s = _s;
+    if (s == null) return SectorsCopy.offer(sector);
+    return switch (sector) {
+      ResidentSector.seniorCitizen => s.sectorsOfferSenior,
+      ResidentSector.pwd => s.sectorsOfferPwd,
+      ResidentSector.soloParent => s.sectorsOfferSoloParent,
+    };
+  }
+
+  String choiceNote(ResidentSector sector) {
+    final AppStrings? s = _s;
+    if (s == null) return SectorsCopy.choiceNote(sector);
+    return switch (sector) {
+      ResidentSector.seniorCitizen => s.sectorsChoiceSenior,
+      ResidentSector.pwd => s.sectorsChoicePwd,
+      ResidentSector.soloParent => s.sectorsChoiceSoloParent,
+    };
+  }
+
+  String ownDetail({
+    required String? since,
+    required String? lastFour,
+    required String? validUntil,
+  }) {
+    final AppStrings? s = _s;
+    if (s == null) {
+      return SectorsCopy.ownDetail(
+        since: since,
+        lastFour: lastFour,
+        validUntil: validUntil,
+      );
+    }
+    return SectorsCopy.join(<String?>[
+      if (since != null) s.sectorsSince(since),
+      if (lastFour != null) s.sectorsIdEnding(lastFour),
+      if (validUntil != null) s.sectorsValidUntil(validUntil),
+    ]);
+  }
+
+  String appliedOn(String? date) {
+    final AppStrings? s = _s;
+    if (s == null) return SectorsCopy.appliedOn(date);
+    return date == null ? s.sectorsYouApplied : s.sectorsYouAppliedOn(date);
+  }
+
+  /// The reason is the office's own words, passed through as written.
+  String returnedDetail(String? reason) {
+    final AppStrings? s = _s;
+    if (s == null) return SectorsCopy.returnedDetail(reason);
+    return reason == null
+        ? s.sectorsReturnedNoReason
+        : s.sectorsOfficeSaid(reason);
+  }
+
+  String get stepOne => _s?.applyStepOf(1, 3) ?? SectorsCopy.stepOne;
+  String get stepTwo => _s?.applyStepOf(2, 3) ?? SectorsCopy.stepTwo;
+  String get chooseTitle => _s?.sectorsApplyHeading ?? SectorsCopy.chooseTitle;
+  String get chooseSubtitle =>
+      _s?.sectorsChooseSubtitle ?? SectorsCopy.chooseSubtitle;
+  String get choiceGroup => _s?.sectorsSector ?? SectorsCopy.choiceGroup;
+  String get next => _s?.gateActionContinue ?? SectorsCopy.next;
+
+  String proofTitle(ResidentSector sector) =>
+      _s?.sectorsProofTitle(idName(sector)) ?? SectorsCopy.proofTitle(sector);
+  String get proofSubtitle =>
+      _s?.sectorsProofSubtitle ?? SectorsCopy.proofSubtitle;
+  String get photoLabel => _s?.sectorsPhotoLabel ?? SectorsCopy.photoLabel;
+  String get addPhoto => _s?.sectorsAddPhoto ?? SectorsCopy.addPhoto;
+  String get change => _s?.applyEdit ?? SectorsCopy.change;
+  String photoAdded(String size) =>
+      _s?.sectorsPhotoAdded(size) ?? SectorsCopy.photoAdded(size);
+  String get photoNote => _s?.sectorsPhotoNote ?? SectorsCopy.photoNote;
+  String get confirmLabel =>
+      _s?.sectorsConfirmLabel ?? SectorsCopy.confirmLabel;
+  String get confirmDescription =>
+      _s?.sectorsConfirmDescription ?? SectorsCopy.confirmDescription;
+  String get send => _s?.sectorsSend ?? SectorsCopy.send;
+  String get sourceTitle => _s?.sectorsSourceTitle ?? SectorsCopy.sourceTitle;
+  String get noSource => _s?.sectorsNoSource ?? SectorsCopy.noSource;
+
+  String get sentTitle => _s?.sectorsSentTitle ?? SectorsCopy.sentTitle;
+  String sentSubtitle(ResidentSector sector) =>
+      _s?.sectorsSentSubtitle(label(sector)) ??
+      SectorsCopy.sentSubtitle(sector);
+  String get sentSector => _s?.sectorsSector ?? SectorsCopy.sentSector;
+  String get sentAt => _s?.sectorsSentAt ?? SectorsCopy.sentAt;
+  String get nextHeading => _s?.sectorsNextHeading ?? SectorsCopy.nextHeading;
+  String get stepSent => _s?.sectorsStepSent ?? SectorsCopy.stepSent;
+  String get stepCheck => _s?.sectorsStepCheck ?? SectorsCopy.stepCheck;
+  String get stepCheckDetail =>
+      _s?.sectorsStepCheckDetail ?? SectorsCopy.stepCheckDetail;
+  String get stepAdded => _s?.sectorsStepAdded ?? SectorsCopy.stepAdded;
+  String get stepAddedDetail =>
+      _s?.sectorsStepAddedDetail ?? SectorsCopy.stepAddedDetail;
+  String get backToSectors =>
+      _s?.sectorsBackToSectors ?? SectorsCopy.backToSectors;
+  String get home => _s?.sectorsGoHome ?? SectorsCopy.home;
+
+  String get unconfirmedTitle =>
+      _s?.unsentTitle ?? SectorsCopy.unconfirmedTitle;
+  String get unconfirmed => _s?.sectorsUnconfirmed ?? SectorsCopy.unconfirmed;
+  String get offlineTitle => _s?.applyOfflineTitle ?? SectorsCopy.offlineTitle;
+  String get offline => _s?.sectorsOffline ?? SectorsCopy.offline;
+  String get refusedTitle =>
+      _s?.sectorsRefusedTitle ?? SectorsCopy.refusedTitle;
+  String get refused => _s?.sectorsRefused ?? SectorsCopy.refused;
+  String get waitingTitle =>
+      _s?.sectorsWaitingTitle ?? SectorsCopy.waitingTitle;
+  String get waiting => _s?.sectorsWaiting ?? SectorsCopy.waiting;
+  String get notOpenTitle =>
+      _s?.sectorsNotOpenTitle ?? SectorsCopy.notOpenTitle;
+  String get notOpen => _s?.sectorsNotOpen ?? SectorsCopy.notOpen;
+  String get failedSendTitle =>
+      _s?.sectorsFailedSendTitle ?? SectorsCopy.failedSendTitle;
+  String get failedSend => _s?.sectorsFailedSend ?? SectorsCopy.failedSend;
+
+  /// A failed send's request id, to quote at the counter.
+  String reference(String id) =>
+      _s?.applyFailureReference(id) ?? 'Reference: $id';
 }

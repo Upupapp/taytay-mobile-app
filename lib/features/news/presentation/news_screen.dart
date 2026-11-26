@@ -11,6 +11,7 @@ import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/session_state.dart';
 import '../../../core/sharing/share_service.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
 import '../domain/announcement_repository.dart';
 import 'balita_canvas.dart';
@@ -141,11 +142,12 @@ class _NewsScreenState extends State<NewsScreen> with LiveRefresh<NewsScreen> {
   }
 
   Future<void> _share(Announcement article) async {
+    final AppStrings strings = AppStrings.of(context);
     final ShareOutcome outcome = await AppDependencies.of(context).shareService
         .share(
           ShareableContent(
             title: article.title,
-            body: '${article.preview}\n\nFrom Taytay LGU',
+            body: '${article.preview}\n\n${strings.balitaShareFooter}',
             // The server's link, or none. This app does not compose a URL.
             url: article.shareUrl,
           ),
@@ -153,9 +155,9 @@ class _NewsScreenState extends State<NewsScreen> with LiveRefresh<NewsScreen> {
     if (!mounted) return;
     switch (outcome) {
       case ShareOutcome.copiedToClipboard:
-        Outcome.succeeded(context, 'Copied. You can paste this into any app.');
+        Outcome.succeeded(context, strings.balitaShareCopied);
       case ShareOutcome.unavailable:
-        Outcome.problem(context, 'Sharing is not available on this device.');
+        Outcome.problem(context, strings.balitaShareUnavailable);
       case ShareOutcome.shared:
       case ShareOutcome.dismissed:
         break;

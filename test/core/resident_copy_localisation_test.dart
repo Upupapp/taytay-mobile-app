@@ -76,6 +76,14 @@ void main() {
     'NotificationCategory', // notificationCategoryLabel
     'InboxGroup', // labelIn(AppStrings) — see below for why this shape
     'ServiceCategory', // serviceCategoryLabel
+    // Localised 2026-11-27 (D-237), in the per-area files beside
+    // app_locales.dart (`lib/core/l10n/*_copy.dart`).
+    'ConsentKind', // consentKindLabel — settings_copy.dart
+    'VerificationItemCategory', // verificationItemCategoryLabel
+    'OfficeRecordSex', // officeRecordSexLabel — profile_copy.dart
+    // The scan reads this one-line enum together with `OfficeFact` below it,
+    // whose English `label` is the fallback; the kind is what is localised.
+    'OfficeFactKind', // officeFactKindLabel — directory_copy.dart
   };
 
   /// Enums whose copy a resident never reads, each with the reason.
@@ -139,17 +147,9 @@ void main() {
         'Phase 4 (it was unreachable while onboarding is staff-mediated, '
         'TAB 03). The events flow has its own enum of the same name. '
         'Localise when F15 is answered.',
-    'ConsentKind':
-        'Rendered only by the same deleted wizard. Not reached by the events '
-        'or assistance flows, which use ServerConsent.',
-    // The status screen shows these kinds through `_noteLabel`, which is the
-    // fixed English on the existing verification frames. Filipino copy for
-    // the enum itself arrives with app-wide localisation. The decoder does
-    // populate the lists; this entry is the untranslated labels, not a dead
-    // section.
-    'VerificationItemCategory':
-        'Shown as the design labels in verification_screen.dart (_noteLabel). '
-        'Localise with the rest of the English verification copy.',
+    // `ConsentKind` left this list in D-237: the consents screen in Settings
+    // names each kind, so it has `consentKindLabel`. `VerificationItemCategory`
+    // left it too: `verificationItemCategoryLabel` replaced `_noteLabel`.
   };
 
   Iterable<({String name, String file, Set<String> fields})>
@@ -215,7 +215,8 @@ void main() {
     // localisation should lower it, and nothing should raise it.
     expect(
       knownUntranslated.length,
-      lessThanOrEqualTo(8),
+      // Eight when written; one after D-237.
+      lessThanOrEqualTo(1),
       reason:
           'An enum was added to knownUntranslated. That list records a debt '
           'this app already had; new resident-facing copy is localised when it '
@@ -234,9 +235,12 @@ void main() {
   });
 
   test('every enum called localised actually has a localiser', () {
-    final String locales = File(
-      'lib/core/l10n/app_locales.dart',
-    ).readAsStringSync();
+    // app_locales.dart and, since D-237, the per-area `*_copy.dart` files
+    // beside it.
+    final String locales = <String>[
+      for (final FileSystemEntity f in Directory('lib/core/l10n').listSync())
+        if (f is File && f.path.endsWith('.dart')) f.readAsStringSync(),
+    ].join('\n');
 
     for (final String name in localised) {
       // CORRECTED 2026-08-28. This was `locales.contains(name)`, which asserts
@@ -249,7 +253,7 @@ void main() {
       // police, so it now requires a real signature: a function taking a
       // BuildContext and then the enum itself.
       final bool viaAppLocales = RegExp(
-        'BuildContext\\s+context,\\s*$name\\s+\\w+',
+        '(BuildContext\\s+context|AppStrings\\s+\\w+),\\s*$name\\??\\s+\\w+',
       ).hasMatch(locales);
       // Two shapes count, because the codebase legitimately has both:
       // a function in app_locales.dart taking a BuildContext, or an accessor on

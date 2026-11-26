@@ -66,10 +66,10 @@ abstract final class HomeCatalogue {
   static HomeSlide _fromBanner(HomeBanner banner, HomeSlide fallback) {
     final String route = _route(banner.href, fallback.routeName);
     return HomeSlide(
-      eyebrow: _eyebrowFor(route),
+      eyebrow: HomeSlideWords.eyebrowFor(route),
       title: banner.title,
       body: '',
-      action: _actionFor(route),
+      action: HomeSlideWords.actionFor(route),
       photoAsset: fallback.photoAsset,
       credit: fallback.credit,
       routeName: route,
@@ -77,24 +77,6 @@ abstract final class HomeCatalogue {
       bannerId: _bannerId(banner),
     );
   }
-
-  static String _eyebrowFor(String route) => switch (route) {
-    'news' => 'BALITA',
-    'programs' => 'TULONG',
-    'services' => 'DIRECTORY',
-    'hotlines' => 'HOTLINES',
-    'events' => 'EVENTS',
-    _ => 'TAYTAY LGU',
-  };
-
-  static String _actionFor(String route) => switch (route) {
-    'news' => 'Read Balita',
-    'programs' => 'Explore Tulong',
-    'services' => 'Open Directory',
-    'hotlines' => 'See hotlines',
-    'events' => 'See events',
-    _ => 'Open',
-  };
 
   static String? _bannerId(HomeBanner banner) {
     final String? url = banner.imageUrl;

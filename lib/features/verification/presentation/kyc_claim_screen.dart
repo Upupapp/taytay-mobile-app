@@ -6,7 +6,9 @@ import '../../../core/design/button_styles.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/form_support.dart';
@@ -97,7 +99,7 @@ class _KycClaimScreenState extends State<KycClaimScreen> {
       // offers a date the server refuses is a form that lies.
       firstDate: DateTime(now.year - 120),
       lastDate: now.subtract(const Duration(days: 1)),
-      helpText: 'Date of birth',
+      helpText: AppStrings.of(context).fieldBirthDate,
     );
     if (picked != null) _controller.setBirthDate(picked);
   }
@@ -108,24 +110,23 @@ class _KycClaimScreenState extends State<KycClaimScreen> {
     final failure = _controller.failure;
     final birthDate = _controller.birthDate;
     final sex = _controller.sex;
+    final AppStrings strings = AppStrings.of(context);
 
     return AuthFormPage(
-      title: 'Verify your identity',
+      title: strings.gateSheetVerifyTitle,
       subtitle: 'Bayan ng Taytay · Rizal',
       child: _controller.loadingDirectory
-          ? const LoadingSkeleton(
+          ? LoadingSkeleton(
               layout: SkeletonLayout.detail,
               count: 1,
-              semanticLabel: 'Loading barangays…',
+              semanticLabel: strings.verifKycLoadingBarangays,
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 const OfflineBanner(),
                 Text(
-                  'Taytay LGU checks these details against the municipal '
-                  'resident register. Enter them as they appear on your birth '
-                  'certificate or valid ID.',
+                  strings.verifKycIntro,
                   style: AppTypography.bodyStyle.copyWith(
                     color: BrandColors.text,
                   ),
@@ -138,14 +139,17 @@ class _KycClaimScreenState extends State<KycClaimScreen> {
                   // be told than that the list could not be loaded.
                   SoftNote(
                     tone: NoteTone.warning,
-                    heading: 'Could not load barangays',
-                    message: directoryFailure.residentMessage,
+                    heading: strings.verifKycBarangaysFailed,
+                    message: localisedResidentMessage(
+                      context,
+                      directoryFailure,
+                    ),
                   ),
                   const SizedBox(height: Spacing.sm),
                   FilledButton(
                     style: TaytayButtonStyles.soft(),
                     onPressed: _controller.loadDirectory,
-                    child: const Text('Try again'),
+                    child: Text(strings.actionTryAgain),
                   ),
                   const SizedBox(height: Spacing.formGap),
                 ],
@@ -153,57 +157,61 @@ class _KycClaimScreenState extends State<KycClaimScreen> {
                 if (failure != null) ...<Widget>[
                   SoftNote(
                     tone: NoteTone.warning,
-                    heading: 'Could not start your verification',
-                    message: failure.residentMessage,
+                    heading: strings.verifKycStartFailed,
+                    message: localisedResidentMessage(context, failure),
                   ),
                   const SizedBox(height: Spacing.formGap),
                 ],
 
-                const FieldLabel(
-                  label: 'First name',
-                  hint: 'As it appears on your ID.',
+                FieldLabel(
+                  label: strings.fieldFirstName,
+                  hint: strings.verifKycAsOnId,
                 ),
                 TextField(
                   enabled: !_controller.submitting,
                   textCapitalization: TextCapitalization.words,
                   autofillHints: const <String>[AutofillHints.givenName],
-                  decoration: const InputDecoration(labelText: 'First name'),
+                  decoration: InputDecoration(
+                    labelText: strings.fieldFirstName,
+                  ),
                   onChanged: _controller.setGivenName,
                 ),
                 const SizedBox(height: Spacing.formGap),
 
-                const FieldLabel(label: 'Middle name', required: false),
+                FieldLabel(label: strings.fieldMiddleName, required: false),
                 TextField(
                   enabled: !_controller.submitting,
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(labelText: 'Middle name'),
+                  decoration: InputDecoration(
+                    labelText: strings.fieldMiddleName,
+                  ),
                   onChanged: _controller.setMiddleName,
                 ),
                 const SizedBox(height: Spacing.formGap),
 
-                const FieldLabel(label: 'Last name'),
+                FieldLabel(label: strings.fieldLastName),
                 TextField(
                   enabled: !_controller.submitting,
                   textCapitalization: TextCapitalization.words,
                   autofillHints: const <String>[AutofillHints.familyName],
-                  decoration: const InputDecoration(labelText: 'Last name'),
+                  decoration: InputDecoration(labelText: strings.fieldLastName),
                   onChanged: _controller.setFamilyName,
                 ),
                 const SizedBox(height: Spacing.formGap),
 
-                const FieldLabel(
-                  label: 'Suffix',
+                FieldLabel(
+                  label: strings.verifSuffix,
                   required: false,
                   hint: 'Jr, Sr, III.',
                 ),
                 TextField(
                   enabled: !_controller.submitting,
-                  decoration: const InputDecoration(labelText: 'Suffix'),
+                  decoration: InputDecoration(labelText: strings.verifSuffix),
                   onChanged: _controller.setSuffix,
                 ),
                 const SizedBox(height: Spacing.formGap),
 
-                const FieldLabel(label: 'Date of birth'),
+                FieldLabel(label: strings.fieldBirthDate),
                 OutlinedButton.icon(
                   onPressed: _controller.submitting ? null : _pickBirthDate,
                   icon: const TaytayIcon(
@@ -215,28 +223,28 @@ class _KycClaimScreenState extends State<KycClaimScreen> {
                   ),
                   label: Text(
                     birthDate == null
-                        ? 'Choose your date of birth'
+                        ? strings.verifKycChooseBirthDate
                         : _formatDate(birthDate),
                   ),
                 ),
                 const SizedBox(height: Spacing.formGap),
 
-                const FieldLabel(
-                  label: 'Sex',
-                  hint: 'As recorded on your birth certificate.',
+                FieldLabel(
+                  label: strings.fieldSex,
+                  hint: strings.verifKycSexHint,
                 ),
                 // Two options because the civil register holds two, and this
                 // claim is matched against it. Not a gender field — see
                 // [ClaimedSex].
                 SegmentedButton<ClaimedSex>(
-                  segments: const <ButtonSegment<ClaimedSex>>[
+                  segments: <ButtonSegment<ClaimedSex>>[
                     ButtonSegment<ClaimedSex>(
                       value: ClaimedSex.female,
-                      label: Text('Female'),
+                      label: Text(strings.verifSexFemale),
                     ),
                     ButtonSegment<ClaimedSex>(
                       value: ClaimedSex.male,
-                      label: Text('Male'),
+                      label: Text(strings.verifSexMale),
                     ),
                   ],
                   emptySelectionAllowed: true,
@@ -251,13 +259,13 @@ class _KycClaimScreenState extends State<KycClaimScreen> {
                 ),
                 const SizedBox(height: Spacing.formGap),
 
-                const FieldLabel(
-                  label: 'Barangay',
-                  hint: 'Decides which barangay office serves you.',
+                FieldLabel(
+                  label: strings.fieldBarangay,
+                  hint: strings.profileHintBarangay,
                 ),
                 DropdownButtonFormField<Barangay>(
                   initialValue: _controller.barangay,
-                  decoration: const InputDecoration(labelText: 'Barangay'),
+                  decoration: InputDecoration(labelText: strings.fieldBarangay),
                   items: <DropdownMenuItem<Barangay>>[
                     for (final Barangay barangay in _controller.barangays)
                       DropdownMenuItem<Barangay>(
@@ -273,44 +281,33 @@ class _KycClaimScreenState extends State<KycClaimScreen> {
                 ),
                 const SizedBox(height: Spacing.formGap),
 
-                const FieldLabel(label: 'Street address'),
+                FieldLabel(label: strings.profileFieldStreetAddress),
                 TextField(
                   enabled: !_controller.submitting,
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'House number and street',
+                  decoration: InputDecoration(
+                    labelText: strings.fieldStreetAddress,
                   ),
                   onChanged: _controller.setStreetAddress,
                 ),
                 const SizedBox(height: Spacing.xl),
 
-                const WhyWeAsk(
-                  title: 'Why does Taytay LGU need these?',
-                  purpose:
-                      'Taytay LGU matches these details against the municipal '
-                      'resident register to confirm you are who you say you '
-                      'are.',
-                  whoSeesIt:
-                      'Staff reviewing verification for your barangay. Your '
-                      'details are not shown to other residents and are not '
-                      'used for anything else.',
-                  ifYouDecline:
-                      'You can keep using this app to browse municipal '
-                      'services and announcements. You will not be able to '
-                      'hold a digital ID until Taytay LGU confirms who you '
-                      'are. Programme pages are information only.',
+                WhyWeAsk(
+                  title: strings.verifKycWhyTitle,
+                  purpose: strings.verifKycWhyPurpose,
+                  whoSeesIt: strings.verifKycWhyWho,
+                  ifYouDecline: strings.verifKycWhyDecline,
                 ),
                 const SizedBox(height: Spacing.xl),
 
                 AppButton(
-                  label: 'Save and continue',
+                  label: strings.verifKycSaveContinue,
                   loading: _controller.submitting,
                   onPressed: _controller.canSubmit ? _controller.submit : null,
                 ),
                 const SizedBox(height: Spacing.sm),
                 Text(
-                  'Nothing is sent to Taytay LGU yet. You can check your '
-                  'details before sending them for review.',
+                  strings.verifKycNothingSentYet,
                   style: AppTypography.small.copyWith(color: BrandColors.muted),
                 ),
               ],

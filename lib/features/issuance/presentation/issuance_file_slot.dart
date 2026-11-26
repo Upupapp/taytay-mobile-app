@@ -6,6 +6,7 @@ import '../../../core/design/typography.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
 import '../../../core/l10n/app_locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/upload_slot.dart';
@@ -21,7 +22,7 @@ Future<DocumentSource?> chooseIssuanceSource(
 }) {
   return AppSheet.show<DocumentSource>(
     context: context,
-    title: 'Add: $label',
+    title: AppStrings.of(context).applyChooseSource(label),
     builder: (BuildContext sheetContext) {
       final List<DocumentSource> offered = <DocumentSource>[
         for (final DocumentSource source in DocumentSource.values)
@@ -32,12 +33,9 @@ Future<DocumentSource?> chooseIssuanceSource(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           if (offered.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(bottom: Spacing.sm),
-              child: Text(
-                'This phone cannot pick a file. The office can take the '
-                'document in person at the Municipal Hall.',
-              ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: Spacing.sm),
+              child: Text(AppStrings.of(sheetContext).issuanceNoPicker),
             ),
           for (final DocumentSource source in offered)
             Padding(
@@ -97,11 +95,15 @@ class IssuanceFileSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final CapturedDocument? file = chosen;
     final String? hint = requirement.hint;
     final ({DocumentRejection reason, int bytes})? refusal = refused;
     final String need =
-        optionalNote ?? (requirement.required ? 'Required' : 'Optional');
+        optionalNote ??
+        (requirement.required
+            ? strings.applyObligationRequired
+            : strings.applyObligationOptional);
     final String? problem = refusal != null
         ? localisedDocumentRejection(
             context,
@@ -110,10 +112,9 @@ class IssuanceFileSlot extends StatelessWidget {
             policy: policy,
           )
         : flagged
-        ? 'The office could not accept this file. Choose it again, or choose '
-              'another.'
+        ? strings.applyFileFlagged
         : missing
-        ? 'Add this file to continue.'
+        ? strings.applyMissingFile
         : null;
     return Padding(
       key: Key('issuance-slot-${requirement.code}'),
@@ -140,17 +141,18 @@ class IssuanceFileSlot extends StatelessWidget {
             AttachedFileCard(
               icon: file.isImage ? TaytayIcons.image : TaytayIcons.fileText,
               title: requirement.label,
-              status:
-                  '${file.isImage ? 'Photo' : 'PDF'} added · '
-                  '${file.readableSize}',
-              actionLabel: 'Remove',
+              status: strings.applyFileAdded(
+                file.isImage ? strings.applyFilePhoto : strings.applyFilePdf,
+                file.readableSize,
+              ),
+              actionLabel: strings.applyRemoveFile,
               actionKey: Key('issuance-remove-${requirement.code}'),
               onAction: onRemove,
             )
           else
             UploadSlot(
               key: Key('issuance-add-${requirement.code}'),
-              label: 'Add file',
+              label: strings.applyAddFile,
               error: problem != null,
               onPressed: onAdd,
             ),

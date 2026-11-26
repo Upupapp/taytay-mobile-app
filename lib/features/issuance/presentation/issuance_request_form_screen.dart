@@ -7,8 +7,10 @@ import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/documents/document_capture.dart';
+import '../../../core/l10n/issuance_copy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
@@ -18,7 +20,6 @@ import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../domain/issuance_form.dart';
 import '../domain/issuance_request.dart';
-import '../domain/issuance_terms.dart';
 import '../domain/issuance_type.dart';
 import 'issuance_failure_copy.dart';
 import 'issuance_file_slot.dart';
@@ -102,21 +103,22 @@ class _IssuanceRequestFormScreenState extends State<IssuanceRequestFormScreen> {
     final IssuanceRequestController? controller = _controller;
     final AppFailure? failure = _loadFailure;
     if (controller == null) {
+      final AppStrings strings = AppStrings.of(context);
       return IssuanceScaffold(
-        title: 'Request a document',
+        title: strings.issuanceRequestTitle,
         body: failure != null
             ? IssuanceLoadFailure(
                 failure: failure,
                 onRetry: _load,
-                what: 'this document',
+                failedTitle: strings.issuanceLoadFailedDocument,
               )
             : ListView(
                 padding: const EdgeInsets.all(Spacing.lg),
-                children: const <Widget>[
+                children: <Widget>[
                   LoadingSkeleton(
                     layout: SkeletonLayout.detail,
                     count: 1,
-                    semanticLabel: 'Opening the form',
+                    semanticLabel: strings.issuanceFormLoading,
                   ),
                 ],
               ),
@@ -177,6 +179,7 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
   }
 
   Widget _editing(BuildContext context, IssuanceRequestController controller) {
+    final AppStrings strings = AppStrings.of(context);
     final IssuanceType type = controller.type;
     final PurposeProblem? purposeProblem = controller.showProblems
         ? controller.purposeProblem
@@ -187,19 +190,19 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
           }
         : const <String>{};
     final String? purposeError = purposeProblem != null
-        ? purposeProblemText(purposeProblem)
+        ? purposeProblemMessage(strings, purposeProblem)
         : controller.serverFlagged('purpose')
-        ? 'The office could not accept this. Check what you wrote.'
+        ? strings.applyServerFlagged
         : null;
     return AuthFormPage(
-      title: 'Request a document',
+      title: strings.issuanceRequestTitle,
       subtitle: type.name,
-      stepLabel: 'Step 1 of 2',
+      stepLabel: strings.applyStepOf(1, 2),
       progress: 0.5,
-      progressSemanticLabel: 'Step 1 of 2',
+      progressSemanticLabel: strings.applyStepOf(1, 2),
       footer: PrimaryButton(
         key: const Key('issuance-review'),
-        label: 'Review request',
+        label: strings.issuanceReviewButton,
         onPressed: controller.review,
       ),
       child: Column(
@@ -209,7 +212,7 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
             _FailureNotice(failure: failure),
           _TypeSummary(type: type),
           const SizedBox(height: Spacing.formGap),
-          const AuthFieldLabel('What is the document for?'),
+          AuthFieldLabel(strings.issuancePurposeLabel),
           const SizedBox(height: Spacing.sm),
           TextField(
             key: const Key('issuance-purpose'),
@@ -221,8 +224,8 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
             textCapitalization: TextCapitalization.sentences,
             style: AppTypography.fieldValue.copyWith(color: BrandColors.ink),
             decoration: InputDecoration(
-              hintText: 'For example: for a school enrolment requirement',
-              helperText: 'The office reads this. Keep it short.',
+              hintText: strings.issuancePurposeHint,
+              helperText: strings.issuancePurposeHelp,
               errorText: purposeError,
               errorMaxLines: 3,
               helperMaxLines: 2,
@@ -230,12 +233,12 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
           ),
           if (type.requirements.isNotEmpty) ...<Widget>[
             const SizedBox(height: Spacing.formGap),
-            const IssuanceHeading('Files the office needs'),
+            IssuanceHeading(strings.issuanceFilesNeeded),
             const SizedBox(height: Spacing.xs),
             IssuanceText(
-              'One file each: ${acceptedFilesLine(type.uploadPolicy)}. '
-              'Lay paper flat, fill the frame, and make every word '
-              'readable.',
+              strings.issuanceFilesIntro(
+                acceptedFilesText(strings, type.uploadPolicy),
+              ),
               color: BrandColors.muted,
               small: true,
             ),
@@ -253,9 +256,9 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
           ],
           if (controller.showProblems && !controller.isComplete) ...<Widget>[
             const SizedBox(height: Spacing.formGap),
-            const SoftNote(
+            SoftNote(
               tone: NoteTone.error,
-              message: 'Some answers are missing. They are marked above.',
+              message: strings.issuanceMissingAnswers,
             ),
           ],
         ],
@@ -264,14 +267,15 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
   }
 
   Widget _review(BuildContext context, IssuanceRequestController controller) {
+    final AppStrings strings = AppStrings.of(context);
     final IssuanceType type = controller.type;
     final bool sending = controller.stage == IssuanceFormStage.sending;
     return AuthFormPage(
-      title: 'Review your request',
+      title: strings.issuanceReviewTitle,
       subtitle: type.name,
-      stepLabel: 'Step 2 of 2',
+      stepLabel: strings.applyStepOf(2, 2),
       progress: 1,
-      progressSemanticLabel: 'Step 2 of 2',
+      progressSemanticLabel: strings.applyStepOf(2, 2),
       backEnabled: !sending,
       footer: Column(
         mainAxisSize: MainAxisSize.min,
@@ -279,13 +283,13 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
         children: <Widget>[
           PrimaryButton(
             key: const Key('issuance-send'),
-            label: sending ? 'Sending…' : 'Send request',
+            label: sending ? strings.applySending : strings.issuanceSendRequest,
             onPressed: sending ? null : controller.submit,
           ),
           const SizedBox(height: Spacing.sm),
           SecondaryButton(
             key: const Key('issuance-edit'),
-            label: 'Change something',
+            label: strings.issuanceChangeSomething,
             onPressed: sending ? null : controller.backToEditing,
           ),
         ],
@@ -298,15 +302,15 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
           _TypeSummary(type: type),
           const SizedBox(height: Spacing.formGap),
           IssuanceCard(
-            title: 'You are asking for it',
+            title: strings.issuanceAskingFor,
             child: IssuanceQuote(
-              label: 'Purpose',
+              label: strings.issuancePurpose,
               text: controller.purpose.trim(),
             ),
           ),
           if (type.requirements.isNotEmpty)
             IssuanceCard(
-              title: 'Files you are sending',
+              title: strings.issuanceFilesSending,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
@@ -317,21 +321,20 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
                           ? TaytayIcons.circleCheck
                           : TaytayIcons.circleSlash,
                       text: switch (controller.files[requirement.code]) {
-                        final CapturedDocument file =>
-                          '${requirement.label}: '
-                              '${file.isImage ? 'photo' : 'PDF'}, '
-                              '${file.readableSize}',
-                        null => '${requirement.label}: not sent (optional)',
+                        final CapturedDocument file => strings.applyReviewFile(
+                          requirement.label,
+                          file.isImage ? strings.issuanceKindPhoto : 'PDF',
+                          file.readableSize,
+                        ),
+                        null => strings.issuanceReviewNotSent(
+                          requirement.label,
+                        ),
                       },
                     ),
                 ],
               ),
             ),
-          const SoftNote(
-            message:
-                'Check it before sending. You can cancel the request yourself '
-                'until the office starts on it. After that, message the office.',
-          ),
+          SoftNote(message: strings.issuanceReviewNote),
         ],
       ),
     );
@@ -340,47 +343,44 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
   /// RegDone: the medal, the reference number on the receipt, what happens
   /// next, and the two ways on.
   Widget _done(BuildContext context, IssuanceRequestController controller) {
+    final AppStrings strings = AppStrings.of(context);
     final IssuanceRequestDetail? filed = controller.filed;
     final IssuanceType type = controller.type;
     return SuccessScreen(
       mark: SuccessMarkStyle.medal,
-      title: 'The office has your request',
-      message:
-          'Keep this number. The office uses it when you ask about your '
-          'request.',
+      title: strings.issuanceDoneTitle,
+      message: strings.issuanceDoneMessage,
       details: <SuccessDetail>[
         SuccessDetail(
-          label: 'Reference number',
+          label: strings.myRequestReference,
           value: filed?.summary.referenceNumber ?? '—',
         ),
-        SuccessDetail(label: 'Document', value: type.name),
-        SuccessDetail(label: 'Office', value: type.officeName),
+        SuccessDetail(label: strings.issuanceDocument, value: type.name),
+        SuccessDetail(label: strings.issuanceOffice, value: type.officeName),
       ],
-      note:
-          'The office will review it. Each step shows here and in your '
-          'notifications, including when it is ready to claim.',
+      note: strings.issuanceDoneNote,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           IssuanceFact(
             icon: TaytayIcons.clock,
-            text: issuanceProcessingLine(type.processingDays),
+            text: issuanceProcessingText(strings, type.processingDays),
           ),
           IssuanceFact(
             icon: TaytayIcons.handCoins,
-            text: issuanceFeeLine(type.feeCentavos),
+            text: issuanceFeeText(strings, type.feeCentavos),
           ),
         ],
       ),
       showBack: true,
-      primaryLabel: 'Follow this request',
+      primaryLabel: strings.issuanceFollowRequest,
       onPrimary: filed == null
           ? null
           : () => context.goNamed(
               AppRoute.issuanceRequestDetail.routeName,
               pathParameters: <String, String>{'requestId': filed.id},
             ),
-      secondaryLabel: 'Back to documents',
+      secondaryLabel: strings.issuanceBackToDocuments,
       onSecondary: () => context.goNamed(AppRoute.issuanceCatalogue.routeName),
     );
   }
@@ -394,6 +394,7 @@ class _TypeSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return SoftCard(
       filled: true,
       child: Row(
@@ -412,7 +413,7 @@ class _TypeSummary extends StatelessWidget {
                 ),
                 const SizedBox(height: Spacing.xxs),
                 IssuanceText(
-                  '${type.officeName} · ${issuanceFeeLine(type.feeCentavos)}',
+                  '${type.officeName} · ${issuanceFeeText(strings, type.feeCentavos)}',
                   color: BrandColors.muted,
                   small: true,
                 ),
@@ -434,8 +435,9 @@ class _FailureNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final ({String title, String body, bool offerVerification}) copy =
-        issuanceSendFailure(failure, act: IssuanceAct.submit);
+        issuanceSendFailure(failure, act: IssuanceAct.submit, strings: strings);
     return Semantics(
       liveRegion: true,
       child: Padding(
@@ -463,7 +465,7 @@ class _FailureNotice extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(top: Spacing.xs),
                     child: SelectableText(
-                      'Reference: $reference',
+                      strings.applyFailureReference(reference),
                       style: AppTypography.small.copyWith(
                         color: BrandColors.muted,
                       ),
@@ -472,7 +474,7 @@ class _FailureNotice extends StatelessWidget {
                 if (copy.offerVerification) ...<Widget>[
                   const SizedBox(height: Spacing.md),
                   SecondaryButton(
-                    label: 'Go to verification',
+                    label: strings.applyGoToVerification,
                     onPressed: () =>
                         context.goNamed(AppRoute.verification.routeName),
                   ),

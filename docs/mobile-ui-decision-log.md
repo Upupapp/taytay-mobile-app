@@ -4937,6 +4937,107 @@ offline save says so; a used link asks for a new code).
 
 ---
 
+## D-237 — A phone set to Filipino reads Filipino throughout; the Filipino is a draft for a native speaker
+
+**Status: settled** (the mechanism); **the Filipino wording is a draft awaiting review**. Category:
+copy / accessibility. Recorded 2026-11-27. Closes the "Left open" of D-236 (flow audit 3, M6).
+
+**Context.** The two ARB files agreed key for key (449 keys), yet a resident who chose Filipino
+still read English on about a third of the app: error sentences from `AppFailure.residentMessage`,
+document-request statuses, event replies, the account wizard, Settings, Sectors, the digital ID,
+dialogs, buttons and screen-reader labels. The audit counted about 300; read screen by screen it
+was about 1,400 sentences, because the 2026-11 redesign wrote its new screens in English literals.
+
+**Decision.**
+
+1. **Every sentence a resident reads is an ARB key with an English and a Filipino entry.** 1,399
+   keys were added (1,838 in all): auth and the account wizard 223, document requests and the
+   digital ID 186, profile, household and Sectors 167, My Account 165, events, Balita and the inbox
+   159, Directory, Tulong and Home 137, verification 134, Settings, consents and messages 120,
+   shared widgets 77, failure sentences and core 31. The English wording is the wording the
+   screens already showed; where a phrase already had a key (`actionTryAgain`, `applyStepOf`, the
+   `field…` labels…), the key is reused.
+2. **The house pattern is kept.** A screen reads `AppStrings.of(context)`. A domain enum or value
+   keeps its English as the no-context fallback and gets a localiser beside `app_locales.dart`
+   (`lib/core/l10n/<area>_copy.dart`: `issuanceStatusText`, `consentKindLabel`,
+   `verificationItemCategoryLabel`, `eventRegistrationStateLabel`, `deepLinkRejectionMessage`…), and
+   every render site calls the localiser. Sentences the events repository used to compose in the
+   data layer moved to the screen, keyed on the outcome (`RegistrationRefusal`).
+3. **A failure says its own sentence in both languages.** `localisedResidentMessage` used to
+   collapse each failure kind to one sentence, so a refused selfie read "This is not available for
+   your account" in Filipino where the English said "agree to the selfie text, or verify in
+   person". It now has one key per variant the getter tells apart (selfie consent, verification
+   required, barangay held by the office, a request that already moved on, a wait in seconds,
+   maintenance…), and its English is the getter's word for word, so no English screen changed
+   when it moved to the localiser. The ten old `failure…` keys whose English differed were
+   removed; nothing read them.
+4. **Dates name the month in the reader's language.** `ManilaTime` takes a language code; Filipino
+   uses the CLDR abbreviations (Ene, Peb, Mar, Abr, May, Hun, Hul, Ago, Set, Okt, Nob, Dis; Lun …
+   Lin). Day–month–year order, AM/PM and PHT are the same in both, so the two can never name
+   different days (D-107).
+5. **A guard holds it.** `test/core/hard_coded_copy_test.dart` counts the English sentences typed
+   into `features/*/presentation/`, `shared/` and `app/`, and fails when a file has more than it
+   was left with — or fewer, so the number only goes down. What it counts today is deliberate:
+   the English no-context fallbacks kept beside each localiser, test-only design specimens, the
+   printed face of the digital ID, the dev-only gallery row and assert text. Its allow-list is
+   thirteen proper names (Taytay LGU, Bayan ng Taytay · Rizal, Balita, Tulong, Terms of Use,
+   Privacy Notice, PhilSys National ID…). `resident_copy_localisation_test.dart` now reads the
+   per-area localiser files too; `ConsentKind` and `VerificationItemCategory` left its
+   "untranslated" list, which is down to the unreachable registration wizard's `RegistrationStep`.
+
+**Vocabulary.** The existing ARB's: plain Filipino as an LGU counter sign writes it, respectful but
+without "po", Taglish where people say the English word (*Mag-sign in*, *I-refresh*, *email*,
+*password*, *code*, *selfie*, *verification*). *hiling* (request), *tanggapan* (office), *ipadala* /
+*Walang naipadala* (send / nothing was sent), *Subukang muli*, *katayuan* (status), *pahintulot*
+(consent), *sambahayan* (household), *Mga Kaganapan* (events), *Mga mensahe* (messages), *Bayan ng
+Taytay* (the Municipality, as every page header says it), *Munisipyo* (the municipal hall).
+Proper names, programme and office names, ID names, "Terms of Use", "Privacy Notice", law
+citations and "Senior citizen" / "Solo parent" (as LGU forms print them) are kept; "Person with
+disability" is *Taong may kapansanan*, from RA 7277's Filipino title.
+
+**The Filipino is a draft.** It was written by Claude, not by a native speaker. Every new pair is in
+the owner's review sheet (`Filipino translations to check.csv`: screen, English, Filipino draft,
+note; 203 rows carry a note). The terms least sure of:
+
+- consent and legal lines: *Sumasang-ayon ako* (I agree), *Kinilala* (acknowledged the Privacy
+  Notice — must not read as agreeing), *Pinatutunayan ko… pumapayag ako…* (the verification
+  certification), and "a withdrawal is not backdated", drafted two ways (*hindi umaatras ang bisa
+  ng pagbawi*, *hindi umaabot pabalik sa nakaraan*) — pick one;
+- *puwesto* / *Bitawan ang iyong puwesto* (a place at an event / give it up), *Pang-{n} ka sa
+  waitlist*;
+- *nananagot para sa* (answers for this household — may read as legal liability);
+- *Tulong sa app* for Help, chosen so it does not read as the Tulong pages;
+- *Bukas* / *Sarado* (open / closed; *bukas* is also "tomorrow");
+- *datos* beside *impormasyon* for "data", and *litrato* beside *larawan* for "photo" (the old ARB
+  has both);
+- *Hindi pa naiisyu* / *mai-isyu* (issued), *HALIMBAWA* (the SAMPLE chip), *Selyo ng Bayan ng
+  Taytay* (the seal's screen-reader name), *paghinto* (the pause after too many tries).
+
+**Left in English, on purpose.** Text the server sends (office, programme, event and document-type
+names, Balita articles, office notes and refusal reasons, consent text the office publishes —
+D-09); the printed digital ID face; the no-context fallbacks and test specimens above; the
+dev-only component gallery; developer text (debug messages, asserts, the Firebase startup issue
+list, `core/api` and `core/config`); and the registration wizard's enums, which no route reaches
+(TAB 03). Two things still read English and need content rather than code: the Home slides in
+`assets/home/slides.json`, and the fallback names the document-request codec uses when the server
+sends none ("Taytay municipal office", "Document request"). The Balita chip labels come from the
+design set and the server's categories.
+
+**English that changed.** On an English phone the account wizard's code, expired-code and
+service-unavailable lines, which were typed in Filipino, now have English. Four wizard headings
+and the reset / new-password / too-many-attempts flow stay in Filipino in both languages, as their
+design and tests have them (D-217, D-236).
+
+**Tests.** `hard_coded_copy_test.dart` (new; a planted literal is caught, a key, a comment, a raw
+string and an assert are not), `resident_copy_localisation_test.dart`, `s9_polish_test.dart` (the
+About line now lives in the ARB), and the screens' own tests, whose hosts gained the localisation
+delegates where they lacked them. `device_adaptation_test.dart` found the one layout Filipino broke:
+"Mag-sign in" ran 4 px past the Home header on a 320 dp phone, so below 360 dp the pill is the round
+sign-in button, as it already was at large text. The four digital ID goldens with a QR code and the
+design-system card are refreshed: D-236 added "PHT" to the QR line and left them as they were.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -5177,5 +5278,6 @@ offline save says so; a used link asks for a new code).
 | D-234 | The launcher icon is the municipal seal, whole on white, scaled from the registered file only; no monochrome (themed) layer, which would recolour it | brand | settled |
 | D-235 | The office's changes to her record (backend ADR 0016): a `registry_record_updated` notice names which details changed, never their values (OWASP MASWE-0054), opens the profile and has its own switch after Sector applications; the profile shows `GET /me` `office_record` read-only with "The office keeps this record. If something here is wrong, visit the MSWDO office with your ID." and re-reads on `account` and `notifications`; a verified resident's barangay is read-only with "To change your barangay, visit the MSWDO office with proof of your new address." and never sent, and `BARANGAY_HELD_BY_OFFICE` is said in the app's words; the close-account copy says the account closes at once (one "Close my account" button, switch left off) instead of "the office will contact you"; contract re-vendored at `fd1293e` | product / privacy / contract | settled |
 | D-236 | Every notice type the API sends has its own inbox category (supersedes the general "Update" row label of D-235); the Home bell reads `GET notifications/unread-count`; each news list keeps its own cursor; the digital ID dates and QR clock are Manila time with PHT (D-107); a refused new password says why, in Filipino | contract / copy / safety | settled |
+| D-237 | Every sentence a resident reads is an ARB key with English and Filipino (1,399 added): screens read AppStrings, domain copy keeps its English fallback with a localiser in `lib/core/l10n/*_copy.dart`, a failure says its own variant's sentence in both languages, dates name the month in the reader's language, and `hard_coded_copy_test.dart` holds the English left per file; the Filipino is a draft awaiting a native speaker (review sheet) | copy / accessibility | settled |
 
-**227 decisions — 223 settled, 4 provisional.**
+**228 decisions — 224 settled, 4 provisional.**

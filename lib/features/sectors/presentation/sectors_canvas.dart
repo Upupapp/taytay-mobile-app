@@ -5,8 +5,8 @@ import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/core_copy.dart';
 import '../../../core/result/result.dart';
-import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
@@ -52,9 +52,10 @@ class SectorsCanvas extends StatelessWidget {
   Widget build(BuildContext context) {
     final SectorOverview? overview = this.overview;
     final AppFailure? failure = this.failure;
+    final SectorsText words = SectorsText.of(context);
     return SoftPage(
-      title: SectorsCopy.title,
-      subtitle: SectorsCopy.subtitle,
+      title: words.title,
+      subtitle: words.subtitle,
       offlineBanner: true,
       onBack: onBack,
       scrollKey: const Key('sectors-scroll'),
@@ -62,7 +63,7 @@ class SectorsCanvas extends StatelessWidget {
         const _Intro(),
         const SizedBox(height: Spacing.xl),
         if (loading && overview == null)
-          const LoadingSkeleton(count: 3, semanticLabel: SectorsCopy.loading)
+          LoadingSkeleton(count: 3, semanticLabel: words.loading)
         else if (overview == null)
           FailureView(
             failure: failure ?? const UnexpectedFailure(),
@@ -70,16 +71,16 @@ class SectorsCanvas extends StatelessWidget {
             onRetry: onRetry,
           )
         else ...<Widget>[
-          const SettingsSectionTitle(SectorsCopy.yoursHeading),
+          SettingsSectionTitle(words.yoursHeading),
           _Yours(overview: overview, today: today, onApply: onApply),
           const SizedBox(height: Spacing.xl),
-          const SettingsSectionTitle(SectorsCopy.applyHeading),
+          SettingsSectionTitle(words.applyHeading),
           _Offers(sectors: overview.offered, onApply: onApply),
           const SizedBox(height: Spacing.lg),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: Spacing.xs),
             child: Text(
-              SectorsCopy.inPerson,
+              words.inPerson,
               style: AppTypography.small.copyWith(color: BrandColors.muted),
             ),
           ),
@@ -107,7 +108,7 @@ class _Intro extends StatelessWidget {
           const SizedBox(width: Spacing.md),
           Expanded(
             child: Text(
-              SectorsCopy.intro,
+              SectorsText.of(context).intro,
               style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
             ),
           ),
@@ -125,19 +126,21 @@ class _Yours extends StatelessWidget {
   final DateTime today;
   final ValueChanged<ResidentSector>? onApply;
 
-  static String? _date(DateTime? instant) =>
-      instant == null ? null : ManilaTime.formatDate(instant);
+  /// The day, with the month named in the reader's language.
+  static String? _date(BuildContext context, DateTime? instant) =>
+      instant == null ? null : manilaDate(context, instant);
 
   @override
   Widget build(BuildContext context) {
     // Nothing recorded is said even beside an application being checked: the
     // list stays empty until the office links the account on its first
     // approval, and a resident should not read that as a lost record.
+    final SectorsText words = SectorsText.of(context);
     final Widget? none = overview.recorded.isEmpty
         ? SoftCard(
             key: const Key('sectors-none'),
             child: Text(
-              SectorsCopy.none,
+              words.none,
               style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
             ),
           )
@@ -149,15 +152,14 @@ class _Yours extends StatelessWidget {
         for (final OwnSector own in overview.recorded)
           _row(
             key: Key('sectors-own-${own.sector.name}'),
+            words: words,
             sector: own.sector,
-            detail: SectorsCopy.ownDetail(
-              since: _date(own.since),
+            detail: words.ownDetail(
+              since: _date(context, own.since),
               lastFour: own.idLastFour,
-              validUntil: _date(own.validUntil),
+              validUntil: _date(context, own.validUntil),
             ),
-            status: own.lapsedOn(today)
-                ? SectorsCopy.lapsed
-                : SectorsCopy.recorded,
+            status: own.lapsedOn(today) ? words.lapsed : words.recorded,
             tone: own.lapsedOn(today) ? PillTone.gold : PillTone.green,
             tile: BrandColors.green50,
             ink: BrandColors.green,
@@ -166,9 +168,10 @@ class _Yours extends StatelessWidget {
           if (application.status == SectorApplicationStatus.returned)
             _row(
               key: Key('sectors-returned-${application.sector.name}'),
+              words: words,
               sector: application.sector,
-              detail: SectorsCopy.returnedDetail(application.reason),
-              status: SectorsCopy.returned,
+              detail: words.returnedDetail(application.reason),
+              status: words.returned,
               tone: PillTone.red,
               tile: BrandColors.red50,
               ink: BrandColors.redInk,
@@ -177,9 +180,10 @@ class _Yours extends StatelessWidget {
           else
             _row(
               key: Key('sectors-pending-${application.sector.name}'),
+              words: words,
               sector: application.sector,
-              detail: SectorsCopy.appliedOn(_date(application.submittedAt)),
-              status: SectorsCopy.beingChecked,
+              detail: words.appliedOn(_date(context, application.submittedAt)),
+              status: words.beingChecked,
               tone: PillTone.gold,
               tile: BrandColors.gold50,
               ink: BrandColors.goldInk,
@@ -199,6 +203,7 @@ class _Yours extends StatelessWidget {
 
   Widget _row({
     required Key key,
+    required SectorsText words,
     required ResidentSector sector,
     required String detail,
     required String status,
@@ -209,7 +214,7 @@ class _Yours extends StatelessWidget {
   }) {
     return _SectorRow(
       key: key,
-      title: SectorsCopy.label(sector),
+      title: words.label(sector),
       detail: detail,
       status: status,
       tone: tone,
@@ -323,11 +328,12 @@ class _Offers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final SectorsText words = SectorsText.of(context);
     if (sectors.isEmpty) {
       return SoftCard(
         key: const Key('sectors-nothing-to-apply'),
         child: Text(
-          SectorsCopy.nothingToApply,
+          words.nothingToApply,
           style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
         ),
       );
@@ -342,8 +348,8 @@ class _Offers extends StatelessWidget {
             key: Key('sectors-apply-${sector.name}'),
             onTap: onApply == null ? null : () => onApply(sector),
             semanticLabel: SectorsCopy.join(<String>[
-              SectorsCopy.label(sector),
-              SectorsCopy.offer(sector),
+              words.label(sector),
+              words.offer(sector),
             ]),
             child: Row(
               children: <Widget>[
@@ -354,14 +360,14 @@ class _Offers extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        SectorsCopy.label(sector),
+                        words.label(sector),
                         style: AppTypography.listTitle.copyWith(
                           color: BrandColors.ink,
                         ),
                       ),
                       const SizedBox(height: Spacing.xxs),
                       Text(
-                        SectorsCopy.offer(sector),
+                        words.offer(sector),
                         style: AppTypography.listDetail.copyWith(
                           color: BrandColors.muted,
                         ),

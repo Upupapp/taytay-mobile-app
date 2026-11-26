@@ -13,6 +13,7 @@ import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/surface_cards.dart';
@@ -148,11 +149,12 @@ class _MyIssuanceRequestsScreenState extends State<MyIssuanceRequestsScreen>
   @override
   Widget build(BuildContext context) {
     final AppFailure? failure = _failure;
+    final AppStrings strings = AppStrings.of(context);
     return IssuanceScaffold(
-      title: 'My document requests',
+      title: strings.issuanceMyRequests,
       footer: PrimaryButton(
         key: const Key('issuance-new-request'),
-        label: 'Request a document',
+        label: strings.issuanceRequestTitle,
         onPressed: () =>
             context.pushNamed(AppRoute.issuanceCatalogue.routeName),
       ),
@@ -160,7 +162,7 @@ class _MyIssuanceRequestsScreenState extends State<MyIssuanceRequestsScreen>
           ? IssuanceLoadFailure(
               failure: failure,
               onRetry: _load,
-              what: 'your requests',
+              failedTitle: strings.issuanceLoadFailedRequests,
             )
           : RefreshIndicator(
               onRefresh: _load,
@@ -168,16 +170,14 @@ class _MyIssuanceRequestsScreenState extends State<MyIssuanceRequestsScreen>
                 padding: issuanceListPadding(context),
                 children: <Widget>[
                   if (_loading && _items.isEmpty)
-                    const LoadingSkeleton(
+                    LoadingSkeleton(
                       layout: SkeletonLayout.cards,
-                      semanticLabel: 'Loading your requests',
+                      semanticLabel: strings.myRequestsLoading,
                     )
                   else if (_items.isEmpty)
-                    const EmptyState(
-                      title: 'No document requests yet',
-                      message:
-                          'When you request a certificate or a copy from a '
-                          'municipal office, you can follow it here.',
+                    EmptyState(
+                      title: strings.issuanceMyRequestsEmptyTitle,
+                      message: strings.issuanceMyRequestsEmptyMessage,
                       boxed: true,
                     )
                   else ...<Widget>[
@@ -195,10 +195,10 @@ class _MyIssuanceRequestsScreenState extends State<MyIssuanceRequestsScreen>
                       SecondaryButton(
                         key: const Key('issuance-load-more'),
                         label: _loadingMore
-                            ? 'Loading…'
+                            ? strings.myRequestsLoadingMore
                             : _moreFailure != null
-                            ? 'Could not load more. Try again'
-                            : 'Show older requests',
+                            ? strings.myRequestsMoreFailed
+                            : strings.myRequestsShowOlder,
                         onPressed: _loadingMore ? null : _more,
                       ),
                   ],
@@ -264,7 +264,12 @@ class IssuanceRequestRow extends StatelessWidget {
                     children: <Widget>[
                       IssuanceStatusChip(status: status),
                       Text(
-                        'Sent ${issuanceDate(item.createdAt)}',
+                        AppStrings.of(context).issuanceSentOn(
+                          issuanceDate(
+                            item.createdAt,
+                            Localizations.localeOf(context).languageCode,
+                          ),
+                        ),
                         style: AppTypography.small.copyWith(
                           color: BrandColors.muted,
                         ),

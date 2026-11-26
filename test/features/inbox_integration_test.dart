@@ -12,6 +12,7 @@ import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/documents/document_capture.dart';
 import 'package:taytay_resident/core/documents/upload_policy.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
@@ -23,6 +24,7 @@ import 'package:taytay_resident/features/account/presentation/account_pages.dart
 import 'package:taytay_resident/features/messaging/data/office_messaging_gap_repository.dart';
 import 'package:taytay_resident/features/messaging/domain/message_send_failure.dart';
 import 'package:taytay_resident/features/messaging/domain/office_messaging_repository.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 
 final RegExp _uuidV4 = RegExp(
   r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
@@ -841,7 +843,11 @@ void main() {
       await tester.pumpWidget(
         AppDependenciesScope(
           dependencies: dependencies,
-          child: const MaterialApp(home: MessagesInboxScreen()),
+          child: const MaterialApp(
+            localizationsDelegates: AppStrings.localizationsDelegates,
+            supportedLocales: AppLocales.supported,
+            home: MessagesInboxScreen(),
+          ),
         ),
       );
       await tester.pump();
@@ -862,7 +868,11 @@ void main() {
       await tester.pumpWidget(
         AppDependenciesScope(
           dependencies: dependencies,
-          child: const MaterialApp(home: MessagesInboxScreen()),
+          child: const MaterialApp(
+            localizationsDelegates: AppStrings.localizationsDelegates,
+            supportedLocales: AppLocales.supported,
+            home: MessagesInboxScreen(),
+          ),
         ),
       );
       await tester.pump();
@@ -885,7 +895,11 @@ void main() {
       await tester.pumpWidget(
         AppDependenciesScope(
           dependencies: dependencies,
-          child: const MaterialApp(home: MessagesInboxScreen()),
+          child: const MaterialApp(
+            localizationsDelegates: AppStrings.localizationsDelegates,
+            supportedLocales: AppLocales.supported,
+            home: MessagesInboxScreen(),
+          ),
         ),
       );
       await tester.pump();
@@ -913,7 +927,11 @@ void main() {
         await tester.pumpWidget(
           AppDependenciesScope(
             dependencies: dependencies,
-            child: const MaterialApp(home: MessagesInboxScreen()),
+            child: const MaterialApp(
+              localizationsDelegates: AppStrings.localizationsDelegates,
+              supportedLocales: AppLocales.supported,
+              home: MessagesInboxScreen(),
+            ),
           ),
         );
         await tester.pump();
@@ -1284,7 +1302,11 @@ Future<void> _pumpThread(
   await tester.pumpWidget(
     AppDependenciesScope(
       dependencies: dependencies,
-      child: const MaterialApp(home: AccountThreadScreen(threadId: 'thread-1')),
+      child: const MaterialApp(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
+        home: AccountThreadScreen(threadId: 'thread-1'),
+      ),
     ),
   );
   await tester.pump();

@@ -172,9 +172,10 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
     final editable =
         _detail?.fieldsOwnedBy(FieldOwnership.accountOwned) ??
         ResidentProfileField.ownedBy(FieldOwnership.accountOwned);
+    final strings = AppStrings.of(context);
 
     return AuthFormPage(
-      title: 'Your account details',
+      title: strings.profileSectionAccountTitle,
       subtitle: profileSectionCopy(
         context,
         FieldOwnership.accountOwned,
@@ -184,16 +185,16 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
       footer: _loading || _unread
           ? null
           : AppButton(
-              label: 'Save changes',
+              label: strings.profSaveChanges,
               loading: _saving,
               onPressed: _saving ? null : _save,
             ),
       child: CapabilityGate(
         capability: ResidentCapability.manageAccount,
         child: _loading
-            ? const LoadingSkeleton(
+            ? LoadingSkeleton(
                 layout: SkeletonLayout.detail,
-                semanticLabel: 'Loading your details',
+                semanticLabel: strings.profLoadingDetails,
               )
             // A failed read is said as itself, with Try again, in place of an
             // empty form (DESIGN_SYSTEM.md §5).
@@ -213,45 +214,35 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
                       const SizedBox(height: Spacing.formGap),
                     ],
                     const SizedBox(height: Spacing.sm),
-                    const WhyWeAsk(
-                      title: 'Why Taytay LGU keeps this',
-                      purpose:
-                          'Your mobile number is how Taytay LGU signs you in '
-                          'and tells you about your requests. Your email is '
-                          'optional and is used only to send you copies.',
-                      whoSeesIt:
-                          'Staff handling something you applied for. It is '
-                          'never shared for advertising.',
-                      ifYouDecline:
-                          'Without a mobile number you cannot sign in. Email '
-                          'can be left blank.',
+                    WhyWeAsk(
+                      title: strings.profContactWhyTitle,
+                      purpose: strings.profContactWhyPurpose,
+                      whoSeesIt: strings.profContactWhoSees,
+                      ifYouDecline: strings.profContactIfDecline,
                     ),
                     const SizedBox(height: Spacing.lg),
                     if (_saved)
-                      const SoftNote(
+                      SoftNote(
                         tone: NoteTone.success,
-                        message: 'Your contact details were updated.',
+                        message: strings.profContactSaved,
                       ),
                     // `PATCH /me` is wired, so a failure is the request's,
                     // not a feature that is switched off. Each value is set
                     // outright and the key is kept, so saving again is safe.
                     if (_saveFailure case final AppFailure failure)
                       failure.outcomeUnknown
-                          ? const SoftNote(
+                          ? SoftNote(
                               tone: NoteTone.warning,
-                              title: 'Your changes may not have been saved. ',
-                              message:
-                                  'We could not confirm them. Saving again '
-                                  'is safe: the same details are sent '
-                                  'again.',
+                              title:
+                                  '${strings.profContactMaybeNotSavedTitle} ',
+                              message: strings.profContactMaybeNotSavedBody,
                             )
                           : SoftNote(
                               tone: NoteTone.error,
-                              title: 'Could not save your changes. ',
-                              message:
-                                  '${failure.residentMessage} Nothing was '
-                                  'changed, and the municipal hall can '
-                                  'update them for you.',
+                              title: '${strings.profContactNotSavedTitle} ',
+                              message: strings.profContactNotSavedBody(
+                                localisedResidentMessage(context, failure),
+                              ),
                             ),
                   ],
                 ),
@@ -294,13 +285,13 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
         decoration: InputDecoration(
           hintText: '09XXXXXXXXX',
           // Stated before submission: changing this changes how they sign in.
-          helperText: 'This is also how you sign in.',
+          helperText: AppStrings.of(context).profContactMobileHelper,
           helperMaxLines: 2,
           prefixIcon: _icon(TaytayIcons.smartphone),
         ),
         // The same rule as sign-in, from the same definition, so the two cannot
         // disagree about what a valid Philippine mobile number looks like.
-        validator: SignInIdentifier.validate,
+        validator: _validateMobile,
       ),
     ),
     ResidentProfileField.emailAddress => _labelled(
@@ -355,15 +346,26 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
     _ => const SizedBox.shrink(),
   };
 
+  /// The sign-in rule, from the same definition as sign-in so the two cannot
+  /// disagree about a valid Philippine mobile number; only the words are this
+  /// screen's, in the resident's language (D-237).
+  String? _validateMobile(String? value) {
+    if (SignInIdentifier.validate(value) == null) return null;
+    final strings = AppStrings.of(context);
+    return (value?.trim() ?? '').isEmpty
+        ? strings.profMobileEmpty
+        : strings.profMobileShape;
+  }
+
   /// Optional, but must look like an address if given.
   ///
   /// Deliberately loose. Over-strict email validation rejects real addresses,
   /// and the server validates again — its answer is the one that counts.
-  static String? _validateOptionalEmail(String? value) {
+  String? _validateOptionalEmail(String? value) {
     final input = value?.trim() ?? '';
     if (input.isEmpty) return null;
     if (!input.contains('@') || input.startsWith('@') || input.endsWith('@')) {
-      return 'Enter an email address, or leave this blank.';
+      return AppStrings.of(context).profContactEmailInvalid;
     }
     return null;
   }

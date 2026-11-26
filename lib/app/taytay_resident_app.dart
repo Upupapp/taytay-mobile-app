@@ -9,6 +9,7 @@ import '../core/design/app_theme.dart';
 import '../core/design/design_tokens.dart';
 import '../core/design/taytay_icons.dart';
 import '../core/l10n/app_locales.dart';
+import '../core/l10n/shared_copy.dart';
 import '../core/router/app_router.dart';
 import '../core/session/session_state.dart';
 import '../core/telemetry/telemetry_route_observer.dart';
@@ -228,7 +229,9 @@ class _AppLockGate extends StatelessWidget {
         if (!lock.isLocked) return child;
         return AppLockScreen(
           lock: lock,
-          onUnlock: lock.unlock,
+          onUnlock: () => lock.unlock(
+            reason: sharedStrings(context).coreAppLockUnlockReason,
+          ),
           onSignOut: () async {
             // Sign-out is the escape hatch, so it must not depend on the
             // network: the local session is cleared regardless of what the
@@ -277,6 +280,13 @@ class _MisconfiguredApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      // A release build can stop here (Firebase refusing to start on the
+      // phone), in front of a resident: the headline follows the phone's
+      // language like the rest of the app. The issues under it are for
+      // whoever builds the app, and stay as written.
+      localizationsDelegates: AppStrings.localizationsDelegates,
+      supportedLocales: AppLocales.supported,
+      localeResolutionCallback: AppLocales.resolve,
       theme: AppTheme.light(),
       home: Scaffold(
         body: SafeArea(
@@ -316,6 +326,7 @@ class _ConfigStopBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final foreground = theme.colorScheme.onErrorContainer;
+    final strings = sharedStrings(context);
     return Semantics(
       container: true,
       liveRegion: true,
@@ -332,7 +343,7 @@ class _ConfigStopBanner extends StatelessWidget {
           children: <Widget>[
             TaytayIcon(
               icon: TaytayIcons.settings,
-              semanticLabel: 'Configuration',
+              semanticLabel: strings.sharedConfigStopIconLabel,
               size: IconSizes.md,
               color: foreground,
             ),
@@ -342,7 +353,7 @@ class _ConfigStopBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    'This build is not configured correctly and cannot start.',
+                    strings.sharedConfigStopTitle,
                     style: theme.textTheme.titleSmall?.copyWith(
                       color: foreground,
                     ),

@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/l10n/core_copy.dart';
 import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
@@ -80,17 +82,20 @@ class _NewsPostScreenState extends State<NewsPostScreen>
     if (!_idIsValid) {
       return _Shell(
         child: _NotAvailable(
-          message: DeepLinkRejection.invalidIdentifier.residentMessage,
+          message: deepLinkRejectionMessage(
+            context,
+            DeepLinkRejection.invalidIdentifier,
+          ),
         ),
       );
     }
 
     final PostDetailController? controller = _controller;
     if (controller == null || controller.isLoading) {
-      return const _Shell(
+      return _Shell(
         child: LoadingSkeleton(
           layout: SkeletonLayout.detail,
-          semanticLabel: 'Loading the announcement',
+          semanticLabel: AppStrings.of(context).balitaLoadingArticle,
         ),
       );
     }
@@ -112,7 +117,10 @@ class _NewsPostScreenState extends State<NewsPostScreen>
     if (post == null) {
       return _Shell(
         child: _NotAvailable(
-          message: DeepLinkRejection.unknownTarget.residentMessage,
+          message: deepLinkRejectionMessage(
+            context,
+            DeepLinkRejection.unknownTarget,
+          ),
         ),
       );
     }
@@ -161,12 +169,13 @@ class _NotAvailable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return EmptyState(
-      title: 'This announcement is not available',
+      title: strings.balitaArticleNotAvailable,
       message: message,
       boxed: true,
       primaryAction: true,
-      actionLabel: 'See all announcements',
+      actionLabel: strings.balitaSeeAllAnnouncements,
       onAction: () => context.goNamed(AppRoute.news.routeName),
     );
   }

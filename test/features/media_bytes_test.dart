@@ -15,6 +15,7 @@ import 'package:taytay_resident/core/api/media_bytes_api.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/router/app_routes.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -40,6 +41,7 @@ import 'package:taytay_resident/features/tulong/domain/social_service.dart';
 import 'package:taytay_resident/features/tulong/domain/social_service_repository.dart';
 import 'package:taytay_resident/features/tulong/presentation/service_info_screen.dart';
 import 'package:taytay_resident/features/tulong/presentation/tulong_canvas.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/detail_page.dart';
 import 'package:taytay_resident/shared/widgets/media_bytes_image.dart';
 
@@ -1104,6 +1106,8 @@ Future<void> _pumpRouted(
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
         routerConfig: router,
       ),
     ),
@@ -1119,6 +1123,8 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
     MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
+      localizationsDelegates: AppStrings.localizationsDelegates,
+      supportedLocales: AppLocales.supported,
       home: child,
     ),
   );

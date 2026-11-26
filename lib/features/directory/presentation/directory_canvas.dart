@@ -9,7 +9,9 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/l10n/directory_copy.dart';
 import '../../../core/result/result.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/conversation.dart';
 import '../../../shared/widgets/error_state.dart';
@@ -84,7 +86,7 @@ class DirectoryCanvas extends StatelessWidget {
     this.attachmentLabel,
     this.loadHero,
     this.onServiceLine,
-    this.selectedChip = 'All',
+    this.selectedChip = Office.allChip,
     this.onChip,
     this.onBell,
     this.officeMissing = false,
@@ -183,6 +185,7 @@ class DirectoryCanvas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final Office? current = office;
     final Widget page = switch (frame) {
       DirectoryFrame.list ||
@@ -195,8 +198,8 @@ class DirectoryCanvas extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   BlueHeader(
-                    title: 'Directory',
-                    subtitle: 'Office details',
+                    title: strings.navServices,
+                    subtitle: strings.dirOfficeDetails,
                     showBack: true,
                     onBack: onBack,
                   ),
@@ -206,17 +209,14 @@ class DirectoryCanvas extends StatelessWidget {
                       children: <Widget>[
                         officeMissing
                             ? ErrorState(
-                                title: 'This office could not be shown',
-                                message:
-                                    'Taytay LGU could not be reached, or the '
-                                    'office is no longer listed. You can try '
-                                    'again.',
+                                title: strings.dirOfficeNotShownTitle,
+                                message: strings.dirOfficeNotShownBody,
                                 onRetry: onRetry,
                                 boxed: true,
                               )
-                            : const LoadingSkeleton(
+                            : LoadingSkeleton(
                                 layout: SkeletonLayout.detail,
-                                semanticLabel: 'Loading the office',
+                                semanticLabel: strings.dirLoadingOffice,
                               ),
                       ],
                     ),
@@ -290,25 +290,26 @@ class _ListPage extends StatelessWidget {
     final bool search = c.frame == DirectoryFrame.searchSpecimen;
     final bool offline = c.frame == DirectoryFrame.offline;
     final VoidCallback? onBell = c.onBell;
+    final AppStrings strings = AppStrings.of(context);
     final Widget header = BlueHeader(
       leading: search ? null : const HeaderSeal(),
       showBack: search,
       onBack: c.onBack,
-      title: search ? 'Search' : 'Directory',
-      subtitle: search ? 'Directory' : 'Municipal offices',
+      title: search ? strings.dirSearchTitle : strings.navServices,
+      subtitle: search ? strings.navServices : strings.dirMunicipalOffices,
       actions: <Widget>[
         if (!search)
           HeaderIconButton(
             key: const Key('directory-bell'),
             icon: TaytayIcons.bell,
-            semanticLabel: 'Notifications',
+            semanticLabel: strings.dirNotifications,
             onPressed: onBell,
           ),
       ],
       bottom: offline || search
           ? null
           : HeaderSearchField(
-              hint: 'Search offices or services',
+              hint: strings.dirSearchHint,
               controller: c.searchController,
               onChanged: c.onSearch,
             ),
@@ -360,9 +361,10 @@ class _ChipsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     if (labels.isEmpty) return const SizedBox.shrink();
     final ValueChanged<String>? onChip = this.onChip;
+    final AppStrings strings = AppStrings.of(context);
     return Semantics(
       container: true,
-      label: 'Category',
+      label: strings.dirCategory,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(
@@ -376,7 +378,7 @@ class _ChipsRow extends StatelessWidget {
             for (var i = 0; i < labels.length; i++) ...<Widget>[
               if (i > 0) const SizedBox(width: Spacing.sm),
               SoftChoiceChip(
-                label: labels[i],
+                label: directoryChipLabel(strings, labels[i]),
                 selected: labels[i] == selected,
                 onTap: onChip == null ? null : () => onChip(labels[i]),
               ),
@@ -409,11 +411,14 @@ class _ListBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String chip = chips.contains(selectedChip) ? selectedChip : 'All';
+    final String chip = chips.contains(selectedChip)
+        ? selectedChip
+        : Office.allChip;
     final List<Office> visible = offices
         .where((Office office) => office.matches(query, chip))
         .toList(growable: false);
     final String trimmed = query.trim();
+    final AppStrings strings = AppStrings.of(context);
     return ListView(
       padding: const EdgeInsets.only(bottom: Spacing.xl),
       children: <Widget>[
@@ -428,12 +433,12 @@ class _ListBody extends StatelessWidget {
           child: visible.isEmpty
               ? EmptyState(
                   title: trimmed.isEmpty
-                      ? 'No offices in this category'
-                      : 'No offices found for “$trimmed”',
-                  message: 'Try another word, or browse by category.',
+                      ? strings.dirNoOfficesInCategory
+                      : strings.dirNoOfficesFound(trimmed),
+                  message: strings.dirTryAnotherWord,
                   actionLabel: onBrowseAll == null
                       ? null
-                      : 'Browse all offices',
+                      : strings.dirBrowseAll,
                   onAction: onBrowseAll,
                   boxed: true,
                 )
@@ -476,7 +481,9 @@ class _CountLine extends StatelessWidget {
                 color: BrandColors.ink,
               ),
             ),
-            TextSpan(text: count == 1 ? ' office' : ' offices'),
+            TextSpan(
+              text: ' ${AppStrings.of(context).dirOfficeCountNoun(count)}',
+            ),
           ],
         ),
       ),
@@ -553,9 +560,9 @@ class _LoadingBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: Spacing.xl),
       children: <Widget>[
-        _ChipsRow(labels: chips, selected: 'All'),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(
+        _ChipsRow(labels: chips, selected: Office.allChip),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
             Spacing.lg,
             Spacing.section,
             Spacing.lg,
@@ -564,7 +571,7 @@ class _LoadingBody extends StatelessWidget {
           child: SoftCard(
             child: LoadingSkeleton(
               count: 6,
-              semanticLabel: 'Loading the directory',
+              semanticLabel: AppStrings.of(context).dirLoadingDirectory,
             ),
           ),
         ),
@@ -594,6 +601,7 @@ class _OfflineBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppFailure? failure = this.failure;
     final bool offline = failure == null || FailureView.isOffline(failure);
+    final AppStrings strings = AppStrings.of(context);
     final List<Office> saved =
         offices
             .where(
@@ -617,12 +625,10 @@ class _OfflineBody extends StatelessWidget {
           const _OfflineStrip(),
           const SizedBox(height: Spacing.section),
           EmptyState(
-            title: "Can't load the directory",
-            message:
-                'Check your mobile data or Wi-Fi, then try again. '
-                'Saved office numbers are listed below.',
+            title: strings.dirCantLoadTitle,
+            message: strings.dirCantLoadBody,
             illustration: TaytayIllustration.offline,
-            actionLabel: 'Try again',
+            actionLabel: strings.actionTryAgain,
             actionIcon: TaytayIcons.refreshCw,
             onAction: onRetry,
             primaryAction: true,
@@ -638,7 +644,7 @@ class _OfflineBody extends StatelessWidget {
           ),
         if (saved.isNotEmpty) ...<Widget>[
           const SizedBox(height: Spacing.xl),
-          const SettingsSectionTitle('Saved on this phone'),
+          SettingsSectionTitle(strings.dirSavedOnPhone),
           SettingsList(
             children: <Widget>[
               for (final Office office in saved)
@@ -657,6 +663,7 @@ class _OfflineStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return Semantics(
       liveRegion: true,
       container: true,
@@ -685,14 +692,14 @@ class _OfflineStrip extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      "You're offline",
+                      strings.dirOfflineTitle,
                       style: AppTypography.listTitle.copyWith(
                         fontWeight: AppTypography.strong,
                         color: BrandColors.goldInk,
                       ),
                     ),
                     Text(
-                      'Showing what was saved on this phone',
+                      strings.dirOfflineShowingSaved,
                       style: AppTypography.small.copyWith(
                         color: BrandColors.goldInk,
                       ),
@@ -725,7 +732,7 @@ class _SavedRow extends StatelessWidget {
       detail: office.phone,
       trailing: Semantics(
         button: true,
-        label: 'Call $title',
+        label: AppStrings.of(context).dirCallName(title),
         excludeSemantics: true,
         child: InkResponse(
           key: Key('directory-saved-call-${office.id}'),
@@ -970,6 +977,7 @@ class _Hero extends StatelessWidget {
   Widget build(BuildContext context) {
     final double top = MediaQuery.paddingOf(context).top;
     final String credit = office.credit;
+    final AppStrings strings = AppStrings.of(context);
     return SizedBox(
       height: _height + top,
       child: Stack(
@@ -1024,8 +1032,8 @@ class _Hero extends StatelessWidget {
               bottom: Radii.sheetLarge + Spacing.section,
               child: _HeroTag(
                 credit.isNotEmpty
-                    ? 'Representative photo · $credit'
-                    : 'Representative photo',
+                    ? strings.dirRepresentativePhotoCredit(credit)
+                    : strings.dirRepresentativePhoto,
               ),
             )
           else if (credit.isNotEmpty)
@@ -1100,6 +1108,7 @@ class _Sheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final String category = office.category;
     final String place = _placeOf(office, office.listLine);
+    final AppStrings strings = AppStrings.of(context);
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: BrandColors.white,
@@ -1163,7 +1172,7 @@ class _Sheet extends StatelessWidget {
               actions: <PillAction>[
                 PillAction(
                   buttonKey: const Key('directory-call'),
-                  label: office.callLabel,
+                  label: officeCallLabel(strings, office),
                   glyph: TaytayGlyph.phone,
                   primary: true,
                   danger: office.callIsEmergency,
@@ -1171,13 +1180,15 @@ class _Sheet extends StatelessWidget {
                 ),
                 PillAction(
                   buttonKey: const Key('directory-directions'),
-                  label: 'Directions',
+                  label: strings.dirActionDirections,
                   glyph: TaytayGlyph.pin,
                   onPressed: onDirections,
                 ),
                 PillAction(
                   buttonKey: const Key('directory-message'),
-                  label: office.messageable ? 'Message' : 'App',
+                  label: office.messageable
+                      ? strings.dirActionMessage
+                      : strings.dirActionApp,
                   glyph: office.messageable
                       ? TaytayGlyph.chat
                       : TaytayGlyph.phone,
@@ -1288,7 +1299,7 @@ class _FactRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    fact.label,
+                    officeFactLabel(AppStrings.of(context), fact),
                     style: AppTypography.small.copyWith(
                       fontWeight: AppTypography.medium,
                       color: BrandColors.muted,
@@ -1331,7 +1342,7 @@ class _Services extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const SettingsSectionTitle('Services'),
+        SettingsSectionTitle(AppStrings.of(context).dirServices),
         SettingsList(
           children: <Widget>[
             for (final OfficeServiceLine line in office.services)
@@ -1368,11 +1379,12 @@ class _ComposePage extends StatelessWidget {
     final Office? office = canvas.office;
     final String? error = canvas.composeError;
     final double safeBottom = MediaQuery.paddingOf(context).bottom;
+    final AppStrings strings = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         BlueHeader(
-          title: 'New message',
+          title: strings.dirNewMessage,
           subtitle: 'Bayan ng Taytay · Rizal',
           showBack: true,
           onBack: canvas.onBack,
@@ -1386,19 +1398,19 @@ class _ComposePage extends StatelessWidget {
                   padding: const EdgeInsets.all(Spacing.lg),
                   children: <Widget>[
                     ErrorState(
-                      title: 'This office did not load',
-                      message: 'Try again, or go back to the directory.',
+                      title: strings.dirOfficeDidNotLoadTitle,
+                      message: strings.dirOfficeDidNotLoadBody,
                       onRetry: canvas.onRetry,
                       boxed: true,
                     ),
                   ],
                 )
               : office == null
-              ? const Padding(
-                  padding: EdgeInsets.all(Spacing.lg),
+              ? Padding(
+                  padding: const EdgeInsets.all(Spacing.lg),
                   child: LoadingSkeleton(
                     layout: SkeletonLayout.detail,
-                    semanticLabel: 'Loading the office',
+                    semanticLabel: strings.dirLoadingOffice,
                   ),
                 )
               : ListView(
@@ -1411,7 +1423,7 @@ class _ComposePage extends StatelessWidget {
                   children: <Widget>[
                     _ToRow(office: office),
                     const SizedBox(height: Spacing.formGap),
-                    const AuthFieldLabel('Topic'),
+                    AuthFieldLabel(strings.dirTopic),
                     const SizedBox(height: Spacing.sm),
                     _TopicField(
                       topic: canvas.selectedTopic ?? office.topic ?? '',
@@ -1419,7 +1431,7 @@ class _ComposePage extends StatelessWidget {
                       onTap: canvas.onTopic,
                     ),
                     const SizedBox(height: Spacing.formGap),
-                    const AuthFieldLabel('Message'),
+                    AuthFieldLabel(strings.dirFieldMessage),
                     const SizedBox(height: Spacing.sm),
                     TextField(
                       key: const Key('directory-message-field'),
@@ -1433,8 +1445,8 @@ class _ComposePage extends StatelessWidget {
                         color: BrandColors.ink,
                         height: 1.5,
                       ),
-                      decoration: const InputDecoration(
-                        hintText: 'Write your message',
+                      decoration: InputDecoration(
+                        hintText: strings.dirMessageHint,
                       ),
                     ),
                     const SizedBox(height: Spacing.md),
@@ -1443,7 +1455,7 @@ class _ComposePage extends StatelessWidget {
                       label: canvas.attachmentLabel,
                     ),
                     const SizedBox(height: Spacing.md),
-                    SoftNote(message: _privacyLine(office)),
+                    SoftNote(message: _privacyLine(strings, office)),
                   ],
                 ),
         ),
@@ -1474,7 +1486,7 @@ class _ComposePage extends StatelessWidget {
                       excludeSemantics: true,
                       size: IconSizes.sm,
                     ),
-                    label: const Text('Send message'),
+                    label: Text(strings.dirSendMessage),
                   ),
                 ],
               ),
@@ -1486,10 +1498,9 @@ class _ComposePage extends StatelessWidget {
 
   /// The office's own privacy sentence when it published one, then the
   /// warning every message carries.
-  static String _privacyLine(Office office) {
+  static String _privacyLine(AppStrings strings, Office office) {
     final String own = (office.privacy ?? '').trim();
-    const String warning =
-        'Don’t share passwords or one-time codes in a message.';
+    final String warning = strings.dirPrivacyWarning;
     return own.isEmpty ? warning : '$own $warning';
   }
 }
@@ -1517,7 +1528,7 @@ class _ToRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  'To',
+                  AppStrings.of(context).dirTo,
                   style: AppTypography.small.copyWith(
                     fontWeight: AppTypography.strong,
                     color: BrandColors.muted,
@@ -1550,9 +1561,11 @@ class _TopicField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final BorderRadius corners = BorderRadius.circular(Radii.field);
+    final AppStrings strings = AppStrings.of(context);
+    final String shown = directoryTopicLabel(strings, topic);
     return Semantics(
       button: onTap != null,
-      label: topic.isEmpty ? 'Topic' : 'Topic, $topic',
+      label: shown.isEmpty ? strings.dirTopic : strings.dirTopicValue(shown),
       excludeSemantics: true,
       child: Material(
         color: BrandColors.softFill,
@@ -1574,7 +1587,7 @@ class _TopicField extends StatelessWidget {
                 children: <Widget>[
                   Expanded(
                     child: Text(
-                      topic,
+                      shown,
                       style: AppTypography.fieldValue.copyWith(
                         color: BrandColors.ink,
                       ),
@@ -1625,7 +1638,7 @@ class _AttachButton extends StatelessWidget {
             excludeSemantics: true,
             size: IconSizes.sm,
           ),
-          label: const Text('Attach photo or PDF (optional)'),
+          label: Text(AppStrings.of(context).dirAttach),
         ),
         if (label != null) ...<Widget>[
           const SizedBox(height: Spacing.sm),
@@ -1661,6 +1674,9 @@ typedef EmergencyLine = ({String name, String number});
 /// the sentence. With no command center marked it names no number and no line
 /// (D-196); with one, its name and number (D-214). The hotlines button stays
 /// either way.
+///
+/// The English words, kept for tests and as the no-context fallback. The page
+/// draws the same sentences from [AppStrings] (`dirEmergency…`).
 abstract final class MessageSentCopy {
   static const String emergencyHeading =
       "For emergencies don't wait for a reply";
@@ -1692,10 +1708,11 @@ class _SentPage extends StatelessWidget {
     final VoidCallback? onHotlines = canvas.onHotlines;
     final EmergencyLine? line = canvas.commandCenter;
     final VoidCallback? onCall = canvas.onCallCommandCenter;
+    final AppStrings strings = AppStrings.of(context);
     final List<PillAction> actions = <PillAction>[
       if (line != null && onCall != null)
         PillAction(
-          label: MessageSentCopy.callButton(line),
+          label: strings.dirCallName(line.name),
           glyph: TaytayGlyph.phone,
           primary: true,
           danger: true,
@@ -1704,7 +1721,7 @@ class _SentPage extends StatelessWidget {
         ),
       if (onHotlines != null)
         PillAction(
-          label: MessageSentCopy.hotlinesButton,
+          label: strings.dirSeeHotlines,
           glyph: TaytayGlyph.phone,
           danger: true,
           buttonKey: messageSentHotlinesKey,
@@ -1717,22 +1734,21 @@ class _SentPage extends StatelessWidget {
         // 40 px pill in a 48 dp target, wrapping at 200%.
         : PillButtonRow(wrap: true, padding: EdgeInsets.zero, actions: actions);
     return SuccessScreen(
-      title: 'Message sent',
-      message:
-          "We'll notify you, and the conversation is saved in My Account › "
-          'Messages.',
+      title: strings.dirMessageSentTitle,
+      message: strings.dirMessageSentBody,
       details: <SuccessDetail>[
-        if (office != null) SuccessDetail(label: 'To', value: office.shortName),
+        if (office != null)
+          SuccessDetail(label: strings.dirTo, value: office.shortName),
       ],
       // Never the messaged office's line: it is not an emergency line. A
       // number only when the office marked a command center (D-214).
       body: SoftNote(
         key: messageSentEmergencyNoteKey,
         tone: NoteTone.emergency,
-        heading: MessageSentCopy.emergencyHeading,
+        heading: strings.dirEmergencyHeading,
         message: line == null
-            ? MessageSentCopy.emergency
-            : MessageSentCopy.callLine(line),
+            ? strings.dirEmergencyBody
+            : strings.dirEmergencyCallLine(line.name, line.number),
         // Part of the page, not news: read in order, not announced over the
         // page's own title.
         live: false,
@@ -1740,10 +1756,10 @@ class _SentPage extends StatelessWidget {
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  const LoadingSkeleton(
+                  LoadingSkeleton(
                     layout: SkeletonLayout.text,
                     count: 1,
-                    semanticLabel: MessageSentCopy.loading,
+                    semanticLabel: strings.dirLoadingHotline,
                   ),
                   if (pills != null) ...<Widget>[
                     const SizedBox(height: Spacing.sm),
@@ -1753,9 +1769,9 @@ class _SentPage extends StatelessWidget {
               )
             : pills,
       ),
-      primaryLabel: 'Go to Messages',
+      primaryLabel: strings.dirGoToMessages,
       onPrimary: canvas.onMessages,
-      secondaryLabel: 'Back to Directory',
+      secondaryLabel: strings.dirBackToDirectory,
       onSecondary: canvas.onBack,
       showBack: true,
       onBack: canvas.onBack,
@@ -1787,7 +1803,7 @@ class _ThreadPage extends StatelessWidget {
         Expanded(
           child: Semantics(
             container: true,
-            label: 'Conversation',
+            label: AppStrings.of(context).dirConversation,
             child: ListView(
               padding: const EdgeInsets.fromLTRB(
                 Spacing.lg,

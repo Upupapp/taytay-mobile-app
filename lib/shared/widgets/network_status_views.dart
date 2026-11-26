@@ -240,7 +240,12 @@ class StaleContentNotice extends StatelessWidget {
               // phone can be set to any timezone and Taytay is in one. The
               // timestamp is formatted before it reaches the translation, so
               // no locale can reorder a date a resident acts on.
-              strings.staleContentMessage(ManilaTime.formatDateTime(storedAt)),
+              strings.staleContentMessage(
+                ManilaTime.formatDateTime(
+                  storedAt,
+                  languageCode: strings.localeName,
+                ),
+              ),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

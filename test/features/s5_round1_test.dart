@@ -9,6 +9,7 @@ import 'package:taytay_resident/core/api/api_client.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
@@ -26,6 +27,7 @@ import 'package:taytay_resident/features/messaging/domain/office_messaging_repos
 import 'package:taytay_resident/features/profile/domain/resident_profile_detail.dart';
 import 'package:taytay_resident/features/profile/domain/resident_profile_repository.dart';
 import 'package:taytay_resident/features/verification/presentation/unverified_gate_sheet.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 
 AppConfig _mockConfig() => AppConfig.from(
   rawEnvironment: 'dev',
@@ -832,6 +834,8 @@ void main() {
         await OfficeCatalogue.load();
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
         home: DirectoryCanvas(
           frame: DirectoryFrame.searchSpecimen,
           offices: catalogue.offices,

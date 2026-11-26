@@ -12,6 +12,7 @@ import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/core/design/taytay_icons.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
@@ -26,6 +27,7 @@ import 'package:taytay_resident/features/settings/data/privacy_api_repository.da
 import 'package:taytay_resident/features/settings/domain/account_controls.dart';
 import 'package:taytay_resident/features/tulong/data/social_service_api_repository.dart';
 import 'package:taytay_resident/features/tulong/domain/social_service.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/taytay_icon.dart';
 
 class _Recording implements ApiTransport {
@@ -469,6 +471,8 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
         theme: AppTheme.light(),
         home: const AccountCanvas(frame: AccountFrame.settings),
       ),
@@ -478,6 +482,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
         theme: AppTheme.light(),
         home: AccountCanvas(
           frame: AccountFrame.settings,
@@ -545,6 +551,8 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
         theme: AppTheme.light(),
         home: DirectoryCanvas(
           frame: DirectoryFrame.detail,
@@ -713,6 +721,8 @@ Future<_HeldOffice> _pumpOffice(WidgetTester tester) async {
     AppDependenciesScope(
       dependencies: dependencies,
       child: MaterialApp(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
         theme: AppTheme.light(),
         home: const OfficeDetailScreen(officeId: 'sample-office'),
       ),

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/router/app_routes.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
@@ -16,6 +17,7 @@ import 'package:taytay_resident/features/profile/domain/resident_profile_detail.
 import 'package:taytay_resident/features/profile/domain/resident_profile_repository.dart';
 import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/taytay_icon.dart';
 
 /// D-195: the account's name is checked against the ID, so it is the
@@ -222,6 +224,8 @@ void main() {
       var opened = 0;
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
           home: NeedsCorrectionPage(
             onResubmit: () {},
             onCheckName: () => opened++,
@@ -248,7 +252,13 @@ void main() {
     testWidgets('without a way to Edit profile the sentence stands alone', (
       tester,
     ) async {
-      await tester.pumpWidget(const MaterialApp(home: NeedsCorrectionPage()));
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
+          home: NeedsCorrectionPage(),
+        ),
+      );
       expect(_lines(NameCheckCopy.beforeSending), findsOneWidget);
       expect(find.text(NameCheckCopy.checkName), findsNothing);
     });
@@ -348,7 +358,11 @@ Future<void> _open(WidgetTester tester, _Profile profile) async {
   await tester.pumpWidget(
     AppDependenciesScope(
       dependencies: dependencies,
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
+        routerConfig: router,
+      ),
     ),
   );
   await tester.pumpAndSettle();

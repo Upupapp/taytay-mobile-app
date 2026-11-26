@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
 import '../../core/design/typography.dart';
+import '../../core/l10n/shared_copy.dart';
 
 /// The Directory compose message field.
 ///
@@ -52,9 +53,12 @@ class MessageField extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const Padding(
-          padding: EdgeInsets.only(top: 12, bottom: 5),
-          child: Text('Message', style: _label),
+        Padding(
+          padding: const EdgeInsets.only(top: 12, bottom: 5),
+          child: Text(
+            sharedStrings(context).sharedMessageFieldLabel,
+            style: _label,
+          ),
         ),
         Container(
           height: 170,

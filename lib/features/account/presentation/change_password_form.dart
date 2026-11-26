@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/result/result.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/soft_note.dart';
@@ -34,9 +36,14 @@ class _ChangePasswordFormState extends State<ChangePasswordForm> {
   final TextEditingController _current = TextEditingController();
   final TextEditingController _next = TextEditingController();
   final TextEditingController _confirm = TextEditingController();
+
+  /// A field's error as the form or the password client wrote it, in English;
+  /// [_say] puts it in the phone's language when it is drawn.
   String? _currentMessage;
   String? _nextMessage;
-  String? _formMessage;
+
+  /// Why the change failed when no field says so.
+  AppFailure? _formFailure;
   bool _busy = false;
 
   @override
@@ -51,13 +58,13 @@ class _ChangePasswordFormState extends State<ChangePasswordForm> {
     final String current = _current.text;
     final String next = _next.text;
     setState(() {
-      _currentMessage = current.isEmpty ? 'Enter your current password.' : null;
-      _nextMessage = next.isEmpty ? 'Enter a new password.' : null;
-      _formMessage = null;
+      _currentMessage = current.isEmpty ? _PasswordCopy.enterCurrent : null;
+      _nextMessage = next.isEmpty ? _PasswordCopy.enterNew : null;
+      _formFailure = null;
     });
     if (current.isEmpty || next.isEmpty) return;
     if (next != _confirm.text) {
-      setState(() => _nextMessage = 'Those passwords do not match.');
+      setState(() => _nextMessage = _PasswordCopy.mismatch);
       return;
     }
     setState(() => _busy = true);
@@ -80,8 +87,8 @@ class _ChangePasswordFormState extends State<ChangePasswordForm> {
           _busy = false;
           _currentMessage = currentError;
           _nextMessage = nextError;
-          _formMessage = currentError == null && nextError == null
-              ? failure.residentMessage
+          _formFailure = currentError == null && nextError == null
+              ? failure
               : null;
         });
     }
@@ -89,30 +96,34 @@ class _ChangePasswordFormState extends State<ChangePasswordForm> {
 
   @override
   Widget build(BuildContext context) {
-    final String? formMessage = _formMessage;
+    final AppStrings strings = AppStrings.of(context);
+    final AppFailure? formFailure = _formFailure;
+    final String? formMessage = formFailure == null
+        ? null
+        : localisedResidentMessage(context, formFailure);
     final VoidCallback? onCancel = widget.onCancel;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         AuthField(
-          label: 'Current password',
+          label: strings.acctCurrentPassword,
           controller: _current,
           obscure: true,
-          error: _currentMessage,
+          error: _say(strings, _currentMessage),
           icon: TaytayIcons.lock,
         ),
         const SizedBox(height: Spacing.formGap),
         AuthField(
-          label: 'New password',
+          label: strings.acctNewPassword,
           controller: _next,
           obscure: true,
-          error: _nextMessage,
+          error: _say(strings, _nextMessage),
           icon: TaytayIcons.key,
         ),
         const SizedBox(height: Spacing.formGap),
         AuthField(
-          label: 'Repeat the new password',
+          label: strings.acctRepeatNewPassword,
           controller: _confirm,
           obscure: true,
           icon: TaytayIcons.key,
@@ -123,14 +134,38 @@ class _ChangePasswordFormState extends State<ChangePasswordForm> {
         ],
         AppDialogActions(
           primary: DialogButton(
-            label: _busy ? 'Saving' : 'Save password',
+            label: _busy ? strings.acctSaving : strings.acctSavePassword,
             onPressed: _busy ? null : _submit,
           ),
           text: onCancel == null
               ? null
-              : DialogButton(label: 'Cancel', onPressed: onCancel),
+              : DialogButton(label: strings.actionCancel, onPressed: onCancel),
         ),
       ],
     );
   }
+}
+
+/// A field error in the phone's language. The password clients
+/// (`FirebaseAccountPasswordClient`, the dev mock) answer in English field
+/// errors, the same sentences as below; one this form does not know is shown
+/// as it came.
+String? _say(AppStrings strings, String? message) => switch (message) {
+  null => null,
+  _PasswordCopy.enterCurrent => strings.acctEnterCurrentPassword,
+  _PasswordCopy.enterNew => strings.acctEnterNewPassword,
+  _PasswordCopy.mismatch => strings.acctPasswordsDoNotMatch,
+  _PasswordCopy.wrongCurrent => strings.acctPasswordWrong,
+  _PasswordCopy.weak => strings.acctPasswordWeak,
+  final String other => other,
+};
+
+/// The English field errors, as the form and the password clients write them.
+abstract final class _PasswordCopy {
+  static const String enterCurrent = 'Enter your current password.';
+  static const String enterNew = 'Enter a new password.';
+  static const String mismatch = 'Those passwords do not match.';
+  static const String wrongCurrent = 'That password does not match.';
+  static const String weak =
+      'Use at least 8 characters, with a letter and a number.';
 }

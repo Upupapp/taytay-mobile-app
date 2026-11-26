@@ -7,6 +7,7 @@ import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/l10n/app_locales.dart';
+import '../../../core/l10n/core_copy.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/manila_time.dart';
@@ -90,20 +91,21 @@ class _Choose extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ValueChanged<ResidentSector>? onChoose = canvas.onChoose;
+    final SectorsText words = SectorsText.of(context);
     return AuthFormPage(
       pageKey: const Key('sector-apply-choose'),
-      title: SectorsCopy.chooseTitle,
-      subtitle: SectorsCopy.chooseSubtitle,
-      stepLabel: SectorsCopy.stepOne,
+      title: words.chooseTitle,
+      subtitle: words.chooseSubtitle,
+      stepLabel: words.stepOne,
       progress: 1 / 3,
-      progressSemanticLabel: SectorsCopy.stepOne,
+      progressSemanticLabel: words.stepOne,
       footer: AppButton(
         key: const Key('sector-apply-next'),
-        label: SectorsCopy.next,
+        label: words.next,
         onPressed: canvas.chosen == null ? null : canvas.onNext,
       ),
       child: Semantics(
-        label: SectorsCopy.choiceGroup,
+        label: words.choiceGroup,
         container: true,
         child: RadioGroup<ResidentSector>(
           groupValue: canvas.chosen,
@@ -146,6 +148,7 @@ class _SectorChoice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final BorderRadius corners = BorderRadius.circular(Radii.lg);
+    final SectorsText words = SectorsText.of(context);
     return MergeSemantics(
       child: Material(
         type: MaterialType.transparency,
@@ -183,14 +186,14 @@ class _SectorChoice extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          SectorsCopy.label(sector),
+                          words.label(sector),
                           style: AppTypography.listTitle.copyWith(
                             color: BrandColors.ink,
                           ),
                         ),
                         const SizedBox(height: Spacing.xxs),
                         Text(
-                          SectorsCopy.choiceNote(sector),
+                          words.choiceNote(sector),
                           style: AppTypography.listDetail.copyWith(
                             color: BrandColors.muted,
                           ),
@@ -232,18 +235,19 @@ class _Proof extends StatelessWidget {
     final AppFailure? failure = canvas.failure;
     final ValueChanged<bool>? onConfirm = canvas.onConfirm;
     final bool ready = proof != null && canvas.confirmed;
+    final SectorsText words = SectorsText.of(context);
     return AuthFormPage(
       pageKey: const Key('sector-apply-proof'),
-      title: SectorsCopy.proofTitle(sector),
-      subtitle: SectorsCopy.proofSubtitle,
-      stepLabel: SectorsCopy.stepTwo,
+      title: words.proofTitle(sector),
+      subtitle: words.proofSubtitle,
+      stepLabel: words.stepTwo,
       progress: 2 / 3,
-      progressSemanticLabel: SectorsCopy.stepTwo,
+      progressSemanticLabel: words.stepTwo,
       onBack: canvas.onStepBack,
       backEnabled: !sending,
       footer: AppButton(
         key: const Key('sector-apply-send'),
-        label: SectorsCopy.send,
+        label: words.send,
         loading: sending,
         hapticIntent: HapticIntent.confirm,
         onPressed: ready && !sending ? canvas.onSend : null,
@@ -252,23 +256,23 @@ class _Proof extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Text(
-            SectorsCopy.photoLabel,
+            words.photoLabel,
             style: AppTypography.label.copyWith(color: BrandColors.text),
           ),
           const SizedBox(height: Spacing.sm),
           if (proof != null)
             AttachedFileCard(
               icon: TaytayIcons.image,
-              title: SectorsCopy.idName(sector),
-              status: SectorsCopy.photoAdded(proof.readableSize),
-              actionLabel: SectorsCopy.change,
+              title: words.idName(sector),
+              status: words.photoAdded(proof.readableSize),
+              actionLabel: words.change,
               actionKey: const Key('sector-apply-change'),
               onAction: sending ? null : canvas.onAddPhoto,
             )
           else
             UploadSlot(
               key: const Key('sector-apply-add'),
-              label: SectorsCopy.addPhoto,
+              label: words.addPhoto,
               error: problem != null,
               onPressed: sending ? null : canvas.onAddPhoto,
             ),
@@ -287,14 +291,14 @@ class _Proof extends StatelessWidget {
             ),
           ],
           const SizedBox(height: Spacing.formGap),
-          const SoftNote(message: SectorsCopy.photoNote, live: false),
+          SoftNote(message: words.photoNote, live: false),
           const SizedBox(height: Spacing.formGap),
           ConsentCheckCard(
             key: const Key('sector-apply-confirm'),
             value: canvas.confirmed,
             onChanged: sending || onConfirm == null ? null : onConfirm,
-            label: SectorsCopy.confirmLabel,
-            description: SectorsCopy.confirmDescription,
+            label: words.confirmLabel,
+            description: words.confirmDescription,
           ),
           if (failure != null) ...<Widget>[
             const SizedBox(height: Spacing.formGap),
@@ -315,7 +319,11 @@ class _SendFailure extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ({String title, String body}) copy = sectorSendFailure(failure);
+    final SectorsText words = SectorsText.of(context);
+    final ({String title, String body}) copy = sectorSendFailure(
+      failure,
+      words: words,
+    );
     final String? reference = failure.requestId;
     return SoftNote(
       key: const Key('sector-apply-failure'),
@@ -323,29 +331,33 @@ class _SendFailure extends StatelessWidget {
       heading: copy.title,
       message: reference == null
           ? copy.body
-          : '${copy.body} Reference: $reference',
+          : '${copy.body} ${words.reference(reference)}',
     );
   }
 }
 
-/// What a resident reads when the application did not go through.
-({String title, String body}) sectorSendFailure(AppFailure failure) {
+/// What a resident reads when the application did not go through, in
+/// [words]' language (English when no screen is asking).
+({String title, String body}) sectorSendFailure(
+  AppFailure failure, {
+  SectorsText words = SectorsText.english,
+}) {
   if (failure.outcomeUnknown) {
-    return (title: SectorsCopy.unconfirmedTitle, body: SectorsCopy.unconfirmed);
+    return (title: words.unconfirmedTitle, body: words.unconfirmed);
   }
   if (failure is NetworkFailure || failure is TimeoutFailure) {
-    return (title: SectorsCopy.offlineTitle, body: SectorsCopy.offline);
+    return (title: words.offlineTitle, body: words.offline);
   }
   if (failure is ValidationFailure || failure is UnacceptableUploadFailure) {
-    return (title: SectorsCopy.refusedTitle, body: SectorsCopy.refused);
+    return (title: words.refusedTitle, body: words.refused);
   }
   if (failure is ConflictFailure) {
-    return (title: SectorsCopy.waitingTitle, body: SectorsCopy.waiting);
+    return (title: words.waitingTitle, body: words.waiting);
   }
   if (failure is ForbiddenFailure) {
-    return (title: SectorsCopy.notOpenTitle, body: SectorsCopy.notOpen);
+    return (title: words.notOpenTitle, body: words.notOpen);
   }
-  return (title: SectorsCopy.failedSendTitle, body: SectorsCopy.failedSend);
+  return (title: words.failedSendTitle, body: words.failedSend);
 }
 
 /// `SectorSent.dc.html`: the receipt and what happens next.
@@ -362,53 +374,50 @@ class _Sent extends StatelessWidget {
     final DateTime? sentAt = filed?.submittedAt;
     final String? when = sentAt == null
         ? null
-        : '${ManilaTime.formatDate(sentAt)}, ${ManilaTime.formatTime(sentAt)}';
+        : '${manilaDate(context, sentAt)}, ${ManilaTime.formatTime(sentAt)}';
     final VoidCallback? onSectors = canvas.onSectors;
+    final SectorsText words = SectorsText.of(context);
     return Scaffold(
       key: const Key('sector-apply-sent'),
       backgroundColor: BrandColors.white,
       body: SuccessScreen(
-        title: SectorsCopy.sentTitle,
-        message: SectorsCopy.sentSubtitle(sector),
+        title: words.sentTitle,
+        message: words.sentSubtitle(sector),
         details: <SuccessDetail>[
-          SuccessDetail(
-            label: SectorsCopy.sentSector,
-            value: SectorsCopy.label(sector),
-          ),
-          if (when != null)
-            SuccessDetail(label: SectorsCopy.sentAt, value: when),
+          SuccessDetail(label: words.sentSector, value: words.label(sector)),
+          if (when != null) SuccessDetail(label: words.sentAt, value: when),
         ],
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            const SettingsSectionTitle(SectorsCopy.nextHeading),
+            SettingsSectionTitle(words.nextHeading),
             Timeline(
               steps: <TimelineStep>[
                 TimelineStep(
                   icon: TaytayIcons.check,
-                  title: SectorsCopy.stepSent,
+                  title: words.stepSent,
                   detail: when ?? '',
                   tone: TimelineTone.done,
                 ),
-                const TimelineStep(
+                TimelineStep(
                   icon: TaytayIcons.clock,
-                  title: SectorsCopy.stepCheck,
-                  detail: SectorsCopy.stepCheckDetail,
+                  title: words.stepCheck,
+                  detail: words.stepCheckDetail,
                   tone: TimelineTone.current,
                 ),
-                const TimelineStep(
+                TimelineStep(
                   icon: TaytayIcons.users,
-                  title: SectorsCopy.stepAdded,
-                  detail: SectorsCopy.stepAddedDetail,
+                  title: words.stepAdded,
+                  detail: words.stepAddedDetail,
                   tone: TimelineTone.upcoming,
                 ),
               ],
             ),
           ],
         ),
-        primaryLabel: SectorsCopy.backToSectors,
+        primaryLabel: words.backToSectors,
         onPrimary: onSectors,
-        secondaryLabel: SectorsCopy.home,
+        secondaryLabel: words.home,
         onSecondary: canvas.onHome,
         showBack: true,
         onBack: onSectors,

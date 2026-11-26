@@ -62,6 +62,12 @@ class AppLockController extends ChangeNotifier {
   final LocalAuthenticator _authenticator;
   final SecretStore _secrets;
 
+  /// English fallbacks for the OS prompt's line. Resident-facing: the OS shows
+  /// them in its own biometric or screen-lock dialog.
+  static const String defaultEnableReason =
+      'Confirm it is you before turning on the app lock';
+  static const String defaultUnlockReason = 'Unlock Taytay LGU IDS';
+
   bool _enabled = false;
   bool _satisfied = true;
   bool _prompting = false;
@@ -108,12 +114,16 @@ class AppLockController extends ChangeNotifier {
   ///
   /// Returns the platform's outcome so the settings screen can explain a
   /// refusal instead of silently leaving the switch off.
-  Future<LocalUnlockOutcome> enable() async {
+  ///
+  /// [reason] is the line the OS prints on its own prompt, so a screen passes
+  /// it in the reader's language (`coreAppLockEnableReason`). The English
+  /// default is for callers with no `BuildContext`.
+  Future<LocalUnlockOutcome> enable({
+    String reason = defaultEnableReason,
+  }) async {
     if (!_availability.canUnlock) return LocalUnlockOutcome.unavailable;
 
-    final outcome = await _prompt(
-      'Confirm it is you before turning on the app lock',
-    );
+    final outcome = await _prompt(reason);
     if (outcome != LocalUnlockOutcome.unlocked) return outcome;
 
     await _secrets.write(SecretKeys.appLockEnabled, _enabledValue);
@@ -150,10 +160,15 @@ class AppLockController extends ChangeNotifier {
   }
 
   /// Asks the platform to confirm the holder, and unhides on success.
-  Future<LocalUnlockOutcome> unlock() async {
+  ///
+  /// [reason] as for [enable]: the lock screen passes
+  /// `coreAppLockUnlockReason`.
+  Future<LocalUnlockOutcome> unlock({
+    String reason = defaultUnlockReason,
+  }) async {
     if (!isLocked) return LocalUnlockOutcome.unlocked;
 
-    final outcome = await _prompt('Unlock Taytay LGU IDS');
+    final outcome = await _prompt(reason);
     if (outcome == LocalUnlockOutcome.unlocked) {
       _satisfied = true;
     }

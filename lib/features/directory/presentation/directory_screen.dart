@@ -10,6 +10,8 @@ import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
 import '../../../core/intent/resident_intent.dart';
 import '../../../core/l10n/app_locales.dart';
+import '../../../core/l10n/directory_copy.dart';
+import '../../../core/l10n/settings_copy.dart';
 import '../../../core/links/external_link_service.dart';
 import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
@@ -17,6 +19,7 @@ import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../core/session/access_policy.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
@@ -51,7 +54,7 @@ class _DirectoryScreenState extends State<DirectoryScreen>
   bool _reading = false;
   final TextEditingController _search = TextEditingController();
   String _query = '';
-  String _chip = 'All';
+  String _chip = Office.allChip;
 
   @override
   void didChangeDependencies() {
@@ -148,7 +151,7 @@ class _DirectoryScreenState extends State<DirectoryScreen>
           _search.clear();
           setState(() {
             _query = '';
-            _chip = 'All';
+            _chip = Office.allChip;
           });
         },
         onBell: () => context.goNamed(AppRoute.notifications.routeName),
@@ -416,7 +419,7 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
     if (office == null || office.topics.isEmpty) return;
     final String? chosen = await AppSheet.show<String>(
       context: context,
-      title: 'Topic',
+      title: AppStrings.of(context).dirTopic,
       builder: (BuildContext sheetContext) => Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -424,7 +427,7 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
           for (final String topic in office.topics)
             PickerChoiceRow(
               rowKey: Key('topic-$topic'),
-              label: topic,
+              label: directoryTopicLabel(AppStrings.of(sheetContext), topic),
               selected: topic == _topic,
               onTap: () => Navigator.of(sheetContext).pop(topic),
             ),
@@ -439,7 +442,7 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
     final DocumentPicker picker = AppDependencies.of(context).documentPicker;
     const UploadPolicy policy = UploadPolicy.fallback;
     if (!picker.supports(DocumentSource.file)) {
-      setState(() => _error = 'This phone cannot attach a file.');
+      setState(() => _error = AppStrings.of(context).dirCannotAttach);
       return;
     }
     final CapturedDocument? picked = await picker.pick(
@@ -476,7 +479,7 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
     if (office == null) return;
     final String body = _message.text.trim();
     if (body.isEmpty) {
-      setState(() => _error = 'Write a message before sending.');
+      setState(() => _error = AppStrings.of(context).dirWriteBeforeSending);
       return;
     }
     // An office from `GET /offices` publishes no topics, and `POST /threads`
@@ -515,7 +518,8 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
         // Once an answer was lost, a later failure is never "not sent" until
         // a message goes through (D-192).
         setState(
-          () => _error = messageSendFailure(
+          () => _error = localisedMessageSendFailure(
+            context,
             failure,
             act: MessageAct.start,
             unconfirmed: _sendKey.unconfirmed,
@@ -559,7 +563,7 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
       }
     }
     if (!mounted) return;
-    setState(() => _error = failure.residentMessage);
+    setState(() => _error = localisedResidentMessage(context, failure));
   }
 
   @override
@@ -654,7 +658,7 @@ class _MessageSentScreenState extends State<MessageSentScreen> {
     ).externalLinks.dial(number);
     if (!mounted) return;
     if (outcome == LinkOutcome.unavailable) {
-      Outcome.problem(context, 'This phone has no app that can place a call.');
+      Outcome.problem(context, AppStrings.of(context).dirNoDialer);
     }
   }
 

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/design/button_styles.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/haptics/app_haptics.dart';
+import '../../core/l10n/shared_copy.dart';
 import '../../core/motion/motion_tokens.dart';
 
 /// What a button is for, which decides how it looks.
@@ -163,7 +164,7 @@ class AppButton extends StatelessWidget {
       label: semanticLabel,
       // While loading, tell a screen-reader user that something is happening —
       // a silently inert button reads as a broken one.
-      hint: loading ? 'Loading' : null,
+      hint: loading ? sharedStrings(context).a11yLoading : null,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
         child: fullWidth

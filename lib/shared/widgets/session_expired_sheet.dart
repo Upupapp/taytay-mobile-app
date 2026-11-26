@@ -78,7 +78,7 @@ abstract final class SessionExpiredSheet {
           },
         ),
         text: DialogButton(
-          label: 'Continue as guest',
+          label: AppStrings.of(dialog).welcomeContinueAsGuest,
           onPressed: () {
             Navigator.of(dialog).pop();
             router.goNamed(AppRoute.home.routeName);

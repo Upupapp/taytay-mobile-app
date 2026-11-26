@@ -7,6 +7,7 @@ import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/core/api/api_client.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/router/app_routes.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -25,6 +26,7 @@ import 'package:taytay_resident/features/profile/domain/profile_fields.dart';
 import 'package:taytay_resident/features/profile/domain/resident_profile_detail.dart';
 import 'package:taytay_resident/features/profile/domain/resident_profile_repository.dart';
 import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/barangay_picker.dart';
 
 /// D-235: the resident's record at the MSWDO office, read-only on her
@@ -221,7 +223,11 @@ Future<_Profile> _openEdit(WidgetTester tester, _Profile profile) async {
   await tester.pumpWidget(
     AppDependenciesScope(
       dependencies: dependencies,
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
+        routerConfig: router,
+      ),
     ),
   );
   await tester.pumpAndSettle();

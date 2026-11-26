@@ -10,6 +10,7 @@ import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/session_state.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/service_search.dart';
 import '../domain/social_service.dart';
 import '../domain/social_service_repository.dart';
@@ -160,6 +161,7 @@ class _TulongScreenState extends State<TulongScreen>
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final bool guest =
         AppDependencies.of(context).session.state is! AuthenticatedSession;
     final List<SocialService> visible = searchServices(_services, _query);
@@ -177,11 +179,11 @@ class _TulongScreenState extends State<TulongScreen>
           services: visible,
           saved: _saved,
           offlineSubtitle: _failed
-              ? 'Social services & programmes'
-              : 'Social services · MSWDO',
+              ? strings.tulongSubtitle
+              : strings.tulongSubtitleMswdo,
           emptyMessage:
               !_loading && !_failed && visible.isEmpty && _query.isNotEmpty
-              ? 'No programmes match that search.'
+              ? strings.tulongNoMatchTitle
               : null,
           staleSince: _stale ? _loadedAt : null,
           partialCatalogueCount: _complete ? null : _services.length,

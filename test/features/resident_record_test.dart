@@ -7,6 +7,7 @@ import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/core/api/api_client.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
@@ -18,6 +19,7 @@ import 'package:taytay_resident/features/verification/domain/resident_record.dar
 import 'package:taytay_resident/features/verification/domain/resident_record_repository.dart';
 import 'package:taytay_resident/features/verification/presentation/profile_wizard_page.dart';
 import 'package:taytay_resident/features/verification/presentation/profile_wizard_screen.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 
 AppConfig _config() => AppConfig.from(
   rawEnvironment: 'dev',
@@ -256,6 +258,8 @@ void main() {
       AppDependenciesScope(
         dependencies: dependencies,
         child: const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
           home: ProfileWizardScreen(step: ProfileWizardStep.overview),
         ),
       ),

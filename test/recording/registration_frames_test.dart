@@ -9,7 +9,9 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/features/auth/presentation/account_wizard_screen.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 
 /// Stills of the registration wizard in the order the Node API needs, at
 /// 390×844 @3×, for the demo video. Fictional sample data only. Not part of
@@ -48,6 +50,8 @@ Future<void> _show(WidgetTester tester, Widget child) async {
   await tester.pumpWidget(
     MaterialApp(
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: AppStrings.localizationsDelegates,
+      supportedLocales: AppLocales.supported,
       theme: AppTheme.light(),
       builder: (BuildContext context, Widget? navigator) =>
           RepaintBoundary(key: _frame, child: navigator),

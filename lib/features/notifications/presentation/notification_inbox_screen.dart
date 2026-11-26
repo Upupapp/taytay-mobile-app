@@ -6,6 +6,7 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/l10n/app_locales.dart';
+import '../../../core/l10n/core_copy.dart';
 import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
@@ -101,7 +102,7 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
           pathParameters: target.arguments,
         );
       case DeepLinkRejected(:final reason):
-        Outcome.problem(context, reason.residentMessage);
+        Outcome.problem(context, deepLinkRejectionMessage(context, reason));
     }
   }
 
@@ -115,7 +116,7 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           BlueHeader(
-            title: 'Notifications',
+            title: AppStrings.of(context).inboxTitle,
             subtitle: 'Bayan ng Taytay · Rizal',
             showBack: true,
             onBack: () {
@@ -147,8 +148,11 @@ class _Loading extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(Spacing.lg),
-      children: const <Widget>[
-        LoadingSkeleton(count: 5, semanticLabel: 'Loading notifications'),
+      children: <Widget>[
+        LoadingSkeleton(
+          count: 5,
+          semanticLabel: AppStrings.of(context).inboxLoading,
+        ),
       ],
     );
   }
@@ -174,15 +178,14 @@ class _Inbox extends StatelessWidget {
       );
     }
 
+    final AppStrings strings = AppStrings.of(context);
     if (controller.isEmptyAndHealthy) {
       return ListView(
         padding: const EdgeInsets.all(Spacing.lg),
-        children: const <Widget>[
+        children: <Widget>[
           EmptyState(
-            title: 'Nothing yet',
-            message:
-                'Updates about your requests, documents and events will appear '
-                'here.',
+            title: strings.inboxEmptyTitle,
+            message: strings.inboxEmptyBody,
             boxed: true,
           ),
         ],
@@ -199,7 +202,10 @@ class _Inbox extends StatelessWidget {
             title: item.title,
             body: item.body,
             when: switch (item.sentAt) {
-              final DateTime sent => ManilaTime.formatDateTime(sent),
+              final DateTime sent => ManilaTime.formatDateTime(
+                sent,
+                languageCode: Localizations.localeOf(context).languageCode,
+              ),
               null => '',
             },
             unread: item.isUnread,
@@ -211,7 +217,7 @@ class _Inbox extends StatelessWidget {
       ];
       if (section.group == InboxGroup.today) {
         current = NoticeSection(
-          heading: section.group.labelIn(AppStrings.of(context)),
+          heading: section.group.labelIn(strings),
           rows: rows,
         );
       } else {
@@ -227,7 +233,7 @@ class _Inbox extends StatelessWidget {
             sections: <NoticeSection>[
               ?current,
               if (earlier.isNotEmpty)
-                NoticeSection(heading: 'Earlier', rows: earlier),
+                NoticeSection(heading: strings.inboxEarlier, rows: earlier),
             ],
             onMarkAllRead: controller.markAllRead,
           ),
@@ -240,7 +246,9 @@ class _Inbox extends StatelessWidget {
 
 String _eyebrow(BuildContext context, ResidentNotification item) {
   final category = item.category?.known;
-  if (category == null) return 'UPDATE';
+  if (category == null) {
+    return AppStrings.of(context).inboxEyebrowUpdate.toUpperCase();
+  }
   return notificationCategoryLabel(context, category).toUpperCase();
 }
 
@@ -307,6 +315,7 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     if (controller.pageFailure != null) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -318,29 +327,32 @@ class _Footer extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            const SoftNote(
+            SoftNote(
               tone: NoteTone.warning,
-              heading: 'Could not load more',
-              message: 'What you have already seen is still here.',
+              heading: strings.inboxLoadMoreFailed,
+              message: strings.eventsSeenStillHere,
             ),
-            AuthLink('Try again', onPressed: controller.loadMore),
+            AuthLink(strings.actionTryAgain, onPressed: controller.loadMore),
           ],
         ),
       );
     }
     if (controller.isLoadingMore) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(
+      return Padding(
+        padding: const EdgeInsets.symmetric(
           horizontal: Spacing.lg,
           vertical: Spacing.md,
         ),
-        child: LoadingSkeleton(count: 1, semanticLabel: 'Loading older'),
+        child: LoadingSkeleton(
+          count: 1,
+          semanticLabel: strings.inboxLoadingOlder,
+        ),
       );
     }
     if (controller.hasMore) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
-        child: AuthLink('Load older', onPressed: controller.loadMore),
+        child: AuthLink(strings.inboxLoadOlder, onPressed: controller.loadMore),
       );
     }
     return const SizedBox(height: Spacing.sm);
@@ -440,13 +452,14 @@ class _NotificationPreferencesScreenState
   @override
   Widget build(BuildContext context) {
     final preferences = _preferences;
+    final AppStrings strings = AppStrings.of(context);
 
     return Scaffold(
       backgroundColor: BrandColors.background,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const BlueHeader(title: 'Notification settings', showBack: true),
+          BlueHeader(title: strings.inboxSettingsTitle, showBack: true),
           Expanded(
             child: CapabilityGate(
               capability: ResidentCapability.readNotifications,
@@ -458,10 +471,10 @@ class _NotificationPreferencesScreenState
                   Spacing.xl + MediaQuery.paddingOf(context).bottom,
                 ),
                 children: switch ((_loading, preferences)) {
-                  (true, _) => const <Widget>[
+                  (true, _) => <Widget>[
                     LoadingSkeleton(
                       count: 4,
-                      semanticLabel: 'Loading notification settings',
+                      semanticLabel: strings.inboxSettingsLoading,
                     ),
                   ],
                   // `GET me/notification-preferences` is served: a failed
@@ -481,27 +494,22 @@ class _NotificationPreferencesScreenState
                       // is safe. After a timeout the office may already have
                       // the change, and "unchanged" would be a guess.
                       if (failure.outcomeUnknown)
-                        const SoftNote(
+                        SoftNote(
                           tone: NoteTone.error,
-                          heading: 'Your change may not have been saved',
-                          message:
-                              'We could not confirm it. The switch shows your '
-                              'setting before the change. Setting it again is '
-                              'safe.',
+                          heading: strings.inboxSaveUnconfirmedTitle,
+                          message: strings.inboxSaveUnconfirmedBody,
                         )
                       else
-                        const SoftNote(
+                        SoftNote(
                           tone: NoteTone.error,
-                          heading: 'That change was not saved',
-                          message:
-                              'Your setting is unchanged. Check your '
-                              'connection and try again.',
+                          heading: strings.inboxSaveFailedTitle,
+                          message: strings.inboxSaveFailedBody,
                         ),
                       const SizedBox(height: Spacing.lg),
                     ],
 
                     Text(
-                      'Choose what Taytay LGU tells you about.',
+                      strings.inboxSettingsIntro,
                       style: AppTypography.bodyStyle.copyWith(
                         color: BrandColors.text,
                       ),
@@ -521,14 +529,10 @@ class _NotificationPreferencesScreenState
                     ),
 
                     const SizedBox(height: Spacing.lg),
-                    const SoftNote(
+                    SoftNote(
                       live: false,
-                      heading: 'Always sent',
-                      message:
-                          'Public advisories and messages about your account '
-                          'and security are always sent. They are how Taytay '
-                          'LGU reaches you in an emergency, or tells you if '
-                          'somebody signs in as you.',
+                      heading: strings.inboxAlwaysSentTitle,
+                      message: strings.inboxAlwaysSentBody,
                     ),
                   ],
                 },
