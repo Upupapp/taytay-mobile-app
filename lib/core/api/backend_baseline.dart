@@ -32,10 +32,10 @@ const String backendBaselineDate = '2026-08-18';
 /// `tool/check_backend_baseline.sh` compares the two when the backend clone has
 /// this commit. Re-vendoring the spec means changing this, [nodeContractSha256]
 /// and the record in `docs/integration/backend-baseline.md` in the same commit.
-const String nodeContractCommit = '37f3fe5';
+const String nodeContractCommit = 'fd1293e';
 
 /// The sha256 of `docs/integration/taytay-node-openapi.json`, so that an edit
 /// to the vendored file that nobody declared fails on every machine, with no
 /// backend clone. `tool/check_backend_baseline.sh` checks it.
 const String nodeContractSha256 =
-    '86cc39e4e6099702803f4ae97d852295a0205593e35f280f48cfa90680e60573';
+    '6b0cd9a42931c719e259bb0e3ff18722559a455a5fa3f6e5a6a86699db29e4a5';

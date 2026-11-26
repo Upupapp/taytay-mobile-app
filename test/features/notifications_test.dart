@@ -88,6 +88,8 @@ const Map<NotificationSwitch, String> switchLabels =
       NotificationSwitch.issuanceRequestUpdated: 'Document requests',
       NotificationSwitch.eventRegistrationUpdated: 'Event registrations',
       NotificationSwitch.sectorApplicationDecided: 'Sector applications',
+      NotificationSwitch.registryRecordUpdated:
+          'Changes to your record at the office',
       NotificationSwitch.messageReceived: 'Office replies',
     };
 
@@ -378,6 +380,7 @@ void main() {
           'issuance_request_updated',
           'event_registration_updated',
           'sector_application_decided',
+          'registry_record_updated',
           'message_received',
         ],
         reason:

@@ -25,7 +25,9 @@ import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../messaging/domain/message_send_failure.dart';
 import '../../messaging/domain/office_messaging_repository.dart';
+import '../../profile/domain/barangay_lock.dart';
 import '../../profile/domain/name_lock.dart';
+import '../../profile/domain/office_record.dart';
 import '../../profile/domain/profile_fields.dart';
 import '../../profile/domain/resident_profile_detail.dart';
 import '../../registration/domain/registration_domain.dart';
@@ -33,6 +35,7 @@ import '../domain/account_password_client.dart';
 import 'account_canvas.dart';
 import 'account_copy.dart';
 import 'change_password_form.dart';
+import 'office_record_section.dart';
 
 /// Office inbox. Verified. The shell keeps the tab bar.
 class MessagesInboxScreen extends StatefulWidget {
@@ -755,6 +758,12 @@ class _CloseConversationAction extends StatelessWidget {
 /// The name is the legal name, exactly as the government ID prints it. Taytay
 /// LGU checks it against the ID, so it is a field only while no ID is pending
 /// or approved, and read-only with the reason otherwise (D-195).
+///
+/// A verified resident's barangay is the office's to record, against proof of
+/// her new address: read-only, with that sentence, and never sent (D-235).
+/// Under the fields is her record at the MSWDO office, when the account is
+/// linked to one, read-only; it re-reads when the office changes it, without
+/// touching what she is typing (D-218, D-235).
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
 
@@ -762,7 +771,8 @@ class EditProfileScreen extends StatefulWidget {
   State<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
+class _EditProfileScreenState extends State<EditProfileScreen>
+    with LiveRefresh<EditProfileScreen> {
   bool _started = false;
   final TextEditingController _name = TextEditingController();
   final TextEditingController _mobile = TextEditingController();
@@ -785,6 +795,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _emailVerified = false;
   String? _idempotencyKey;
 
+  /// True once `GET /me` says the account is verified: the barangay is then
+  /// the office's to change, drawn as text and never sent (D-235).
+  bool _barangayLocked = false;
+
+  /// `office_record` on `GET /me`. Null while the account is not linked.
+  OfficeRecord? _officeRecord;
+
   @override
   void dispose() {
     _name.dispose();
@@ -799,6 +816,48 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (_started) return;
     _started = true;
     _load();
+    // A notice that the office linked, unlinked or corrected her record, or
+    // verified her, shows here without a pull (D-218, D-235).
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.account,
+      LiveTopics.notifications,
+    }, () => unawaited(_reread()));
+  }
+
+  /// A quiet re-read for a change. Only what she does not type into moves:
+  /// the record at the office, and whether the barangay is hers to change.
+  /// The name, mobile and email she may be editing stay as they are, and a
+  /// failed read keeps the screen as it is and says nothing.
+  Future<void> _reread() async {
+    final Result<ResidentProfileDetail> result = await AppDependencies.of(
+      context,
+    ).residentProfileRepository.loadOwnDetail();
+    if (!mounted) return;
+    if (result case Ok(:final value)) {
+      setState(() {
+        _officeRecord = value.officeRecord;
+        if (BarangayLock.heldByOffice(value.verificationTier)) {
+          // Locked now: show what the account holds, which the office's edit
+          // may just have changed, and drop a pick that can no longer be sent.
+          _barangayLocked = true;
+          _showHeldBarangay(value.valueOf(ResidentProfileField.barangay) ?? '');
+        }
+      });
+    }
+  }
+
+  /// Names [held] (the id `GET /me` gives) from the list already read, and
+  /// makes it both the shown and the original barangay.
+  void _showHeldBarangay(String held) {
+    _barangayHeld = held;
+    if (barangayFor(held, _barangays) case final Barangay named) {
+      _barangay = named.name;
+      _barangayId = named.id;
+    } else if (_barangays.isNotEmpty) {
+      _barangay = '';
+      _barangayId = null;
+    }
+    _barangayIdOriginal = _barangayId;
   }
 
   Future<void> _load() async {
@@ -820,6 +879,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         // directory below names it, and never the id (D-228).
         _barangayHeld = value.valueOf(ResidentProfileField.barangay) ?? '';
         _emailVerified = value.emailVerified;
+        _barangayLocked = BarangayLock.heldByOffice(value.verificationTier);
+        _officeRecord = value.officeRecord;
       });
     } else {
       // A failed read is not a status. The name stays locked, and its note
@@ -871,7 +932,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _pickBarangay() async {
-    if (_barangays.isEmpty) return;
+    if (_barangayLocked || _barangays.isEmpty) return;
     final List<Barangay> listed = _barangays;
     // The list this screen already read, in the picker sign-up uses.
     final Barangay? picked = await showBarangayPicker(
@@ -912,7 +973,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
     if (mobile != _mobileOriginal) changes['mobile'] = mobile;
     if (email != _emailOriginal) changes['email'] = email;
-    if (_barangayId != null && _barangayId != _barangayIdOriginal) {
+    // Never sent once verified: the office records where she lives (D-235).
+    if (!_barangayLocked &&
+        _barangayId != null &&
+        _barangayId != _barangayIdOriginal) {
       changes['barangay_id'] = _barangayId;
     }
     if (changes.isEmpty) {
@@ -944,6 +1008,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         return;
       }
       _idempotencyKey = null;
+      // The account was verified after this screen drew the barangay as hers
+      // to change. The code says so; the server's message is never shown
+      // (Article 5.5). The field locks on what the account holds.
+      if (failure is ConflictFailure && failure.isBarangayHeldByOffice) {
+        setState(() {
+          _barangayLocked = true;
+          _showHeldBarangay(_barangayHeld);
+        });
+        await AppDialog.acknowledge(
+          context: context,
+          title: BarangayLock.refusedTitle,
+          message: AccountCopy.barangayNotChanged(
+            BarangayLock.refused,
+            otherChanges: changes.length > 1,
+          ),
+        );
+        return;
+      }
       // A 409 is also an email another account uses, so the code alone does
       // not say it was the name. The status read after it does, and the
       // server's message is never shown (Article 5.5).
@@ -1011,13 +1093,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           controller: _email,
           verified: _emailVerified,
         ),
-        AccountField(
-          label: 'Barangay',
-          value: _barangay,
-          chevron: true,
-          onTap: _pickBarangay,
-        ),
+        if (_barangayLocked)
+          AccountField(
+            label: 'Barangay',
+            value: _barangay,
+            locked: true,
+            note: BarangayLock.heldNote,
+          )
+        else
+          AccountField(
+            label: 'Barangay',
+            value: _barangay,
+            chevron: true,
+            onTap: _pickBarangay,
+          ),
       ],
+      belowFields: switch (_officeRecord) {
+        final OfficeRecord record => OfficeRecordSection(
+          record: record,
+          barangays: _barangays,
+        ),
+        null => null,
+      },
       onSave: _save,
     );
   }

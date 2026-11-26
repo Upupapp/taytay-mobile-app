@@ -26,6 +26,7 @@ import 'package:taytay_resident/features/sectors/presentation/sectors_copy.dart'
 
 /// D-216: the sector notice opens Sectors and benefits, with no id on the way.
 /// D-223: the assistance request notice opens that request on My requests.
+/// D-235: the registry record notice opens the resident profile, with no id.
 ///
 /// Synthetic: the ids are made up and nobody here is a real resident.
 const String _applicationId = '00000000-0000-4000-8000-000000000215';
@@ -289,6 +290,69 @@ void main() {
       );
       expect(notice.target[DeepLink.idKey], _applicationId);
       expect(notice.target[DeepLink.targetKey], 'issuance_request');
+    });
+  });
+
+  group('the registry record notice (D-235)', () {
+    // As the API words it: which details changed, never their values, and no
+    // subject (backend ADR 0016).
+    Map<String, Object?> registryNotice() => <String, Object?>{
+      'id': 'n-registry',
+      'type': 'registry_record_updated',
+      'title': 'Your record at the MSWDO office',
+      'body': 'The MSWDO office corrected your name and birth date.',
+      'subject_id': null,
+      'read_at': null,
+      'created_at': '2026-11-26T05:20:00Z',
+    };
+
+    test('targets the profile, a place, with no id', () async {
+      final ResidentNotification notice = await _decoded(registryNotice());
+
+      expect(notice.target[DeepLink.targetKey], 'office_record');
+      expect(notice.target.containsKey(DeepLink.idKey), isFalse);
+      expect(notice.hasTarget, isTrue);
+      final DeepLinkResult link = DeepLink.resolve(notice.target);
+      expect(link, isA<DeepLinkResolved>());
+      final DeepLinkTarget target = (link as DeepLinkResolved).target;
+      expect(target.route, AppRoute.profileEdit);
+      expect(target.location, AppRoute.profileEdit.path);
+    });
+
+    test('an id on the profile target is refused', () {
+      expect(
+        DeepLink.resolve(<String, String>{
+          DeepLink.targetKey: 'office_record',
+          DeepLink.idKey: _applicationId,
+        }),
+        isA<DeepLinkRejected>().having(
+          (DeepLinkRejected r) => r.reason,
+          'reason',
+          DeepLinkRejection.wrongArity,
+        ),
+      );
+    });
+
+    test('a resident can silence it, after sector applications', () {
+      const List<NotificationSwitch> kinds = NotificationSwitch.values;
+      expect(
+        kinds.indexOf(NotificationSwitch.registryRecordUpdated),
+        kinds.indexOf(NotificationSwitch.sectorApplicationDecided) + 1,
+      );
+      expect(
+        NotificationSwitch.registryRecordUpdated.preferenceType,
+        'registry_record_updated',
+      );
+      expect(preferenceTypes, contains('registry_record_updated'));
+    });
+
+    testWidgets('tapping it in the inbox opens the profile', (tester) async {
+      await _openInbox(tester, <Object?>[registryNotice()]);
+
+      await tester.tap(find.text('Your record at the MSWDO office'));
+      await tester.pumpAndSettle();
+
+      expect(_location(tester), AppRoute.profileEdit.path);
     });
   });
 

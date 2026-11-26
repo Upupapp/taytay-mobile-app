@@ -334,37 +334,42 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
     );
   }
 
-  Future<void> _requestClosure({required bool permanent}) async {
+  /// Closes the account (`POST /me/close`), after a confirmation that says
+  /// what closing does. The same is said on the page, before the button, and
+  /// after it in the notice (D-235).
+  ///
+  /// **A close, not a request.** The API closes the account at once; nobody
+  /// reviews it and nobody calls. The words used to say "the office will
+  /// contact you", which was untrue.
+  Future<void> _closeAccount() async {
     final confirmed = await ConfirmSheet.show(
       context: context,
-      title: permanent
-          ? 'Ask Taytay LGU to erase your account?'
-          : 'Ask Taytay LGU to switch off your account?',
-      consequence: permanent
-          ? 'This asks the office to erase your account. It is a request, not '
-                'an instant deletion — Taytay LGU decides what it can erase and '
-                'what it must keep by law.'
-          : 'This asks the office to switch your account off. Your resident '
-                'record with Taytay LGU stays as it is.',
+      title: AccountClosureCopy.confirmTitle,
+      consequence: AccountClosureCopy.confirm,
       detail: _controls.deletionPolicyNote,
-      confirmLabel: permanent ? 'Send the request' : 'Send the request',
+      confirmLabel: AccountClosureCopy.action,
       cancelLabel: 'Not now',
     );
     if (!confirmed || !mounted) return;
 
     final repository = AppDependencies.of(context).accountControlsRepository;
     final result = await repository.requestAccountClosure(
-      permanent: permanent,
+      permanent: _controls.canRequestDeletion,
       reason: '',
       idempotencyKey: generateRequestId(),
     );
     if (!mounted) return;
 
     setState(() {
-      _notice = result.isOk
-          ? 'Taytay LGU has your request. The office will contact you.'
-          : 'That request was not sent, so nothing has been asked for. You can '
-                'try again.';
+      _notice = switch (result) {
+        Ok() => AccountClosureCopy.closed,
+        // A second close is refused with 409: an earlier try, whose answer
+        // was lost, already closed it.
+        Err(failure: ConflictFailure()) => AccountClosureCopy.alreadyClosed,
+        Err(:final failure) when failure.outcomeUnknown =>
+          AccountClosureCopy.notConfirmed,
+        Err() => AccountClosureCopy.notClosed,
+      };
     });
   }
 
@@ -454,21 +459,24 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
             ),
             const SizedBox(height: Spacing.sm),
           ],
-          if (_controls.canRequestDeactivation) ...<Widget>[
-            AppButton(
-              label: 'Ask to switch off my account',
-              variant: AppButtonVariant.secondary,
-              onPressed: () => _requestClosure(permanent: false),
-            ),
+          // Both switches lead to the one thing the API does: it closes the
+          // account at once (`POST /me/close`). One button, with what it does
+          // said before it, last and styled apart from the rest (D-235).
+          if (_controls.canRequestDeactivation ||
+              _controls.canRequestDeletion) ...<Widget>[
             const SizedBox(height: Spacing.sm),
-          ],
-          // Erasure last, and styled apart from the rest.
-          if (_controls.canRequestDeletion)
-            AppButton(
-              label: 'Ask to erase my account',
-              variant: AppButtonVariant.danger,
-              onPressed: () => _requestClosure(permanent: true),
+            Text(
+              AccountClosureCopy.effects,
+              key: privacyCloseEffectsKey,
+              style: body,
             ),
+            const SizedBox(height: Spacing.md),
+            AppButton(
+              label: AccountClosureCopy.action,
+              variant: AppButtonVariant.danger,
+              onPressed: _closeAccount,
+            ),
+          ],
         ],
 
         if (_controls.requiresReauthentication) ...<Widget>[
@@ -485,6 +493,7 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
   }
 }
 
+const Key privacyCloseEffectsKey = Key('privacy-close-effects');
 const Key privacyBiometricGivenKey = Key('privacy-biometric-given');
 const Key privacyBiometricOwedKey = Key('privacy-biometric-owed');
 const Key privacyBiometricUnavailableKey = Key('privacy-biometric-unavailable');

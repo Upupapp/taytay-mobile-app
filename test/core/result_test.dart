@@ -62,6 +62,7 @@ void main() {
         'ARCHIVED': ApiErrorCode.archived,
         'OFFICE_IN_USE': ApiErrorCode.officeInUse,
         'OFFICE_ARCHIVED': ApiErrorCode.officeArchived,
+        'BARANGAY_HELD_BY_OFFICE': ApiErrorCode.barangayHeldByOffice,
         'VALIDATION_FAILED': ApiErrorCode.validationFailed,
         'code_invalid': ApiErrorCode.codeInvalid,
         'code_expired': ApiErrorCode.codeExpired,

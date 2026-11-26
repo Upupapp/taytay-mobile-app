@@ -883,6 +883,12 @@ class MockNotificationRepository
             inApp: true,
             push: true,
           ),
+          // In the app only: the API never pushes it, whatever `push` says.
+          ChannelPreference(
+            type: 'registry_record_updated',
+            inApp: true,
+            push: true,
+          ),
           ChannelPreference(
             type: 'assistance_request_updated',
             inApp: true,

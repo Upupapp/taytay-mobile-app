@@ -1,6 +1,7 @@
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/result/result.dart';
+import '../domain/office_record.dart';
 import '../domain/profile_fields.dart';
 import '../domain/resident_profile_detail.dart';
 import '../domain/resident_profile_repository.dart';
@@ -264,6 +265,37 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
         final bool linked => linked,
         _ => null,
       },
+      officeRecord: _officeRecord(map['office_record']),
+    );
+  }
+
+  /// `office_record` on `GET /me` (backend ADR 0016, D-235).
+  ///
+  /// Null, absent or not an object is no record: nothing is drawn. A record
+  /// missing a part the spec requires (a first or last name, the birth date,
+  /// the barangay) is not drawn either, rather than drawn with a hole that
+  /// reads as the office having nothing. An unknown `sex` is kept as unknown,
+  /// never guessed.
+  static OfficeRecord? _officeRecord(Object? raw) {
+    if (raw is! Map<String, dynamic>) return null;
+    final String? first = _plain(raw, 'first_name');
+    final String? last = _plain(raw, 'last_name');
+    final String? birthDate = _plain(raw, 'birth_date');
+    final String? barangayId = _plain(raw, 'barangay_id');
+    if (first == null ||
+        last == null ||
+        birthDate == null ||
+        barangayId == null) {
+      return null;
+    }
+    return OfficeRecord(
+      firstName: first,
+      middleName: _plain(raw, 'middle_name'),
+      lastName: last,
+      suffix: _plain(raw, 'suffix'),
+      sex: OfficeRecordSex.parse(raw['sex']),
+      birthDate: birthDate,
+      barangayId: barangayId,
     );
   }
 

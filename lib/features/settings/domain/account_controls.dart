@@ -294,14 +294,76 @@ abstract interface class AccountControlsRepository {
     required String idempotencyKey,
   });
 
-  /// Asks for the account to be deactivated or erased.
+  /// Closes the account (`POST /me/close`). It is not a request: the API
+  /// closes it at once — sign-in disabled, profile details cleared, the
+  /// digital ID revoked, device registrations and verification images
+  /// removed — and the offices keep their own records (D-235,
+  /// [AccountClosureCopy]).
   ///
-  /// One method with a [permanent] flag rather than two, because the server
-  /// decides what each means and the app must not imply a difference the office
-  /// has not defined.
+  /// [permanent], [reason] and [idempotencyKey] stay off the wire: the route
+  /// takes no body, and a second call is `409`.
   Future<Result<void>> requestAccountClosure({
     required bool permanent,
     required String reason,
     required String idempotencyKey,
   });
+}
+
+/// What the resident reads about closing her account, before the button, in
+/// the confirmation and after it (D-235).
+///
+/// ---
+///
+/// **What `POST /me/close` does, and nothing it does not** (backend
+/// `src/modules/users/routes.ts` and `repository.ts`, `docs/api/endpoints.md`).
+/// It closes the account at once: the identity provider disables the sign-in;
+/// the name, birth date, sex, mobile, email, address and profile photo are
+/// cleared; a current digital ID is revoked; the ID photos and selfies sent
+/// for verification are discarded; this and every other phone stop getting
+/// notices; a household she heads in the app is removed, as is her place or
+/// invitation in another. The account row itself stays, and the records the
+/// offices keep about her are not touched. Nobody from the office calls: the
+/// old words "the office will contact you" promised a step that does not
+/// exist.
+abstract final class AccountClosureCopy {
+  static const String action = 'Close my account';
+
+  /// Said on the page, before the button.
+  static const String effects =
+      'Closing your account takes effect at once, and you cannot sign in to '
+      'it again. Your name, birth date, contact details, address and profile '
+      'photo are removed from it, your digital ID is cancelled, and the ID '
+      'photos and selfies you sent are deleted. Your phones stop getting '
+      'notices from this app. If you head a household in the app, that '
+      'household is removed. Records that Taytay LGU offices keep about you, '
+      'such as your record at the MSWDO office and the requests you filed, '
+      'stay with those offices. This cannot be undone in the app.';
+
+  static const String confirmTitle = 'Close your account?';
+
+  /// The confirmation's consequence.
+  static const String confirm =
+      'Your account closes now and you cannot sign in to it again. Your digital '
+      'ID is cancelled, and your details, photos and ID pictures are removed '
+      'from the account. Records that Taytay LGU offices keep about you stay '
+      'with them. This cannot be undone in the app.';
+
+  /// After the API answered that it closed.
+  static const String closed =
+      'Your account is closed. You cannot sign in to it again, and your '
+      'digital ID is cancelled. Records that Taytay LGU offices keep about you '
+      'stay with them.';
+
+  /// A `409`: it was closed already, by an earlier try.
+  static const String alreadyClosed =
+      'Your account is already closed. You cannot sign in to it again.';
+
+  /// A timeout or a dropped connection after sending.
+  static const String notConfirmed =
+      'We could not confirm that your account was closed. Trying again is '
+      'safe: an account is closed only once.';
+
+  static const String notClosed =
+      'Your account was not closed. Nothing has changed, and you can try '
+      'again.';
 }

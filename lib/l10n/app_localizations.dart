@@ -1490,6 +1490,12 @@ abstract class AppStrings {
   /// **'Sector applications'**
   String get notifSwitchSectorApplications;
 
+  /// Notification settings switch for the MSWDO office linking, unlinking or correcting the resident's registry record (registry_record_updated).
+  ///
+  /// In en, this message translates to:
+  /// **'Changes to your record at the office'**
+  String get notifSwitchRegistryRecord;
+
   /// Notification settings switch for a new message from an office (message_received).
   ///
   /// In en, this message translates to:

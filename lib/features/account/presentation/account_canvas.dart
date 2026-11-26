@@ -197,6 +197,7 @@ class AccountCanvas extends StatelessWidget {
     this.onInboxRetry,
     this.onMessageOffice,
     this.fields = const <AccountField>[],
+    this.belowFields,
     this.onSave,
     this.onLegalName,
     this.showLegalNameNote = true,
@@ -268,6 +269,10 @@ class AccountCanvas extends StatelessWidget {
   final VoidCallback? onInboxRetry;
   final VoidCallback? onMessageOffice;
   final List<AccountField> fields;
+
+  /// Drawn on Edit profile under the fields: the resident's record at the
+  /// MSWDO office, read-only (D-235). Null draws nothing.
+  final Widget? belowFields;
   final VoidCallback? onSave;
   final VoidCallback? onLegalName;
 
@@ -1287,6 +1292,10 @@ class _EditPage extends StatelessWidget {
                     const SizedBox(height: Spacing.sm),
                     _LegalNameNote(onTap: canvas.onLegalName),
                   ],
+                ],
+                if (canvas.belowFields case final Widget below) ...<Widget>[
+                  const SizedBox(height: Spacing.xl),
+                  below,
                 ],
               ],
             ),

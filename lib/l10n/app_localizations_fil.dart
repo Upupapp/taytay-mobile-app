@@ -831,6 +831,10 @@ class AppStringsFil extends AppStrings {
   String get notifSwitchSectorApplications => 'Mga aplikasyon sa sektor';
 
   @override
+  String get notifSwitchRegistryRecord =>
+      'Mga pagbabago sa iyong rekord sa tanggapan';
+
+  @override
   String get notifSwitchOfficeReplies => 'Mga sagot ng tanggapan';
 
   @override

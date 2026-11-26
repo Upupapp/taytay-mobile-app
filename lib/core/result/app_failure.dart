@@ -240,6 +240,7 @@ final class ValidationFailure extends AppFailure {
 final class ConflictFailure extends AppFailure {
   const ConflictFailure({
     this.isInvalidStateTransition = false,
+    this.isBarangayHeldByOffice = false,
     super.requestId,
     super.debugMessage,
   });
@@ -247,12 +248,26 @@ final class ConflictFailure extends AppFailure {
   /// True for `INVALID_STATE_TRANSITION`, false for plain `CONFLICT`.
   final bool isInvalidStateTransition;
 
-  @override
-  String get kind =>
-      isInvalidStateTransition ? 'invalid_state_transition' : 'conflict';
+  /// True for `BARANGAY_HELD_BY_OFFICE`: a verified account's barangay is
+  /// changed at the MSWDO office, not from the app (D-235).
+  final bool isBarangayHeldByOffice;
 
   @override
-  String get residentMessage => isInvalidStateTransition
+  String get kind => isBarangayHeldByOffice
+      ? 'barangay_held_by_office'
+      : isInvalidStateTransition
+      ? 'invalid_state_transition'
+      : 'conflict';
+
+  // The app's own words for the code, never the server's `message`
+  // (Article 5.5). The barangay sentence is the same as `BarangayLock.refused`,
+  // which `core/` cannot import from a feature's presentation.
+  @override
+  String get residentMessage => isBarangayHeldByOffice
+      ? 'Your account is verified, so your barangay is changed at the MSWDO '
+            'office. To change your barangay, visit the MSWDO office with proof '
+            'of your new address.'
+      : isInvalidStateTransition
       ? 'This request has already moved forward. Refresh to see its current status.'
       : 'This was already submitted. Refresh to see the latest status.';
 }
@@ -575,6 +590,12 @@ AppFailure failureFromApiError({
     case ApiErrorCode.invalidStateTransition:
       return ConflictFailure(
         isInvalidStateTransition: true,
+        requestId: requestId,
+        debugMessage: message,
+      );
+    case ApiErrorCode.barangayHeldByOffice:
+      return ConflictFailure(
+        isBarangayHeldByOffice: true,
         requestId: requestId,
         debugMessage: message,
       );

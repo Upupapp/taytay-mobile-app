@@ -426,13 +426,14 @@ void main() {
       expect(result.isOk, isTrue);
     }
 
-    test('the switches are the six notices the server sends and honours', () {
+    test('the switches are the seven notices the server sends and honours', () {
       expect(preferenceTypes, <String>[
         'verification_decided',
         'assistance_request_updated',
         'issuance_request_updated',
         'event_registration_updated',
         'sector_application_decided',
+        'registry_record_updated',
         'message_received',
       ]);
       expect(preferenceTypes, isNot(contains('balita')));
@@ -463,7 +464,7 @@ void main() {
       expect(sentAuthenticated(transport.requests.single), isTrue);
     });
 
-    test('an update sends the six types and nothing else', () async {
+    test('an update sends the seven types and nothing else', () async {
       await save(
         const NotificationPreferences(push: true, sms: false, email: false),
       );

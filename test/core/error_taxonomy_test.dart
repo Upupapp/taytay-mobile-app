@@ -21,6 +21,7 @@ void main() {
     const ValidationFailure(),
     const ConflictFailure(),
     const ConflictFailure(isInvalidStateTransition: true),
+    const ConflictFailure(isBarangayHeldByOffice: true),
     const RateLimitedFailure(),
     const ServerFailure(),
     const ServerFailure(isTemporary: true),

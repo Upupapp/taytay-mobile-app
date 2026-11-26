@@ -95,13 +95,15 @@ void main() {
         expect(find.byType(TextField), findsNWidgets(2));
         expect(find.text(entry.value), findsOneWidget);
         expect(find.text(NameCheckCopy.asPrinted), findsNothing);
+        // A verified account's barangay is locked too: the office records
+        // where she lives (D-235).
         expect(
           find.byWidgetPredicate(
             (Widget widget) =>
                 widget is TaytayIcon &&
                 widget.semanticLabel == 'Cannot be changed here',
           ),
-          findsOneWidget,
+          entry.key == 'verified' ? findsNWidgets(2) : findsOneWidget,
         );
 
         await tester.enterText(_textField('09170000000'), '09171111111');

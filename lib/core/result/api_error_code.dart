@@ -63,6 +63,11 @@ enum ApiErrorCode {
   /// 409 — nothing new goes under an archived office.
   officeArchived('OFFICE_ARCHIVED'),
 
+  /// 409 — a verified account sent a different `barangay_id` on `PATCH /me`
+  /// (backend ADR 0016). The office records where a verified resident lives,
+  /// so the app says to visit it with proof of the new address (D-235).
+  barangayHeldByOffice('BARANGAY_HELD_BY_OFFICE'),
+
   /// 422 — input failed validation; `details` is `field -> [messages]`.
   ///
   /// This code does not carry `attempts_remaining`. Email and reset codes use

@@ -144,6 +144,18 @@ an older verification notice whose words matched none of the three. It is answer
 `email` of a staff account in the admin users list, and `716876e` and `37f3fe5` did not touch the
 spec. No response this app reads lost or renamed a field.
 
+It was re-vendored from backend `fd1293e` on 26 November 2026, for D-235 (backend ADR 0015 and
+ADR 0016). Five operations were added, all of them the office's: `POST /admin/users/{id}/registry-link`,
+`POST /admin/users/{id}/registry-unlink`, `GET /admin/users/{id}/registry-link-history`,
+`GET /office/residents/{id}/identity-history` and `GET /office/residents/{id}/identity-history/{changeId}`;
+this app calls none of them. None was removed. For this app: `UserProfile` gained `office_record` (the
+linked registry record's name parts, sex, birth date and barangay, or null); `Notification.type` and
+`NotificationPreference.type` gained `registry_record_updated`; and the error codes gained
+`BARANGAY_HELD_BY_OFFICE` (409 on `PATCH /me` when a verified account sends a different barangay). In
+between, backend `aec29d1`, `100b611`, `af79298`, `9096130`, `fa1d216` and `7768dc5` changed the office's
+dashboard, report, registry and request schemas, which this app does not read. No response this app
+reads lost or renamed a field.
+
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 
@@ -157,9 +169,9 @@ The vendored file is held to the commit it was copied from. The record lives in
 | --- | --- |
 | **Vendored file** | `docs/integration/taytay-node-openapi.json` |
 | **Copied from** | backend `openapi/openapi.json` |
-| **Backend commit** | `37f3fe5f2b71d4e6f5363d00429a7f7673fb7a2c` (`37f3fe5`) |
-| **sha256** | `86cc39e4e6099702803f4ae97d852295a0205593e35f280f48cfa90680e60573` |
-| **Vendored on** | 22 November 2026 (D-232) |
+| **Backend commit** | `fd1293ec7cbba8afef809504ab4c068e80db661f` (`fd1293e`) |
+| **sha256** | `6b0cd9a42931c719e259bb0e3ff18722559a455a5fa3f6e5a6a86699db29e4a5` |
+| **Vendored on** | 26 November 2026 (D-235) |
 
 To re-vendor: copy the backend's `openapi/openapi.json` at a commit, byte for byte, then change
 the commit and the sha256 here and in `backend_baseline.dart` in the same commit, and run the two

@@ -56,6 +56,16 @@ abstract final class AccountCopy {
             'changes.'
       : '$explanation Nothing was saved.';
 
+  /// Why a barangay change was refused (`BARANGAY_HELD_BY_OFFICE`,
+  /// [refusal]: `BarangayLock.refused`), and what became of the rest of the
+  /// save: the server refuses the whole request (D-235).
+  static String barangayNotChanged(
+    String refusal, {
+    required bool otherChanges,
+  }) => otherChanges
+      ? '$refusal Nothing was saved. Save again to keep your other changes.'
+      : refusal;
+
   // Settings.
   static const String languageTitle = 'Language';
   static const String language = 'The app follows the language of this phone.';

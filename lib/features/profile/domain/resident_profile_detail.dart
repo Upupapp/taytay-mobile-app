@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'office_record.dart';
 import 'profile_fields.dart';
 
 /// The resident's own record, as this app is willing to hold it.
@@ -39,6 +40,7 @@ class ResidentProfileDetail {
     this.verificationDecidedAt,
     this.verificationMethod,
     this.linkedToOfficeRecord,
+    this.officeRecord,
   });
 
   /// Only fields this app names. Anything else was dropped at the decoder.
@@ -111,6 +113,13 @@ class ResidentProfileDetail {
   /// screen that reads null behaves as it did before the flag existed. It
   /// describes; it grants nothing — the server refuses an unlinked send.
   final bool? linkedToOfficeRecord;
+
+  /// `office_record` on `GET /me` (backend ADR 0016): the registry record the
+  /// account is linked to, as the office keeps it. Null while not linked, from
+  /// an older API, and for a value that is not a record. Shown read-only, under
+  /// her own session; a `registry_record_updated` notice names what changed
+  /// and sends her here for the values (D-235).
+  final OfficeRecord? officeRecord;
 
   /// Who may change [field], preferring the office's answer.
   ///

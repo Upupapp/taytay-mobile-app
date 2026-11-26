@@ -954,6 +954,10 @@
   "@notifSwitchSectorApplications": {
     "description": "Notification settings switch for the office's decision on a sector application (sector_application_decided)."
   },
+  "notifSwitchRegistryRecord": "Changes to your record at the office",
+  "@notifSwitchRegistryRecord": {
+    "description": "Notification settings switch for the MSWDO office linking, unlinking or correcting the resident's registry record (registry_record_updated)."
+  },
   "notifSwitchOfficeReplies": "Office replies",
   "@notifSwitchOfficeReplies": {
     "description": "Notification settings switch for a new message from an office (message_received)."

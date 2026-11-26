@@ -4800,6 +4800,99 @@ fringe and colour checks.
 
 ---
 
+## D-235 — The office's changes to her record are told by name, shown by value, and her barangay and her account's closing say what is true
+
+**Status: settled.** Category: product / privacy / contract. Recorded 2026-11-26. The resident app's
+half of backend ADR 0016 (`fd1293e`; the console's DL-262 to DL-267), decided by Ella's instruction
+("you decide what's best and do it") and on researched best practice, as her standing rule asks.
+
+**Context.** ADR 0015 let the MSWDO link an app account to its registry record after verification and
+keep the record's identity history, and left six questions open. Four of them reach this app: the
+resident was not told when the office linked, unlinked or corrected her record (2); the profile did not
+show what the office now holds (2); a verified resident could still send a new barangay from Edit
+profile, although the office records where she lives and its edit reaches her account (5); and the
+close-account notice said "Taytay LGU has your request. The office will contact you." while
+`POST /me/close` closes the account at once and nobody calls (6). The vendored contract moves to
+backend `fd1293e`.
+
+**Decision.**
+
+1. **A `registry_record_updated` notice, with its own switch.** The API writes it, in the app only and
+   never pushed, when the office links the account, unlinks it, or corrects the linked record's name,
+   sex, birth date or barangay; `subject_id` is null. The app decodes it as a place, not a record:
+   target `office_record`, no id, which opens the resident profile (`/profile/edit`), and `DeepLink`
+   refuses an id on it. It joins `NotificationSwitch` after Sector applications as "Changes to your
+   record at the office" (Filipino "Mga pagbabago sa iyong rekord sa tanggapan", not reviewed by a
+   native speaker), so she can silence it like the others; the preference row is written with both
+   channels, and the API honours only `in_app` for it. The inbox row shows the general "Update" label,
+   as a sector decision does. **The notice names details, never values**, because a notification is
+   the one surface anybody holding the phone can read, on a lock screen or in a shade (OWASP
+   MASWE-0054, "Sensitive Data Leaked via Notifications"; backend ADR 0016 decision 2), and "your
+   barangay changed to San Juan" on a shared phone says where she moved. The API sends nothing at all
+   about a person with a VAWC or CICL record.
+2. **The profile shows the values, under her own session.** `GET /me` now carries `office_record`
+   (`first_name`, `middle_name`, `last_name`, `suffix`, `sex`, `birth_date`, `barangay_id`, or null).
+   `ResidentProfileDetail.officeRecord` holds it; a null, mistyped or incomplete record (no first or
+   last name, birth date or barangay) is no record, rather than one drawn with a hole that reads as the
+   office having nothing, and an unknown `sex` stays unknown. Edit profile (the "Resident Profile" a
+   verified resident opens from My Account, and where the notice lands) shows "Your record at the
+   MSWDO office" under the fields, read-only: the name, the sex, the birth date written out
+   ("Mar 4, 1990", from the date's own digits, no timezone) and the barangay by name from
+   `GET /barangays`, never its id (D-228); a value this build cannot name says "Ask the MSWDO office".
+   Under it, one sentence: "The office keeps this record. If something here is wrong, visit the MSWDO
+   office with your ID." Nothing is drawn while the account is not linked. The page now re-reads
+   quietly on the live topics `account` and `notifications` (D-218): only the record and the barangay
+   lock move, and the name, mobile and email she may be typing are never overwritten.
+3. **A verified resident's barangay is the office's to record.** When `verification_status` is
+   `verified` (read through `AccessLevel.fromVerificationTier`, as `NameLock` does), Edit profile draws
+   the barangay as text with "To change your barangay, visit the MSWDO office with proof of your new
+   address.", opens no picker and never sends `barangay_id`. Unverified, pending, rejected and unknown
+   tiers are unchanged. The API refuses a verified account's different barangay with `409`
+   `BARANGAY_HELD_BY_OFFICE` (ADR 0015 decision 6, ADR 0016 decision 5): the office checks a new
+   address against proof at the counter and its registry edit reaches the account. The code joins
+   `ApiErrorCode` and maps to `ConflictFailure(isBarangayHeldByOffice: true)`, whose resident copy is
+   the app's own sentence (Article 5.5): "Your account is verified, so your barangay is changed at the
+   MSWDO office. To change your barangay, visit the MSWDO office with proof of your new address." Edit
+   profile, drawn before the account was verified, shows it under "Your barangay was not changed" (and
+   that nothing else was saved, since the server refuses the whole request), then locks the field on
+   what the account holds — never the generic "Nothing was changed".
+4. **The close-account copy says what the API does.** `POST /me/close` is not a request: it closes the
+   account at once. The identity provider disables the sign-in; the name, birth date, sex, mobile,
+   email, address and profile photo are cleared; a current digital ID is revoked; the ID photos and
+   selfies sent for verification are discarded; device registrations are removed; a household she
+   heads in the app is removed, as is her place or invitation in another. The offices keep their own
+   records. The page now says this before the button, the confirmation says it again ("Close your
+   account?"), and the notice after it says "Your account is closed. You cannot sign in to it again,
+   and your digital ID is cancelled. Records that Taytay LGU offices keep about you stay with them." A
+   `409` (closed by an earlier try) says it is already closed; a lost answer says trying again is
+   safe. The two buttons ("Ask to switch off my account", "Ask to erase my account") both called the
+   same route, and the second promised an erasure the API does not do: there is one button, "Close my
+   account". The switches are left as they were: `loadControls` still turns closing off until the
+   LGU's retention policy is settled (backend `canRequestDeletion` note, F13), so a resident does not
+   see the button yet; the words are right for when it is switched on. No other close or delete
+   string in the app was wrong: the privacy page's "Deleting your record" note speaks of the
+   municipal record, not the account, and stays.
+
+**Contract.** Re-vendored at backend `fd1293e` (sha256 `6b0cd9a4…`): five office operations added
+(the registry link, unlink and link history, and the identity history in two parts), none of which
+this app calls; `office_record` on `UserProfile`; `registry_record_updated` on `Notification.type` and
+`NotificationPreference.type`; `BARANGAY_HELD_BY_OFFICE` on the error envelope. Staging needs backend
+`fd1293e` deployed with migration 0081: before it, a preference save that includes the new type is a
+`422`, and the profile shows no record.
+
+**Tests.** `test/features/office_record_test.dart` (the decoder's record, its absences and an
+unknown sex; the birth date; the lock for every tier; the code's own words; Edit profile read-only and
+never sending the barangay when verified, still sending it for the other three tiers, and saying the
+refusal; the record's values, its barangay by name, its sentence, and nothing when unlinked);
+`test/features/sector_notice_test.dart` (the notice's place, an id refused, its switch after sector
+applications, and the inbox tap landing on the profile); `test/features/settings_test.dart` (the
+close copy before, in and after the confirmation, one button, no "contact you");
+`notifications_test.dart` and `wired_repositories_test.dart` (seven switches);
+`test/core/result_test.dart` and `error_taxonomy_test.dart` (the new code).
+`tool/check_backend_baseline.sh` and `tool/check_backend_routes.sh` pass at `fd1293e`.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -5038,5 +5131,6 @@ fringe and colour checks.
 | D-232 | A `verification_decided` notice's icon comes from its `outcome` (backend `31038a5`, migration `0077`): `approved` and `verified-in-person` a green check, `rejected` a red alert, anything else the neutral shield; D-231's sentence matching is dropped rather than kept as a fallback; contract re-vendored at `37f3fe5` | contract / product | settled |
 | D-233 | No corner ribbon on the staging build, on the owner's decision: only a dev build carries it; Settings still says "Test build" in dev and staging | product | settled |
 | D-234 | The launcher icon is the municipal seal, whole on white, scaled from the registered file only; no monochrome (themed) layer, which would recolour it | brand | settled |
+| D-235 | The office's changes to her record (backend ADR 0016): a `registry_record_updated` notice names which details changed, never their values (OWASP MASWE-0054), opens the profile and has its own switch after Sector applications; the profile shows `GET /me` `office_record` read-only with "The office keeps this record. If something here is wrong, visit the MSWDO office with your ID." and re-reads on `account` and `notifications`; a verified resident's barangay is read-only with "To change your barangay, visit the MSWDO office with proof of your new address." and never sent, and `BARANGAY_HELD_BY_OFFICE` is said in the app's words; the close-account copy says the account closes at once (one "Close my account" button, switch left off) instead of "the office will contact you"; contract re-vendored at `fd1293e` | product / privacy / contract | settled |
 
-**226 decisions — 222 settled, 4 provisional.**
+**227 decisions — 223 settled, 4 provisional.**

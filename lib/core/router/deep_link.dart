@@ -183,6 +183,9 @@ abstract final class DeepLink {
     // The resident's own sectors and sector applications (D-216). A place, so
     // it takes no id: the payload that names it carries none.
     'sector_applications': AppRoute.sectors,
+    // The resident profile, where her record at the MSWDO office is shown
+    // (D-235). A place: `registry_record_updated` names no record.
+    'office_record': AppRoute.profileEdit,
     // Programs and services directory.
     'service': AppRoute.serviceDetail,
     'programs': AppRoute.programs,

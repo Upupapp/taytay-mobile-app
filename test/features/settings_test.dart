@@ -418,8 +418,8 @@ void main() {
         location: '/settings/privacy',
       );
 
-      expect(find.text('Ask to erase my account'), findsNothing);
-      expect(find.text('Ask to switch off my account'), findsNothing);
+      expect(find.text(AccountClosureCopy.action), findsNothing);
+      expect(find.byKey(privacyCloseEffectsKey), findsNothing);
       expect(find.text('Ask for a correction'), findsNothing);
       expect(
         find.textContaining('not switched on in this app yet'),
@@ -427,7 +427,7 @@ void main() {
       );
     });
 
-    testWidgets('erasure is offered only when the server says so', (
+    testWidgets('closing is offered only when the switch is on', (
       tester,
     ) async {
       await bootSettings(
@@ -441,11 +441,33 @@ void main() {
         location: '/settings/privacy',
       );
 
-      expect(find.text('Ask to erase my account'), findsOneWidget);
-      expect(find.text('Ask to switch off my account'), findsNothing);
+      // One button: both switches lead to the one close the API does.
+      expect(find.text(AccountClosureCopy.action), findsOneWidget);
+      // What closing does is said before the button, not only after it.
+      expect(find.text(AccountClosureCopy.effects), findsOneWidget);
     });
 
-    testWidgets('erasure is confirmed, and dismissing sends nothing', (
+    test('the close copy says what the API does, and promises no call', () {
+      const List<String> said = <String>[
+        AccountClosureCopy.effects,
+        AccountClosureCopy.confirm,
+        AccountClosureCopy.closed,
+        AccountClosureCopy.alreadyClosed,
+      ];
+      for (final String words in said) {
+        // `POST /me/close` closes at once: nobody reviews it and nobody calls.
+        expect(words.toLowerCase(), isNot(contains('contact you')));
+        expect(words.toLowerCase(), isNot(contains('your request')));
+        expect(words.toLowerCase(), isNot(contains('erase your account')));
+      }
+      expect(AccountClosureCopy.effects, contains('at once'));
+      expect(AccountClosureCopy.effects, contains('cannot sign in'));
+      expect(AccountClosureCopy.effects, contains('digital ID is cancelled'));
+      expect(AccountClosureCopy.effects, contains('MSWDO office'));
+      expect(AccountClosureCopy.closed, startsWith('Your account is closed.'));
+    });
+
+    testWidgets('closing is confirmed, and dismissing sends nothing', (
       tester,
     ) async {
       final booted = await bootSettings(
@@ -455,12 +477,13 @@ void main() {
         location: '/settings/privacy',
       );
 
-      await tester.tap(find.text('Ask to erase my account'));
+      await tester.tap(find.text(AccountClosureCopy.action));
       await tester.pumpAndSettle();
 
       expect(find.text('What happens'), findsOneWidget);
       // The sheet names the consequence rather than asking "are you sure".
-      expect(find.textContaining('It is a request, not'), findsOneWidget);
+      expect(find.text(AccountClosureCopy.confirm), findsOneWidget);
+      expect(find.textContaining('It is a request'), findsNothing);
 
       await tester.tap(find.text('Not now'));
       await tester.pumpAndSettle();
@@ -478,17 +501,20 @@ void main() {
         location: '/settings/privacy',
       );
 
-      await tester.tap(find.text('Ask to erase my account'));
+      await tester.tap(find.text(AccountClosureCopy.action));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Send the request'));
+      await tester.tap(find.text(AccountClosureCopy.action).last);
       await tester.pumpAndSettle();
 
       expect(booted.controls.closures, <bool>[true]);
       expect(booted.controls.closureKeys.single, isNotEmpty);
-      expect(find.textContaining('has your request'), findsOneWidget);
+      expect(find.textContaining(AccountClosureCopy.closed), findsOneWidget);
+      expect(find.textContaining('contact you'), findsNothing);
     });
 
-    testWidgets('a failed request says nothing was asked for', (tester) async {
+    testWidgets('a failed close says the account was not closed', (
+      tester,
+    ) async {
       final booted = await bootSettings(
         tester,
         controls: const AccountControls(canRequestDeactivation: true),
@@ -497,12 +523,12 @@ void main() {
       );
       booted.controls.closureFails = true;
 
-      await tester.tap(find.text('Ask to switch off my account'));
+      await tester.tap(find.text(AccountClosureCopy.action));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Send the request'));
+      await tester.tap(find.text(AccountClosureCopy.action).last);
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('nothing has been asked for'), findsOneWidget);
+      expect(find.textContaining(AccountClosureCopy.notClosed), findsOneWidget);
     });
   });
 

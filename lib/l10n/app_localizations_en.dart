@@ -822,6 +822,10 @@ class AppStringsEn extends AppStrings {
   String get notifSwitchSectorApplications => 'Sector applications';
 
   @override
+  String get notifSwitchRegistryRecord =>
+      'Changes to your record at the office';
+
+  @override
   String get notifSwitchOfficeReplies => 'Office replies';
 
   @override

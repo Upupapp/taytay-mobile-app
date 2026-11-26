@@ -329,9 +329,15 @@ class NotificationApiRepository
   /// in-person check at the counter decided the account). It opens the
   /// verification status screen, which reads where the account stands from
   /// `GET /me` (D-228).
+  ///
+  /// `registry_record_updated` carries no `subject_id` either, and its body
+  /// names which details the office changed, never their values (backend ADR
+  /// 0016). It opens the resident profile, which shows the values from
+  /// `GET /me` `office_record` under her own session (D-235).
   static String? _placeTarget(String? type) => switch (type) {
     'sector_application_decided' => 'sector_applications',
     'verification_decided' => 'verification',
+    'registry_record_updated' => 'office_record',
     _ => null,
   };
 

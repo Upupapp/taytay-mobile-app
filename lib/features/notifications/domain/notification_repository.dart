@@ -58,6 +58,11 @@ enum NotificationSwitch {
   issuanceRequestUpdated('issuance_request_updated'),
   eventRegistrationUpdated('event_registration_updated'),
   sectorApplicationDecided('sector_application_decided'),
+
+  /// The office linked the account to its registry record, unlinked it, or
+  /// corrected that record's name, sex, birth date or barangay (backend ADR
+  /// 0016, D-235). In the app only, never pushed: only `in_app` decides it.
+  registryRecordUpdated('registry_record_updated'),
   messageReceived('message_received');
 
   const NotificationSwitch(this.preferenceType);

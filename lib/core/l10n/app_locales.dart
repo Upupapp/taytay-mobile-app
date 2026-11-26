@@ -658,6 +658,8 @@ String notificationSwitchLabel(BuildContext context, NotificationSwitch kind) {
       strings.notifCatEventRegistration,
     NotificationSwitch.sectorApplicationDecided =>
       strings.notifSwitchSectorApplications,
+    NotificationSwitch.registryRecordUpdated =>
+      strings.notifSwitchRegistryRecord,
     NotificationSwitch.messageReceived => strings.notifSwitchOfficeReplies,
   };
 }
