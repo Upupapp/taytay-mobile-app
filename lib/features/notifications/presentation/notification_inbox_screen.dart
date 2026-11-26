@@ -292,6 +292,10 @@ IconData _icon(ResidentNotification item) {
         null => TaytayIcons.shield,
       },
     NotificationCategory.assistanceStatus => TaytayIcons.handHelping,
+    NotificationCategory.documentRequest => TaytayIcons.fileText,
+    NotificationCategory.sectorApplication => TaytayIcons.idCard,
+    NotificationCategory.registryRecord => TaytayIcons.circleUser,
+    NotificationCategory.eventRegistration => TaytayIcons.calendar,
     _ => TaytayIcons.messageCircle,
   };
 }

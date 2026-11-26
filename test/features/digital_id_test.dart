@@ -133,12 +133,30 @@ void main() {
     });
   });
 
-  test('dates and the refresh clock use the device zone', () {
-    expect(formatDigitalIdDate(DateTime(2026, 10, 22, 21, 42)), 'Oct 22, 2026');
-    expect(formatDigitalIdClock(DateTime(2026, 10, 22, 21, 42)), '9:42 PM');
-    expect(formatDigitalIdClock(DateTime(2026, 10, 22, 0, 5)), '12:05 AM');
-    expect(formatDigitalIdClock(DateTime(2026, 10, 22, 12)), '12:00 PM');
-  });
+  test(
+    'dates and the refresh clock are Manila’s, whatever the phone’s zone (D-107, D-236)',
+    () {
+      // 13:42 UTC is 9:42 PM in Taytay.
+      expect(
+        formatDigitalIdDate(DateTime.utc(2026, 10, 22, 13, 42)),
+        'Oct 22, 2026',
+      );
+      expect(
+        formatDigitalIdClock(DateTime.utc(2026, 10, 22, 13, 42)),
+        '9:42 PM',
+      );
+      // 16:30 UTC on the 22nd is already the 23rd in Taytay.
+      expect(
+        formatDigitalIdDate(DateTime.utc(2026, 10, 22, 16, 30)),
+        'Oct 23, 2026',
+      );
+      expect(
+        formatDigitalIdClock(DateTime.utc(2026, 10, 21, 16, 5)),
+        '12:05 AM',
+      );
+      expect(formatDigitalIdClock(DateTime.utc(2026, 10, 22, 4)), '12:00 PM');
+    },
+  );
 
   test('credential presentation does not nudge with Transform', () {
     for (final String path in <String>[

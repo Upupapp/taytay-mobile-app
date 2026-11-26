@@ -25,7 +25,19 @@ enum NotificationCategory {
   eventRegistration('event_registration', 'Event registrations'),
   eventReminder('event_reminder', 'Event reminders'),
   publicAdvisory('public_advisory', 'Public advisories'),
-  accountSecurity('account_security', 'Account and security');
+  accountSecurity('account_security', 'Account and security'),
+
+  // The four below are notice types the API sends under their own `type`
+  // (D-236). Before them they fell through to no category, so a document
+  // request, a sector decision, a change to her office record and an office
+  // reply all read "UPDATE" under the same chat bubble.
+  documentRequest('issuance_request_updated', 'Document requests'),
+  sectorApplication('sector_application_decided', 'Sector applications'),
+  registryRecord(
+    'registry_record_updated',
+    'Changes to your record at the office',
+  ),
+  officeReply('message_received', 'Office replies');
 
   const NotificationCategory(this.wireValue, this.label);
 
@@ -274,6 +286,13 @@ abstract interface class NotificationRepository {
     int perPage,
     String? cursor,
   });
+
+  /// How many of her notices are unread: `GET notifications/unread-count`.
+  ///
+  /// The server's count, never the unread rows of a first page — Home once
+  /// counted the first 20 rows, so a resident with 30 unread saw a bell
+  /// saying 20 or fewer (D-236).
+  Future<Result<int>> unreadCount();
 
   /// Marks one of the resident's own notifications as read.
   ///

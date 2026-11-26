@@ -321,6 +321,11 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
   bool _busy = false;
   String? _matchError;
 
+  /// Why the save did not go through, in the flow's own Filipino (D-236).
+  /// Before it, a refused save cleared the busy state and said nothing, so a
+  /// tap on "I-save" looked like it did nothing.
+  String? _saveFailure;
+
   bool get _sampleMismatch => widget.fixture == SetPasswordFixture.mismatch;
   bool get _sampleExpired => widget.fixture == SetPasswordFixture.expired;
 
@@ -381,7 +386,10 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
     if (_sampleMismatch) return;
     final String? token = widget.draft?.grant?.resetToken;
     if (token == null) return;
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _saveFailure = null;
+    });
     final result = await AppDependencies.of(context).authRepository
         .completePasswordReset(resetToken: token, newPassword: password);
     if (!mounted) return;
@@ -402,6 +410,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
           _matchError = !weak && stillValid && password != confirm
               ? 'Hindi tugma ang password. Pakiulit.'
               : null;
+          _saveFailure = weak ? null : resetSaveFailureWords(failure);
         });
     }
   }
@@ -444,6 +453,15 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          if (_saveFailure case final String why when !expired) ...<Widget>[
+            SoftNote(
+              key: const Key('reset-save-failure'),
+              tone: NoteTone.error,
+              title: 'Hindi pa napalitan ang password. ',
+              message: why,
+            ),
+            const SizedBox(height: Spacing.formGap),
+          ],
           if (expired) ...<Widget>[
             const SoftNote(
               tone: NoteTone.error,
@@ -494,6 +512,21 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
     );
   }
 }
+
+/// What a refused reset says, in the flow's Filipino (D-236): what happened
+/// and what to do, never a code.
+String resetSaveFailureWords(AppFailure failure) => switch (failure) {
+  NetworkFailure() || TimeoutFailure() =>
+    'Walang koneksyon. Ikonekta ang telepono at subukang muli.',
+  RateLimitedFailure() =>
+    'Masyadong maraming subok. Maghintay nang ilang minuto bago subukang muli.',
+  ValidationFailure(:final fieldErrors)
+      when fieldErrors.containsKey('reset_token') =>
+    'Hindi na magagamit ang reset link na ito. Humingi ng bagong code.',
+  ValidationFailure() =>
+    'Kailangan ng password na may 8 o higit pang titik, may letra at numero.',
+  _ => 'Hindi ito natapos ngayon. Subukang muli mamaya.',
+};
 
 /// `02-13`. The password was updated. Sign-in is the only next step.
 class PasswordUpdatedScreen extends StatelessWidget {

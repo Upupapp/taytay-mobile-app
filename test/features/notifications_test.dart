@@ -108,6 +108,13 @@ class ScriptedNotificationRepository implements NotificationRepository {
 
   final List<String> markedRead = <String>[];
   final List<String> registeredTokens = <String>[];
+
+  @override
+  Future<Result<int>> unreadCount() async => Ok<int>(
+    (items ?? const <ResidentNotification>[])
+        .where((ResidentNotification item) => item.isUnread)
+        .length,
+  );
   final List<NotificationPreferences> saved = <NotificationPreferences>[];
   int markAllCalls = 0;
 

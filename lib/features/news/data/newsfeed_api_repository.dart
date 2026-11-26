@@ -18,8 +18,14 @@ class NewsfeedApiRepository implements AnnouncementRepository {
 
   final ApiClient _apiClient;
 
-  /// The cursor from the last list page. Page 1 starts again.
-  String? _cursor;
+  /// The next cursor of each list, keyed by its category and page size. Page
+  /// 1 of a list starts that list again.
+  ///
+  /// One cursor per list, never one for the repository: Home reads two posts
+  /// while Balita pages ten, and a single cursor let Home's refresh hand
+  /// Balita's "load more" the cursor after Home's second post, so posts came
+  /// round again or a category's next page came from another (D-236).
+  final Map<String, String?> _cursors = <String, String?>{};
 
   /// Office slug to the label from a successful `GET /offices`.
   ///
@@ -36,8 +42,16 @@ class NewsfeedApiRepository implements AnnouncementRepository {
     String? category,
   }) async {
     assert(page >= 1);
-    if (page <= 1) _cursor = null;
     final String? chip = category?.trim();
+    final String? filter = (chip == null || chip.isEmpty || chip == 'Lahat')
+        ? null
+        : chip;
+    final int limit = _apiClient.pages.clampRequest(
+      perPage ?? _apiClient.pages.defaultPerPage,
+    );
+    final String list = '$limit:${filter ?? ''}';
+    if (page <= 1) _cursors.remove(list);
+    final String? cursor = _cursors[list];
     final response = await _apiClient.send<List<Announcement>>(
       method: HttpMethod.get,
       path: path,
@@ -45,12 +59,9 @@ class NewsfeedApiRepository implements AnnouncementRepository {
       // Public read. A signed-in resident still sends the session token.
       attachTokenIfAvailable: true,
       query: <String, String>{
-        'limit':
-            '${_apiClient.pages.clampRequest(perPage ?? _apiClient.pages.defaultPerPage)}',
-        'cursor': ?_cursor,
-        'category': ?((chip == null || chip.isEmpty || chip == 'Lahat')
-            ? null
-            : chip),
+        'limit': '$limit',
+        'cursor': ?cursor,
+        'category': ?filter,
       },
       decode: (Object? data) => data is List<dynamic>
           ? data
@@ -63,7 +74,7 @@ class NewsfeedApiRepository implements AnnouncementRepository {
       case Err<ApiEnvelope<List<Announcement>>>(:final failure):
         return Err<Paginated<Announcement>>(failure);
       case Ok<ApiEnvelope<List<Announcement>>>(:final value):
-        _cursor = value.pagination?.nextCursor;
+        _cursors[list] = value.pagination?.nextCursor;
         final List<Announcement> named = await _withOffices(value.data);
         return Ok<Paginated<Announcement>>(
           _toPage(

@@ -225,6 +225,7 @@ class NotificationApiRepository
   }
 
   /// `GET notifications/unread-count`.
+  @override
   Future<Result<int>> unreadCount() async {
     final response = await _apiClient.send<int>(
       method: HttpMethod.get,
@@ -250,11 +251,14 @@ class NotificationApiRepository
 
     final Object? rawType = entry['type'] ?? entry['category'];
     // `verification_decided` is the resident category for a decision.
-    // `message_received` stays itself. It is not relabelled to account security.
+    // `message_received` stays itself, as "Office replies" (D-236). It is not
+    // relabelled to account security.
     final String? categoryWire = switch (rawType) {
       'verification_decided' => 'verification_update',
       // Said under "Assistance updates" (D-223).
       'assistance_request_updated' => 'assistance_status',
+      // The API's name for the category the app already had (D-236).
+      'event_registration_updated' => 'event_registration',
       final String value => value,
       _ => null,
     };

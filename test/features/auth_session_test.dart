@@ -25,6 +25,9 @@ class FakeAuthRepository implements AuthRepository {
   Result<AuthOutcome>? verifyOutcome;
   Result<AuthOutcome>? passwordOutcome;
 
+  /// What `completePasswordReset` answers, when a test scripts it.
+  Result<PasswordUpdated>? completeOutcome;
+
   int requestCalls = 0;
   int verifyCalls = 0;
   final List<String> codesSeen = <String>[];
@@ -155,6 +158,8 @@ class FakeAuthRepository implements AuthRepository {
     required String resetToken,
     required String newPassword,
   }) async {
+    final Result<PasswordUpdated>? scripted = completeOutcome;
+    if (scripted != null) return scripted;
     if (!CodeExchangeRules.acceptablePassword(newPassword)) {
       return const Err<PasswordUpdated>(
         ValidationFailure(

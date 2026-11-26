@@ -884,7 +884,8 @@ class _QrCard extends StatelessWidget {
     final DateTime? expiry = qr.expiresAt;
     final String refresh = expiry == null
         ? 'Code refreshes'
-        : 'Code refreshes · valid until ${formatDigitalIdClock(expiry)}';
+        : 'Code refreshes · valid until ${formatDigitalIdClock(expiry)} '
+              '${ManilaTime.label}';
     return GlassCard(
       child: Column(
         children: <Widget>[

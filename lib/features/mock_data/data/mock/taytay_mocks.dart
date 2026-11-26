@@ -849,6 +849,9 @@ class MockNotificationRepository
   }
 
   @override
+  Future<Result<int>> unreadCount() => _gate.respond<int>(1);
+
+  @override
   Future<Result<void>> markRead(String id) => _gate.respond<void>(null);
 
   @override

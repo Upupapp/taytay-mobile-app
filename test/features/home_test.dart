@@ -270,6 +270,15 @@ class CountingNotificationRepository implements NotificationRepository {
     return const Err<Paginated<ResidentNotification>>(ServerFailure());
   }
 
+  /// Counted with the list: a guest's Home reads neither.
+  @override
+  Future<Result<int>> unreadCount() async {
+    listCalls++;
+    return Ok<int>(unread);
+  }
+
+  int unread = 0;
+
   @override
   Future<Result<void>> markRead(String id) async => const Ok<void>(null);
 
@@ -317,6 +326,7 @@ Future<Booted> bootHome(
   ExternalLinkService? links,
   ResidentProfileRepository? profile,
   String? displayName = 'Ana',
+  int unread = 0,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -343,7 +353,7 @@ Future<Booted> bootHome(
   final verification = CountingVerificationRepository(
     detail: verificationDetail,
   );
-  final notifications = CountingNotificationRepository();
+  final notifications = CountingNotificationRepository()..unread = unread;
 
   final base = AppDependencies.build(
     config: config(dataMode: dataMode),
@@ -857,6 +867,17 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Notifications'), findsOneWidget);
+    });
+
+    testWidgets('the bell says the server’s unread count, past one page', (
+      tester,
+    ) async {
+      // Thirty unread: the first page holds twenty, and the bell once counted
+      // only those (D-236).
+      await bootHome(tester, level: AccessLevel.unverified, unread: 30);
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel('Notifications, 30 unread'), findsOneWidget);
     });
 
     testWidgets('a call with no dialer shows a toast', (tester) async {

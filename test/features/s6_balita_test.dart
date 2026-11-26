@@ -54,19 +54,23 @@ Result<ApiHttpResponse> _offices() => _ok(<Object?>[
   },
 ]);
 
-Result<ApiHttpResponse> _ok(Object? data) => Ok<ApiHttpResponse>(
-  ApiHttpResponse(
-    statusCode: 200,
-    body: jsonEncode(<String, Object?>{
-      'data': data,
-      'meta': <String, Object?>{
-        'request_id': 'req-news',
-        'pagination': <String, Object?>{'has_more': false},
-      },
-    }),
-    headers: const <String, String>{'x-request-id': 'req-news'},
-  ),
-);
+Result<ApiHttpResponse> _ok(Object? data, {String? next}) =>
+    Ok<ApiHttpResponse>(
+      ApiHttpResponse(
+        statusCode: 200,
+        body: jsonEncode(<String, Object?>{
+          'data': data,
+          'meta': <String, Object?>{
+            'request_id': 'req-news',
+            'pagination': <String, Object?>{
+              'has_more': next != null,
+              'next_cursor': ?next,
+            },
+          },
+        }),
+        headers: const <String, String>{'x-request-id': 'req-news'},
+      ),
+    );
 
 ApiClient _client(_Scripted transport, {String? token = 'tok'}) => ApiClient(
   config: AppConfig.from(
@@ -348,6 +352,35 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  test('Home’s two posts never move Balita’s next page (D-236)', () async {
+    final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+      _ok(<Object?>[], next: 'after-feed-10'),
+      _ok(<Object?>[], next: 'after-home-2'),
+      _ok(<Object?>[]),
+      _ok(<Object?>[], next: 'after-advisory-10'),
+      _ok(<Object?>[]),
+    ]);
+    final NewsfeedApiRepository repository = NewsfeedApiRepository(
+      apiClient: _client(transport),
+    );
+
+    await repository.listAnnouncements(perPage: 10);
+    // Home refreshes while Balita is open.
+    await repository.listAnnouncements(perPage: 2);
+    await repository.listAnnouncements(page: 2, perPage: 10);
+    expect(transport.requests[2].query['cursor'], 'after-feed-10');
+
+    // A category is its own list: its page 2 follows its own page 1.
+    await repository.listAnnouncements(perPage: 10, category: 'advisory');
+    await repository.listAnnouncements(
+      page: 2,
+      perPage: 10,
+      category: 'advisory',
+    );
+    expect(transport.requests[4].query['cursor'], 'after-advisory-10');
+    expect(transport.requests[4].query['category'], 'advisory');
   });
 
   test('a guest read stays anonymous and a session sends its token', () async {

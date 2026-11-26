@@ -18,7 +18,6 @@ import '../../../core/session/session_state.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
 import '../../citizen_api/domain/citizen_contract.dart';
 import '../../news/domain/announcement_repository.dart';
-import '../../notifications/domain/notification_repository.dart';
 import '../../profile/domain/profile_fields.dart';
 import '../../profile/domain/resident_profile_detail.dart';
 import '../data/home_catalogue.dart';
@@ -209,15 +208,11 @@ class _HomeScreenState extends State<HomeScreen> with LiveRefresh<HomeScreen> {
 
   /// The unread count, or `null` when the inbox could not be read.
   Future<int?> _bell(AppDependencies dependencies) async {
-    final Result<Paginated<ResidentNotification>> page = await dependencies
-        .notificationRepository
-        .listOwn(page: 1, perPage: 20);
-    return page.fold(
-      onOk: (Paginated<ResidentNotification> inbox) => inbox.items
-          .where((ResidentNotification item) => item.isUnread)
-          .length,
-      onErr: (_) => null,
-    );
+    // The server's count: the unread rows of one page stop at the page's
+    // size (D-236).
+    final Result<int> unread = await dependencies.notificationRepository
+        .unreadCount();
+    return unread.fold(onOk: (int count) => count, onErr: (_) => null);
   }
 
   /// The two newest articles, or `null` when they could not be read.

@@ -57,6 +57,9 @@ class _CursorRepo implements NotificationRepository {
   final List<String?> cursors = <String?>[];
 
   @override
+  Future<Result<int>> unreadCount() async => const Ok<int>(0);
+
+  @override
   Future<Result<Paginated<ResidentNotification>>> listOwn({
     int page = 1,
     int perPage = 20,
@@ -486,14 +489,62 @@ void main() {
       final ResidentNotification message =
           (second as Ok<Paginated<ResidentNotification>>).value.items.single;
       expect(transport.requests[1].query['cursor'], 'cursor-2');
-      expect(
-        message.category?.known,
-        isNot(NotificationCategory.accountSecurity),
-      );
+      expect(message.category?.known, NotificationCategory.officeReply);
       expect(message.category?.raw, 'message_received');
       // Its type alone is not a place: tapping it opens nothing (D-228).
       expect(message.hasTarget, isFalse);
       expect(message.target['type'], 'message_received');
+    },
+  );
+
+  // Every notice type the API sends has a category of its own, so none reads
+  // "UPDATE" under a chat bubble (D-236). The seven are the API's
+  // NOTIFICATION_TYPES, the same list the settings screen switches.
+  test(
+    'each of the seven notice types the API sends has its category',
+    () async {
+      const Map<String, NotificationCategory>
+      expected = <String, NotificationCategory>{
+        'verification_decided': NotificationCategory.verificationUpdate,
+        'assistance_request_updated': NotificationCategory.assistanceStatus,
+        'issuance_request_updated': NotificationCategory.documentRequest,
+        'event_registration_updated': NotificationCategory.eventRegistration,
+        'sector_application_decided': NotificationCategory.sectorApplication,
+        'registry_record_updated': NotificationCategory.registryRecord,
+        'message_received': NotificationCategory.officeReply,
+      };
+      expect(
+        expected.keys.toSet(),
+        NotificationSwitch.values.map((kind) => kind.preferenceType).toSet(),
+      );
+      final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+        _ok(<Object?>[
+          for (final String type in expected.keys)
+            <String, Object?>{
+              'id': 'n-$type',
+              'title': 'Notice',
+              'body': 'Open the app.',
+              'type': type,
+              'created_at': '2026-08-01T00:00:00Z',
+            },
+        ]),
+      ]);
+      final NotificationApiRepository repository = NotificationApiRepository(
+        apiClient: ApiClient(
+          config: _config(),
+          transport: transport,
+          accessTokenProvider: () async => 'firebase-id-token',
+        ),
+      );
+      final Result<Paginated<ResidentNotification>> listed = await repository
+          .listOwn(page: 1);
+      final List<ResidentNotification> items =
+          (listed as Ok<Paginated<ResidentNotification>>).value.items;
+      expect(items, hasLength(expected.length));
+      for (final ResidentNotification item in items) {
+        final String type = item.target['type'] ?? '';
+        expect(item.category?.known, expected[type], reason: type);
+      }
     },
   );
 

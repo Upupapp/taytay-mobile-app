@@ -642,6 +642,12 @@ String notificationCategoryLabel(
     NotificationCategory.eventReminder => strings.notifCatEventReminder,
     NotificationCategory.publicAdvisory => strings.notifCatPublicAdvisory,
     NotificationCategory.accountSecurity => strings.notifCatAccountSecurity,
+    // The same notices the settings screen switches, so the same names.
+    NotificationCategory.documentRequest => strings.notifSwitchDocumentRequests,
+    NotificationCategory.sectorApplication =>
+      strings.notifSwitchSectorApplications,
+    NotificationCategory.registryRecord => strings.notifSwitchRegistryRecord,
+    NotificationCategory.officeReply => strings.notifSwitchOfficeReplies,
   };
 }
 

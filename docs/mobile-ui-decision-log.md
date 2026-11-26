@@ -4893,6 +4893,50 @@ close copy before, in and after the confirmation, one button, no "contact you");
 
 ---
 
+## D-236 — Every notice has its category, the bell counts what the server counts, and the card and a failed reset say what is true
+
+**Status: settled.** Category: contract / copy / safety. Recorded 2026-11-26. Found by flow audit 3
+(the console's DL-280, backend ADR 0018), which read every endpoint the app calls against the API's
+spec and route code; each finding was confirmed in the code before it was changed.
+
+**Context.** Five things the app showed were not what the API said or what the resident needed.
+
+**Decision.**
+
+1. **Every notice type has its own inbox category** (supersedes D-235's "the inbox row shows the
+   general 'Update' label"). The API sends seven types; the decoder mapped two, so a document request,
+   an event registration, a sector decision, a change to her office record and an office reply all
+   read "UPDATE" (in English on a Filipino phone) under the same chat bubble, and
+   `event_registration_updated` never reached the event category the app already had. The four new
+   categories carry the API's own type as their wire value and the settings screen's switch names
+   (Document requests, Sector applications, Changes to your record at the office, Office replies),
+   with their own icons. A row still names details, never values (D-235, OWASP MASWE-0054).
+2. **The Home bell is the server's count.** It counted the unread rows of the first 20 notices, so 30
+   unread read as 20 or fewer. It reads `GET notifications/unread-count`, now on the port.
+3. **Each news list keeps its own cursor.** One cursor served every caller: Home's two-post refresh
+   handed Balita's "load more" the cursor after Home's second post, so posts came round again, or a
+   category's next page came from another list. The cursor is kept per category and page size.
+4. **The digital ID's dates and its QR clock are Manila's, and say PHT** (D-107). They used the
+   phone's zone, so a phone set elsewhere showed a card issued late in the evening as issued the day
+   before.
+5. **A refused new password says why.** On a failed save the screen cleared its busy state and said
+   nothing, so the tap looked like it did nothing. It now says, in the flow's Filipino, whether there
+   was no connection, too many tries, a used or expired link (ask for a new code), or a password the
+   rules refuse; never a code.
+
+**Left open.** About 300 user-visible English strings sit outside the ARB files (error words from
+`AppFailure.residentMessage`, document request statuses, event replies, many buttons and titles);
+the two ARB files agree key for key. Moving them is a translation job for the owner to schedule.
+The unused services-catalogue controller reads only page 1; nothing wires it.
+
+**Tests.** `backend_contract_test.dart` (the seven types and their categories; an office reply is
+its own), `home_test.dart` (30 unread show as 30), `s6_balita_test.dart` (Home's read never moves
+Balita's page 2; a category's page 2 follows its own page 1), `digital_id_test.dart` (UTC instants
+read in Manila, including the evening that is already tomorrow), `auth_screens_test.dart` (an
+offline save says so; a used link asks for a new code).
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -5132,5 +5176,6 @@ close copy before, in and after the confirmation, one button, no "contact you");
 | D-233 | No corner ribbon on the staging build, on the owner's decision: only a dev build carries it; Settings still says "Test build" in dev and staging | product | settled |
 | D-234 | The launcher icon is the municipal seal, whole on white, scaled from the registered file only; no monochrome (themed) layer, which would recolour it | brand | settled |
 | D-235 | The office's changes to her record (backend ADR 0016): a `registry_record_updated` notice names which details changed, never their values (OWASP MASWE-0054), opens the profile and has its own switch after Sector applications; the profile shows `GET /me` `office_record` read-only with "The office keeps this record. If something here is wrong, visit the MSWDO office with your ID." and re-reads on `account` and `notifications`; a verified resident's barangay is read-only with "To change your barangay, visit the MSWDO office with proof of your new address." and never sent, and `BARANGAY_HELD_BY_OFFICE` is said in the app's words; the close-account copy says the account closes at once (one "Close my account" button, switch left off) instead of "the office will contact you"; contract re-vendored at `fd1293e` | product / privacy / contract | settled |
+| D-236 | Every notice type the API sends has its own inbox category (supersedes the general "Update" row label of D-235); the Home bell reads `GET notifications/unread-count`; each news list keeps its own cursor; the digital ID dates and QR clock are Manila time with PHT (D-107); a refused new password says why, in Filipino | contract / copy / safety | settled |
 
 **227 decisions — 223 settled, 4 provisional.**

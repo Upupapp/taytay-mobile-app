@@ -10,6 +10,7 @@ import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
 import 'package:taytay_resident/core/documents/document_capture.dart';
 import 'package:taytay_resident/core/result/result.dart';
+import 'package:taytay_resident/core/router/app_routes.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
@@ -17,7 +18,9 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
+import 'package:taytay_resident/features/auth/domain/code_exchange.dart';
 import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
+import 'package:taytay_resident/features/auth/presentation/reset_flow_screens.dart';
 import 'package:taytay_resident/features/auth/presentation/sign_in_screen.dart';
 import 'package:taytay_resident/features/platform/domain/platform_repository.dart';
 import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
@@ -415,6 +418,55 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining(', Bisita!'), findsOneWidget);
+    });
+  });
+
+  group('a refused new password says why (D-236)', () {
+    testWidgets('offline: the screen says so instead of doing nothing', (
+      tester,
+    ) async {
+      final auth = FakeAuthRepository()
+        ..completeOutcome = const Err<PasswordUpdated>(NetworkFailure());
+      await boot(tester, auth: auth);
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).goNamed(
+        AppRoute.setPassword.routeName,
+        extra: PasswordResetDraft(
+          email: 'ana@example.com',
+          grant: PasswordResetGrant(
+            resetToken: 'example-reset-token-not-a-secret',
+            expiresAt: DateTime.now().toUtc().add(const Duration(minutes: 10)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).at(0), 'Bagong1234');
+      await tester.enterText(find.byType(TextField).at(1), 'Bagong1234');
+      await reveal(tester, find.text('I-save ang password'));
+      await tester.tap(find.text('I-save ang password'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('reset-save-failure')), findsOneWidget);
+      expect(
+        find.textContaining('Walang koneksyon', findRichText: true),
+        findsOneWidget,
+      );
+    });
+
+    test('a used or expired link asks for a new code, in words', () {
+      expect(
+        resetSaveFailureWords(
+          const ValidationFailure(
+            fieldErrors: <String, List<String>>{
+              'reset_token': <String>['This reset link has expired.'],
+            },
+          ),
+        ),
+        contains('Humingi ng bagong code'),
+      );
+      expect(
+        resetSaveFailureWords(const ServerFailure()),
+        isNot(contains('Server')),
+      );
     });
   });
 

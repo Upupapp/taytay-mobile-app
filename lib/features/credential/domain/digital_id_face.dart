@@ -1,3 +1,4 @@
+import '../../../core/time/manila_time.dart';
 import 'credential_repository.dart';
 
 /// What the issued card shows.
@@ -48,9 +49,11 @@ String? publishedResidentName(String? raw) {
   return trimmed;
 }
 
-/// `MMM d, yyyy` in the device's local zone.
+/// `MMM d, yyyy` in Manila (D-107): the card's dates are the office's, and a
+/// phone set to another zone once showed a card issued late in the evening
+/// as issued the day before (D-236).
 String formatDigitalIdDate(DateTime instant) {
-  final DateTime local = instant.toLocal();
+  final DateTime local = ManilaTime.of(instant);
   const List<String> months = <String>[
     'Jan',
     'Feb',
@@ -68,9 +71,10 @@ String formatDigitalIdDate(DateTime instant) {
   return '${months[local.month - 1]} ${local.day}, ${local.year}';
 }
 
-/// `h:mm a` in the device's local zone. The QR line's "valid until".
+/// `h:mm a` in Manila, the QR line's "valid until"; the caller says PHT
+/// beside it (D-107, D-236).
 String formatDigitalIdClock(DateTime instant) {
-  final DateTime local = instant.toLocal();
+  final DateTime local = ManilaTime.of(instant);
   final int hour24 = local.hour;
   final int hour = hour24 % 12 == 0 ? 12 : hour24 % 12;
   final String minutes = local.minute.toString().padLeft(2, '0');
