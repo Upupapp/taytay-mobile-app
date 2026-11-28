@@ -87,13 +87,18 @@ const Set<String> copyFields = <String>{
   'nextActionLabel',
 };
 
-bool isScreen(String path) =>
-    path.contains('/presentation/') || path.contains('/lib/shared/');
+bool isScreen(String path) {
+  // Windows lists `lib\shared\…`; the rule is written with '/'.
+  final String p = path.replaceAll(r'\', '/');
+  return p.contains('/presentation/') || p.contains('/lib/shared/');
+}
 
 Future<void> main() async {
   final String root = Directory.current.path;
   final AnalysisContextCollection collection = AnalysisContextCollection(
-    includedPaths: <String>['$root/lib'],
+    // The analyzer takes only normalised absolute paths: on Windows,
+    // `C:\…\repo/lib` is refused, so the separator is the platform's.
+    includedPaths: <String>['$root${Platform.pathSeparator}lib'],
   );
 
   final List<String> offenders = <String>[];
@@ -107,7 +112,9 @@ Future<void> main() async {
       resolved++;
       result.unit.accept(
         _CopyFieldFinder(
-          path: path.replaceFirst('$root/', ''),
+          path: path
+              .replaceFirst('$root${Platform.pathSeparator}', '')
+              .replaceAll(r'\', '/'),
           unit: result.unit,
           out: offenders,
         ),
