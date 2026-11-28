@@ -246,6 +246,10 @@ void main() {
             ],
           ),
         ],
+        allCount: 1,
+        unreadCount: 1,
+        unreadOnly: false,
+        onShowUnread: _onShowUnread,
         onMarkAllRead: _noop,
       ),
     ];
@@ -286,3 +290,5 @@ void main() {
     }
   });
 }
+
+void _onShowUnread(bool unreadOnly) {}
