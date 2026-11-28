@@ -9593,7 +9593,7 @@ abstract class AppStrings {
   /// Notifications: link that marks every notice read.
   ///
   /// In en, this message translates to:
-  /// **'Mark all read'**
+  /// **'Mark all as read'**
   String get inboxMarkAllRead;
 
   /// Notifications: screen-reader label of the unread dot.
@@ -11125,6 +11125,138 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Configuration'**
   String get sharedConfigStopIconLabel;
+
+  /// Notifications: chip showing every notice, with how many there are. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'All · {count}'**
+  String inboxFilterAllCount(int count);
+
+  /// Notifications: hint of the search field in the header; it finds words in a notice. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'Search notifications'**
+  String get inboxSearchHint;
+
+  /// Notifications: title of the Category picker. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get inboxCategoryTitle;
+
+  /// Notifications: Category chip and picker row showing every kind of notice. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'All categories'**
+  String get inboxCategoryAll;
+
+  /// Notifications: Category for notices of a kind this app version does not know. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'Other updates'**
+  String get inboxCategoryOther;
+
+  /// Notifications: screen-reader label of the Category chip with its current choice. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'Category: {value}'**
+  String inboxCategoryValue(String value);
+
+  /// Notifications: title of the When picker. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'When'**
+  String get inboxWhenTitle;
+
+  /// Notifications: screen-reader label of the When chip with its current choice. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'When: {value}'**
+  String inboxWhenValue(String value);
+
+  /// Notifications: When choice showing notices from any date. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'Any time'**
+  String get inboxWhenAnyTime;
+
+  /// Notifications: When choice showing notices from today (Manila time). Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get inboxWhenToday;
+
+  /// Notifications: When choice showing notices from the last 7 days. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 7 days'**
+  String get inboxWhenLastWeek;
+
+  /// Notifications: When choice showing notices from the last 30 days. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 30 days'**
+  String get inboxWhenLastMonth;
+
+  /// Notifications: When choice that opens a calendar to pick one day. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'On a date…'**
+  String get inboxWhenOnDay;
+
+  /// Notifications: heading of the calendar opened by 'On a date…'. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a day'**
+  String get inboxWhenPickDay;
+
+  /// Notifications: link and button clearing Category, When and the search; shown only while one of them is set. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get inboxClearFilters;
+
+  /// Notifications: title when the filters leave nothing to show. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications match'**
+  String get inboxNoMatchTitle;
+
+  /// Notifications: message when the filters leave nothing to show. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'Try other words, another category or a longer time, or clear the filters.'**
+  String get inboxNoMatchBody;
+
+  /// Notifications: title when Unread is chosen and everything has been read. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'No unread notifications'**
+  String get inboxNoUnreadTitle;
+
+  /// Notifications: message when Unread is chosen and everything has been read. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'You have read everything here. Choose All to see them again.'**
+  String get inboxNoUnreadBody;
+
+  /// Notifications: button that goes back from Unread to All. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all'**
+  String get inboxShowAll;
+
+  /// Notifications: screen-reader name of an unread notice's blue dot, the button that marks that notice read. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as read: {title}'**
+  String inboxMarkReadOne(String title);
+
+  /// Notifications: what a screen reader says for an unread notice's title. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread: {title}'**
+  String inboxUnreadTitle(String title);
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

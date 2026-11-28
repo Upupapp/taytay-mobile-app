@@ -5038,6 +5038,61 @@ design-system card are refreshed: D-236 added "PHT" to the QR line and left them
 
 ---
 
+## D-238 — The inbox filters as the console's does, and an unread notice is a tinted row with a dot
+
+**Status: settled.** Category: product / accessibility / contract. Recorded 2026-11-28. The owner
+asked for the notifications redesign the Taytay console shipped on 2026-11-27 (its DL-291 to DL-294,
+first written for eBPCO) in the resident app, as far as it applies to a resident's phone.
+
+**Decision.**
+
+1. **The inbox narrows four ways**, as the console's Notifications page does: All · n / Unread · n
+   chips; a Category picker of only the kinds she has, each with its count (a notice of a type this
+   build does not know is "Other updates"); When — Any time, Today, Last 7 days, Last 30 days or On a
+   date…, which opens the calendar from her oldest notice to today; and a search in the blue header
+   for words in a notice's title or body, any case. Days are Manila's (D-107). Pickers are `AppSheet`
+   lists; the calendar is Material's `showDatePicker`, as the verification form's birth date is.
+2. **Clear filters shows only while Category, When or a search narrows the list**, and clears those
+   three. All / Unread is its own control and stays as chosen (the console's DL-292 follow-up).
+3. **Two different empty answers, never the empty inbox's.** "No notifications match" with Clear
+   filters, and, when only Unread narrows it, "No unread notifications" with Show all. "Nothing yet"
+   still means she has no notices at all.
+4. **Unread is a tinted row, a bold title and a blue dot** (the console's DL-294): the row is
+   `blue100`, the console's blue tint, and every ink on it keeps 4.5:1 (muted, the tightest, is 4.55).
+   A screen reader hears "Unread:" before the title. The dot is a 48 dp button, "Mark as read:" and
+   the title, that marks the notice read without opening it; opening its link marks it read too, as
+   before. There is no "Unread" tag and no per-row "Mark as read" button; "Mark all read" is now
+   "Mark all as read", the console's words.
+5. **The filters are a view over what the app has read, and nothing is sent.** `GET notifications`
+   takes `limit` and `cursor` only (its zod schema is strict, so another parameter is refused), and
+   only `notifications/unread-count` is counted on the server. So the refresh reads on past the first
+   page, up to 8 pages (200 notices at the default 25), and the counts and filters cover those; Load
+   older reads on beyond that, one page at a time. A page that fails stops the reading and keeps what
+   arrived, with Try again; a page of a list a refresh replaced is dropped.
+6. **Left out, as staff-only:** the console's breadcrumb and its "Messages from residents" category.
+   A resident's office replies keep their own category, "Office replies" (D-236).
+
+**Backend gap (not worked around).** Server-side `unread`, `type`, date and search parameters on
+`GET notifications`, and per-type counts, would let the app filter an inbox of any length without
+reading it first. That is a request to `taytay-backend`; until then the 200-notice reach stands.
+
+**Shared widget.** `SoftChoiceChip` gains `chooser` (a chevron after the label, for a chip that opens
+a picker) and `semanticLabel` ("When: Any time"). Both default off, so no golden moves; the gallery
+has no chooser entry yet.
+
+**The Filipino is a draft**, as D-237's: everyday Taglish (*I-clear ang filters*, *I-mark as read*,
+*Kahit kailan*, *Nakaraang 7 araw*, *Sa isang petsa…*, *Kategorya*), and "Mark all as read" became
+*I-mark lahat as read* to match. A native speaker should read the 22 new pairs.
+
+**Tests.** `notification_filter_test.dart` (new: each filter, Manila days, undated notices, kinds in
+order with counts, filters combined, search words kept out of `toString`), `notifications_test.dart`
+(the controller's counts, kinds, read-on limit, failed page and replaced list; every filter on screen,
+both empty answers, 200% text at 360 dp; the tint, weight, words and dot; contrast on the tint),
+`redesign_p3e_layout_test.dart` (the centre with filters in force and with nothing matching), and
+`backend_contract_test.dart` (the cursor test now reads on in the refresh).
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -5279,5 +5334,6 @@ design-system card are refreshed: D-236 added "PHT" to the QR line and left them
 | D-235 | The office's changes to her record (backend ADR 0016): a `registry_record_updated` notice names which details changed, never their values (OWASP MASWE-0054), opens the profile and has its own switch after Sector applications; the profile shows `GET /me` `office_record` read-only with "The office keeps this record. If something here is wrong, visit the MSWDO office with your ID." and re-reads on `account` and `notifications`; a verified resident's barangay is read-only with "To change your barangay, visit the MSWDO office with proof of your new address." and never sent, and `BARANGAY_HELD_BY_OFFICE` is said in the app's words; the close-account copy says the account closes at once (one "Close my account" button, switch left off) instead of "the office will contact you"; contract re-vendored at `fd1293e` | product / privacy / contract | settled |
 | D-236 | Every notice type the API sends has its own inbox category (supersedes the general "Update" row label of D-235); the Home bell reads `GET notifications/unread-count`; each news list keeps its own cursor; the digital ID dates and QR clock are Manila time with PHT (D-107); a refused new password says why, in Filipino | contract / copy / safety | settled |
 | D-237 | Every sentence a resident reads is an ARB key with English and Filipino (1,399 added): screens read AppStrings, domain copy keeps its English fallback with a localiser in `lib/core/l10n/*_copy.dart`, a failure says its own variant's sentence in both languages, dates name the month in the reader's language, and `hard_coded_copy_test.dart` holds the English left per file; the Filipino is a draft awaiting a native speaker (review sheet) | copy / accessibility | settled |
+| D-238 | The inbox filters as the console's does — All · n / Unread · n, Category of the kinds she has with counts, When (any time, today, 7 / 30 days, a picked Manila day), a search — with Clear filters only while one narrows; an unread notice is a `blue100` row, a bold title and a dot that marks it read; client-side over up to 8 pages, because `GET notifications` takes no filter | product / accessibility / contract | settled |
 
-**228 decisions — 224 settled, 4 provisional.**
+**229 decisions — 225 settled, 4 provisional.**

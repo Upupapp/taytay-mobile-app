@@ -5599,7 +5599,7 @@ class AppStringsFil extends AppStrings {
   }
 
   @override
-  String get inboxMarkAllRead => 'Markahang nabasa lahat';
+  String get inboxMarkAllRead => 'I-mark lahat as read';
 
   @override
   String get inboxUnread => 'Hindi pa nababasa';
@@ -6504,4 +6504,82 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get sharedConfigStopIconLabel => 'Configuration';
+
+  @override
+  String inboxFilterAllCount(int count) {
+    return 'Lahat · $count';
+  }
+
+  @override
+  String get inboxSearchHint => 'Maghanap sa mga notification';
+
+  @override
+  String get inboxCategoryTitle => 'Kategorya';
+
+  @override
+  String get inboxCategoryAll => 'Lahat ng kategorya';
+
+  @override
+  String get inboxCategoryOther => 'Iba pang update';
+
+  @override
+  String inboxCategoryValue(String value) {
+    return 'Kategorya: $value';
+  }
+
+  @override
+  String get inboxWhenTitle => 'Kailan';
+
+  @override
+  String inboxWhenValue(String value) {
+    return 'Kailan: $value';
+  }
+
+  @override
+  String get inboxWhenAnyTime => 'Kahit kailan';
+
+  @override
+  String get inboxWhenToday => 'Ngayong araw';
+
+  @override
+  String get inboxWhenLastWeek => 'Nakaraang 7 araw';
+
+  @override
+  String get inboxWhenLastMonth => 'Nakaraang 30 araw';
+
+  @override
+  String get inboxWhenOnDay => 'Sa isang petsa…';
+
+  @override
+  String get inboxWhenPickDay => 'Pumili ng araw';
+
+  @override
+  String get inboxClearFilters => 'I-clear ang filters';
+
+  @override
+  String get inboxNoMatchTitle => 'Walang notification na tugma';
+
+  @override
+  String get inboxNoMatchBody =>
+      'Subukan ang ibang salita, ibang kategorya o mas mahabang panahon, o i-clear ang filters.';
+
+  @override
+  String get inboxNoUnreadTitle => 'Wala nang hindi pa nababasa';
+
+  @override
+  String get inboxNoUnreadBody =>
+      'Nabasa mo na lahat dito. Piliin ang Lahat para makita ulit.';
+
+  @override
+  String get inboxShowAll => 'Ipakita lahat';
+
+  @override
+  String inboxMarkReadOne(String title) {
+    return 'I-mark as read: $title';
+  }
+
+  @override
+  String inboxUnreadTitle(String title) {
+    return 'Hindi pa nababasa: $title';
+  }
 }

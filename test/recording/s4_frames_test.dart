@@ -280,6 +280,10 @@ void main() {
               Expanded(
                 child: NotificationCentre(
                   showIllustration: true,
+                  allCount: 4,
+                  unreadCount: 2,
+                  unreadOnly: false,
+                  onShowUnread: _onShowUnread,
                   onMarkAllRead: _noop,
                   sections: <NoticeSection>[
                     NoticeSection(
@@ -353,3 +357,5 @@ void main() {
     }
   });
 }
+
+void _onShowUnread(bool unreadOnly) {}
