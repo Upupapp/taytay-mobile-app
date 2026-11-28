@@ -5518,7 +5518,7 @@ class AppStringsEn extends AppStrings {
   }
 
   @override
-  String get inboxMarkAllRead => 'Mark all read';
+  String get inboxMarkAllRead => 'Mark all as read';
 
   @override
   String get inboxUnread => 'Unread';
@@ -6404,4 +6404,82 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get sharedConfigStopIconLabel => 'Configuration';
+
+  @override
+  String inboxFilterAllCount(int count) {
+    return 'All · $count';
+  }
+
+  @override
+  String get inboxSearchHint => 'Search notifications';
+
+  @override
+  String get inboxCategoryTitle => 'Category';
+
+  @override
+  String get inboxCategoryAll => 'All categories';
+
+  @override
+  String get inboxCategoryOther => 'Other updates';
+
+  @override
+  String inboxCategoryValue(String value) {
+    return 'Category: $value';
+  }
+
+  @override
+  String get inboxWhenTitle => 'When';
+
+  @override
+  String inboxWhenValue(String value) {
+    return 'When: $value';
+  }
+
+  @override
+  String get inboxWhenAnyTime => 'Any time';
+
+  @override
+  String get inboxWhenToday => 'Today';
+
+  @override
+  String get inboxWhenLastWeek => 'Last 7 days';
+
+  @override
+  String get inboxWhenLastMonth => 'Last 30 days';
+
+  @override
+  String get inboxWhenOnDay => 'On a date…';
+
+  @override
+  String get inboxWhenPickDay => 'Pick a day';
+
+  @override
+  String get inboxClearFilters => 'Clear filters';
+
+  @override
+  String get inboxNoMatchTitle => 'No notifications match';
+
+  @override
+  String get inboxNoMatchBody =>
+      'Try other words, another category or a longer time, or clear the filters.';
+
+  @override
+  String get inboxNoUnreadTitle => 'No unread notifications';
+
+  @override
+  String get inboxNoUnreadBody =>
+      'You have read everything here. Choose All to see them again.';
+
+  @override
+  String get inboxShowAll => 'Show all';
+
+  @override
+  String inboxMarkReadOne(String title) {
+    return 'Mark as read: $title';
+  }
+
+  @override
+  String inboxUnreadTitle(String title) {
+    return 'Unread: $title';
+  }
 }

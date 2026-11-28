@@ -120,11 +120,38 @@ and the server's order is kept inside each group.
 immediately — a badge that lingers after a tap reads as a broken app — and the
 mark comes back if the server refuses, because a badge that cleared for something
 the server never recorded loses the resident track of what they have seen. Same
-for "Mark all read", which restores the whole list on failure and is a no-op when
-nothing is unread.
+for "Mark all as read", which restores the whole list on failure and is a no-op
+when nothing is unread.
 
-Unread is a dot **and** a weight **and** a semantic label, so a screen reader
-hears it rather than inferring it from styling.
+**Unread is a tinted row, a bold title and a blue dot (D-238)**, as the
+console's notifications draw it (DL-294), and a screen reader hears "Unread:"
+before the title. The dot is a 48 dp button, "Mark as read:" and the title, that
+marks the notice read where it is; opening the notice's link marks it read too.
+There is no "Unread" tag and no per-row "Mark as read" button.
+
+### Filters (D-238)
+
+The inbox narrows as the console's Notifications page does (DL-291, DL-293):
+
+* **All · n / Unread · n** — chips with the counts of every notice and every
+  unread one the app has read, whatever else is filtered.
+* **Category** — a picker of only the kinds she has, each with its count; a
+  notice of a type this build does not know is "Other updates".
+* **When** — Any time, Today, Last 7 days, Last 30 days, or On a date…, which
+  opens the calendar from her oldest notice to today. Days are Manila's.
+* **Search** — in the blue header, words in a notice's title or body, any case.
+* **Clear filters** shows only while Category, When or a search narrows the
+  list, and clears those three; All / Unread is its own control.
+* Nothing matching says so ("No notifications match", with Clear filters), and
+  Unread with nothing unread says that ("No unread notifications", with Show
+  all) — never the empty inbox's "Nothing yet".
+
+**A view over what is loaded; nothing is sent.** `GET notifications` takes
+`limit` and `cursor` and nothing else (its schema is strict), and only
+`notifications/unread-count` is counted on the server. So the inbox reads on
+past the first page, up to 8 pages (200 notices at 25 a page), and filters
+those; beyond that, Load older reads on as before. Server-side filters, a search
+and per-category counts are a backend request, not a client workaround.
 
 ---
 
@@ -160,6 +187,14 @@ the newsfeed, which is open to them.
   that place; an action payload is refused; a payload carrying a name is
   refused; an untargeted message still reads; mark-all appears only when
   something is unread; 200% text scale
+* filters (D-238, with `notification_filter_test.dart` for the rules): counts
+  and kinds cover every notice; a chosen kind that has gone stays at zero;
+  Clear filters keeps Unread; the refresh reads on to its limit, stops on a
+  failed page and drops a page of a replaced list; All / Unread, Category,
+  When (Today, a picked day, a cancelled calendar), search, both empty answers,
+  200% text at 360 dp; the unread tint, weight and words, the dot marks read
+  without opening, opening marks read, Mark all as read, and every ink's
+  contrast on the tint
 * preferences: critical categories have no switch and it says why; turning one
   off saves it; a failed save puts the switch back and says so; an absent
   backend explains

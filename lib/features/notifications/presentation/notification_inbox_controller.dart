@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../l10n/app_localizations.dart';
+import '../domain/notification_filter.dart';
 import '../domain/notification_repository.dart';
 
 /// How the inbox groups a message by when it arrived.
@@ -82,12 +83,22 @@ class InboxSection {
 /// * **The server's order is kept inside every group.** The office decides what
 ///   is most recent; the app only decides which heading a message sits under.
 /// * **A page failure never discards what was already read.**
+/// * **The filters are a view over what is loaded (D-238).** `GET
+///   notifications` takes a page size and a cursor and nothing else, so
+///   [refresh] reads on past the first page, up to [pagesReadAtOnce] pages,
+///   and the All / Unread counts, the Category list and every filter cover
+///   the inbox rather than its first page. Beyond that, Load older reads on
+///   one page at a time, as before.
 class NotificationInboxController extends ChangeNotifier {
   NotificationInboxController({
     required NotificationRepository repository,
     DateTime Function()? clock,
   }) : _repository = repository,
        _clock = clock ?? DateTime.now;
+
+  /// How many pages [refresh] reads before it stops and leaves the rest to
+  /// Load older: 200 notices at the API's default 25 a page.
+  static const int pagesReadAtOnce = 8;
 
   final NotificationRepository _repository;
   final DateTime Function() _clock;
@@ -100,10 +111,15 @@ class NotificationInboxController extends ChangeNotifier {
   bool _loadingMore = false;
   AppFailure? _failure;
   AppFailure? _pageFailure;
+  NotificationFilter _filter = NotificationFilter.none;
 
   /// Bumped by every read or mark that changes the list, so a quiet re-read
   /// that started before it is dropped rather than applied over newer state.
   int _generation = 0;
+
+  /// Bumped by [refresh], so a page still arriving from the list it replaced
+  /// is dropped rather than appended to the new one.
+  int _epoch = 0;
   bool _quietInFlight = false;
   bool _disposed = false;
 
@@ -116,17 +132,70 @@ class NotificationInboxController extends ChangeNotifier {
   AppFailure? get failure => _failure;
   AppFailure? get pageFailure => _pageFailure;
 
+  /// The inbox holds nothing at all — not "nothing matches".
   bool get isEmptyAndHealthy => _items.isEmpty && _failure == null;
 
+  /// Every notice loaded, whatever is filtered: the All chip's count.
+  int get totalCount => _items.length;
+
+  /// Every unread notice loaded, whatever is filtered: the Unread chip's
+  /// count.
   int get unreadCount => _items.where((item) => item.isUnread).length;
 
-  /// The inbox, grouped. Empty groups are omitted rather than shown as headings
-  /// with nothing under them.
+  /// What the resident has narrowed the list to.
+  NotificationFilter get filter => _filter;
+
+  /// The notices [filter] shows, in the server's order.
+  List<ResidentNotification> get visibleItems =>
+      filterNotifications(_items, _filter, now: _clock());
+
+  /// The inbox holds notices, and the filters leave none of them.
+  bool get hasNoMatch => _items.isNotEmpty && visibleItems.isEmpty;
+
+  /// The kinds the inbox holds, with their counts (DL-291) — and the chosen
+  /// kind with nothing in it, if it has gone, so the Category chip never
+  /// names a choice the list does not offer.
+  List<NoticeKindCount> get kinds {
+    final List<NoticeKindCount> present = kindsPresent(_items);
+    final NoticeKind? chosen = _filter.kind;
+    if (chosen == null ||
+        present.any((NoticeKindCount entry) => entry.kind == chosen)) {
+      return present;
+    }
+    return <NoticeKindCount>[
+      ...present,
+      NoticeKindCount(kind: chosen, count: 0),
+    ];
+  }
+
+  void showUnreadOnly(bool unreadOnly) =>
+      _setFilter(_filter.withUnreadOnly(unreadOnly));
+
+  /// [kind] null shows every kind.
+  void chooseKind(NoticeKind? kind) => _setFilter(_filter.withKind(kind));
+
+  /// [day] is read only for [NotificationPeriod.onDay].
+  void choosePeriod(NotificationPeriod period, {DateTime? day}) =>
+      _setFilter(_filter.withPeriod(period, day: day));
+
+  void search(String words) => _setFilter(_filter.withWords(words));
+
+  /// Clears Category, When and the search; All / Unread stays as chosen.
+  void clearFilters() => _setFilter(_filter.cleared());
+
+  void _setFilter(NotificationFilter next) {
+    if (next == _filter) return;
+    _filter = next;
+    notifyListeners();
+  }
+
+  /// The notices [filter] shows, grouped. Empty groups are omitted rather
+  /// than shown as headings with nothing under them.
   List<InboxSection> get sections {
     final now = _clock();
     final buckets = <InboxGroup, List<ResidentNotification>>{};
 
-    for (final item in _items) {
+    for (final item in filterNotifications(_items, _filter, now: now)) {
       final group = InboxGroup.of(item.sentAt, now: now);
       buckets.putIfAbsent(group, () => <ResidentNotification>[]).add(item);
     }
@@ -138,7 +207,14 @@ class NotificationInboxController extends ChangeNotifier {
     ];
   }
 
+  /// Reads the inbox from the top: the first page, then on up to
+  /// [pagesReadAtOnce] pages while the server names a next one (D-238).
+  ///
+  /// The list shows as soon as the first page arrives; the rest come in under
+  /// it with the Load older line showing they are on their way. A page that
+  /// fails stops the reading and keeps what arrived, with Try again.
   Future<void> refresh() async {
+    final int epoch = ++_epoch;
     _generation++;
     _items.clear();
     _page = 0;
@@ -147,9 +223,21 @@ class NotificationInboxController extends ChangeNotifier {
     _failure = null;
     _pageFailure = null;
     _loadingFirstPage = true;
+    _loadingMore = false;
     notifyListeners();
 
-    await _fetch(isFirstPage: true);
+    await _fetch(isFirstPage: true, epoch: epoch);
+    while (!_disposed &&
+        epoch == _epoch &&
+        _failure == null &&
+        _pageFailure == null &&
+        _hasMore &&
+        !_loadingMore &&
+        _page < pagesReadAtOnce) {
+      _loadingMore = true;
+      notifyListeners();
+      await _fetch(isFirstPage: false, epoch: epoch);
+    }
   }
 
   Future<void> loadMore() async {
@@ -158,7 +246,7 @@ class NotificationInboxController extends ChangeNotifier {
     _pageFailure = null;
     notifyListeners();
 
-    await _fetch(isFirstPage: false);
+    await _fetch(isFirstPage: false, epoch: _epoch);
   }
 
   /// Re-reads what is loaded, with no loading state (D-218).
@@ -216,13 +304,15 @@ class NotificationInboxController extends ChangeNotifier {
     super.dispose();
   }
 
-  Future<void> _fetch({required bool isFirstPage}) async {
+  Future<void> _fetch({required bool isFirstPage, required int epoch}) async {
     final next = _page + 1;
     final result = await _repository.listOwn(
       page: next,
       cursor: isFirstPage ? null : _cursor,
     );
-    if (_disposed) return;
+    // A refresh started while this page was on its way: the list it belonged
+    // to is gone, and the new one reads its own pages.
+    if (_disposed || epoch != _epoch) return;
     _generation++;
 
     result.fold(

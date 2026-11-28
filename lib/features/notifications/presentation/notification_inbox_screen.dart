@@ -14,15 +14,19 @@ import '../../../core/router/deep_link.dart';
 import '../../../core/session/resident_capability.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/form_page.dart';
+import '../../../shared/widgets/header_search_field.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
+import '../../../shared/widgets/pills.dart';
 import '../../../shared/widgets/settings_list.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/taytay_states.dart';
+import '../domain/notification_filter.dart';
 import '../domain/notification_repository.dart';
 import 'notification_centre.dart';
 import 'notification_inbox_controller.dart';
@@ -40,6 +44,11 @@ import 'notification_inbox_controller.dart';
 /// **A message whose target this build cannot resolve still reads.** The title
 /// and body are the LGU's words to this resident; dropping the row because the
 /// destination is unknown would hide the message as well as the link.
+///
+/// **She can narrow it (D-238)**, as the console's Notifications page does:
+/// All / Unread, a Category of only the kinds she has, When (any time, today,
+/// the last 7 or 30 days, or a day she picks), and a search for words in a
+/// notice. Each is a view over what the app has read; nothing is sent.
 class NotificationInboxScreen extends StatefulWidget {
   const NotificationInboxScreen({super.key});
 
@@ -51,6 +60,7 @@ class NotificationInboxScreen extends StatefulWidget {
 class _NotificationInboxScreenState extends State<NotificationInboxScreen>
     with LiveRefresh<NotificationInboxScreen> {
   NotificationInboxController? _controller;
+  final TextEditingController _search = TextEditingController();
 
   @override
   void didChangeDependencies() {
@@ -80,7 +90,112 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
     _controller
       ?..removeListener(_onChanged)
       ..dispose();
+    _search.dispose();
     super.dispose();
+  }
+
+  /// Clears Category, When and the search field together.
+  void _clearFilters() {
+    _search.clear();
+    _controller?.clearFilters();
+  }
+
+  /// The Category picker: every kind, then the kinds she has, each with its
+  /// count (DL-291).
+  Future<void> _pickKind() async {
+    final NotificationInboxController? controller = _controller;
+    if (controller == null) return;
+    final NoticeKind? current = controller.filter.kind;
+    final _KindPick? picked = await AppSheet.show<_KindPick>(
+      context: context,
+      title: AppStrings.of(context).inboxCategoryTitle,
+      builder: (BuildContext sheetContext) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          PickerChoiceRow(
+            rowKey: const Key('inbox-kind-all'),
+            label: _counted(
+              AppStrings.of(sheetContext).inboxCategoryAll,
+              controller.totalCount,
+            ),
+            selected: current == null,
+            onTap: () => Navigator.of(sheetContext).pop(const _KindPick(null)),
+          ),
+          for (final NoticeKindCount entry in controller.kinds)
+            PickerChoiceRow(
+              rowKey: Key('inbox-kind-${_kindKey(entry.kind)}'),
+              label: _counted(
+                _kindLabel(sheetContext, entry.kind),
+                entry.count,
+              ),
+              selected: entry.kind == current,
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_KindPick(entry.kind)),
+            ),
+        ],
+      ),
+    );
+    if (picked == null || !mounted) return;
+    controller.chooseKind(picked.kind);
+  }
+
+  /// The When picker. "On a date…" goes on to a calendar; closing the
+  /// calendar without a day keeps what was chosen before.
+  Future<void> _pickPeriod() async {
+    final NotificationInboxController? controller = _controller;
+    if (controller == null) return;
+    final NotificationPeriod current = controller.filter.period;
+    final NotificationPeriod? picked = await AppSheet.show<NotificationPeriod>(
+      context: context,
+      title: AppStrings.of(context).inboxWhenTitle,
+      builder: (BuildContext sheetContext) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          for (final NotificationPeriod period in NotificationPeriod.values)
+            PickerChoiceRow(
+              rowKey: Key('inbox-when-${period.name}'),
+              label: _periodLabel(AppStrings.of(sheetContext), period),
+              selected: period == current,
+              onTap: () => Navigator.of(sheetContext).pop(period),
+            ),
+        ],
+      ),
+    );
+    if (picked == null || !mounted) return;
+    if (picked != NotificationPeriod.onDay) {
+      controller.choosePeriod(picked);
+      return;
+    }
+    final DateTime? day = await _pickDay(controller);
+    if (day == null || !mounted) return;
+    controller.choosePeriod(NotificationPeriod.onDay, day: day);
+  }
+
+  /// A Manila calendar day, from the oldest notice she has to today: a day
+  /// outside that range can hold no notice.
+  Future<DateTime?> _pickDay(NotificationInboxController controller) async {
+    final DateTime today = manilaDayOf(AppDependencies.of(context).clock());
+    var first = today;
+    for (final ResidentNotification item in controller.items) {
+      final DateTime? sent = item.sentAt;
+      if (sent == null) continue;
+      final DateTime day = manilaDayOf(sent);
+      if (day.isBefore(first)) first = day;
+    }
+    var initial = controller.filter.day ?? today;
+    if (initial.isBefore(first)) initial = first;
+    if (initial.isAfter(today)) initial = today;
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _calendarDay(initial),
+      firstDate: _calendarDay(first),
+      lastDate: _calendarDay(today),
+      helpText: AppStrings.of(context).inboxWhenPickDay,
+    );
+    if (picked == null) return null;
+    return DateTime.utc(picked.year, picked.month, picked.day);
   }
 
   Future<void> _open(ResidentNotification notification) async {
@@ -109,6 +224,11 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
+    // The search shows once there is something to search, and stays while it
+    // holds words, so a live re-read can never take the field from under her.
+    final bool searchable =
+        controller != null &&
+        (controller.items.isNotEmpty || _search.text.isNotEmpty);
 
     return Scaffold(
       backgroundColor: BrandColors.background,
@@ -126,13 +246,27 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
                 context.goNamed('home');
               }
             },
+            bottom: searchable
+                ? HeaderSearchField(
+                    hint: AppStrings.of(context).inboxSearchHint,
+                    fieldKey: const Key('inbox-search'),
+                    controller: _search,
+                    onChanged: controller.search,
+                  )
+                : null,
           ),
           Expanded(
             child: CapabilityGate(
               capability: ResidentCapability.readNotifications,
               child: controller == null
                   ? const _Loading()
-                  : _Inbox(controller: controller, onOpen: _open),
+                  : _Inbox(
+                      controller: controller,
+                      onOpen: _open,
+                      onPickKind: _pickKind,
+                      onPickPeriod: _pickPeriod,
+                      onClearFilters: _clearFilters,
+                    ),
             ),
           ),
         ],
@@ -140,6 +274,44 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
     );
   }
 }
+
+/// A Category choice; [kind] null is every kind. Wrapped so the sheet's
+/// "nothing chosen" (null) and "All categories" are not the same answer.
+final class _KindPick {
+  const _KindPick(this.kind);
+
+  final NoticeKind? kind;
+}
+
+/// The day a Manila calendar day names, as the date picker takes it.
+DateTime _calendarDay(DateTime manilaDay) =>
+    DateTime(manilaDay.year, manilaDay.month, manilaDay.day);
+
+/// A choice with how many notices it holds.
+String _counted(String label, int count) => '$label · $count';
+
+/// A test key for a kind: its wire value, or `other`.
+String _kindKey(NoticeKind kind) => kind.category?.wireValue ?? 'other';
+
+/// What the Category filter calls [kind]: the inbox row's own category name,
+/// or "Other updates" for a notice whose type this build does not know.
+String _kindLabel(BuildContext context, NoticeKind kind) =>
+    switch (kind.category) {
+      final NotificationCategory category => notificationCategoryLabel(
+        context,
+        category,
+      ),
+      null => AppStrings.of(context).inboxCategoryOther,
+    };
+
+String _periodLabel(AppStrings strings, NotificationPeriod period) =>
+    switch (period) {
+      NotificationPeriod.anyTime => strings.inboxWhenAnyTime,
+      NotificationPeriod.today => strings.inboxWhenToday,
+      NotificationPeriod.lastWeek => strings.inboxWhenLastWeek,
+      NotificationPeriod.lastMonth => strings.inboxWhenLastMonth,
+      NotificationPeriod.onDay => strings.inboxWhenOnDay,
+    };
 
 class _Loading extends StatelessWidget {
   const _Loading();
@@ -159,10 +331,19 @@ class _Loading extends StatelessWidget {
 }
 
 class _Inbox extends StatelessWidget {
-  const _Inbox({required this.controller, required this.onOpen});
+  const _Inbox({
+    required this.controller,
+    required this.onOpen,
+    required this.onPickKind,
+    required this.onPickPeriod,
+    required this.onClearFilters,
+  });
 
   final NotificationInboxController controller;
   final void Function(ResidentNotification) onOpen;
+  final VoidCallback onPickKind;
+  final VoidCallback onPickPeriod;
+  final VoidCallback onClearFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -213,6 +394,8 @@ class _Inbox extends StatelessWidget {
             tile: _tile(item),
             icon: _icon(item),
             onTap: () => onOpen(item),
+            // The dot marks it read where it is, without opening it.
+            onMarkRead: () => controller.markRead(item.id),
           ),
       ];
       if (section.group == InboxGroup.today) {
@@ -225,6 +408,19 @@ class _Inbox extends StatelessWidget {
       }
     }
 
+    final NotificationFilter filter = controller.filter;
+    final NoticeKind? kind = filter.kind;
+    final String kindLabel = kind == null
+        ? strings.inboxCategoryAll
+        : _kindLabel(context, kind);
+    final String whenLabel = switch ((filter.period, filter.day)) {
+      (NotificationPeriod.onDay, final DateTime day) => manilaDate(
+        context,
+        day,
+      ),
+      (final NotificationPeriod period, _) => _periodLabel(strings, period),
+    };
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -235,11 +431,72 @@ class _Inbox extends StatelessWidget {
               if (earlier.isNotEmpty)
                 NoticeSection(heading: strings.inboxEarlier, rows: earlier),
             ],
+            allCount: controller.totalCount,
+            unreadCount: controller.unreadCount,
+            unreadOnly: filter.unreadOnly,
+            onShowUnread: controller.showUnreadOnly,
             onMarkAllRead: controller.markAllRead,
+            choosers: <Widget>[
+              SoftChoiceChip(
+                key: const Key('inbox-category'),
+                label: kindLabel,
+                semanticLabel: strings.inboxCategoryValue(kindLabel),
+                selected: kind != null,
+                chooser: true,
+                onTap: onPickKind,
+              ),
+              SoftChoiceChip(
+                key: const Key('inbox-when'),
+                label: whenLabel,
+                semanticLabel: strings.inboxWhenValue(whenLabel),
+                selected: filter.period != NotificationPeriod.anyTime,
+                chooser: true,
+                onTap: onPickPeriod,
+              ),
+            ],
+            onClearFilters: filter.isNarrowed ? onClearFilters : null,
+            empty: _NoMatch(
+              controller: controller,
+              onClearFilters: onClearFilters,
+            ),
           ),
         ),
         _Footer(controller: controller),
       ],
+    );
+  }
+}
+
+/// What the inbox says when it holds notices and the filters leave none:
+/// "nothing matches" with Clear filters, or, when only Unread narrows it,
+/// "nothing unread" with Show all (DL-291). Never the empty inbox's words,
+/// which would say she has no notices at all.
+class _NoMatch extends StatelessWidget {
+  const _NoMatch({required this.controller, required this.onClearFilters});
+
+  final NotificationInboxController controller;
+  final VoidCallback onClearFilters;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
+    if (controller.filter.isNarrowed) {
+      return EmptyState(
+        title: strings.inboxNoMatchTitle,
+        message: strings.inboxNoMatchBody,
+        boxed: true,
+        actionLabel: strings.inboxClearFilters,
+        actionKey: const Key('inbox-no-match-clear'),
+        onAction: onClearFilters,
+      );
+    }
+    return EmptyState(
+      title: strings.inboxNoUnreadTitle,
+      message: strings.inboxNoUnreadBody,
+      boxed: true,
+      actionLabel: strings.inboxShowAll,
+      actionKey: const Key('inbox-no-unread-show-all'),
+      onAction: () => controller.showUnreadOnly(false),
     );
   }
 }

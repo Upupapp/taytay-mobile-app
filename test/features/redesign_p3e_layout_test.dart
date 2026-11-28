@@ -42,8 +42,10 @@ import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/blue_header.dart';
 import 'package:taytay_resident/shared/widgets/detail_page.dart';
 import 'package:taytay_resident/shared/widgets/header_search_field.dart';
+import 'package:taytay_resident/shared/widgets/pills.dart';
 import 'package:taytay_resident/shared/widgets/success_screen.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
+import 'package:taytay_resident/shared/widgets/taytay_states.dart';
 import 'package:taytay_resident/shared/widgets/upload_slot.dart';
 import 'package:taytay_resident/shared/widgets/wave_header.dart';
 
@@ -382,11 +384,103 @@ void main() {
                     tile: BrandColors.blue50,
                     icon: NoticeIcons.message,
                     onTap: () {},
+                    onMarkRead: () {},
                   ),
               ],
             ),
           ],
+          allCount: 128,
+          unreadCount: 64,
+          unreadOnly: false,
+          onShowUnread: (_) {},
           onMarkAllRead: () {},
+        ),
+        scrollable: false,
+      );
+    });
+
+    // D-238: the filters at their longest — the longest category name, a
+    // picked day, Clear filters — and an unread row with its dot button.
+    testWidgets('the centre lays out with its filters in force', (
+      tester,
+    ) async {
+      await expectCleanLayouts(
+        tester,
+        () => NotificationCentre(
+          sections: <NoticeSection>[
+            NoticeSection(
+              heading: 'Earlier',
+              rows: <NoticeRow>[
+                NoticeRow(
+                  eyebrow: 'CHANGES TO YOUR RECORD AT THE OFFICE',
+                  title: 'Your record at the office was updated',
+                  body: 'The office corrected your barangay.',
+                  when: '11 Nov 2026, 9:05 AM PHT',
+                  unread: true,
+                  tone: BrandColors.blue,
+                  tile: BrandColors.blue50,
+                  icon: NoticeIcons.message,
+                  onTap: () {},
+                  onMarkRead: () {},
+                ),
+              ],
+            ),
+          ],
+          allCount: 128,
+          unreadCount: 64,
+          unreadOnly: true,
+          onShowUnread: (_) {},
+          onMarkAllRead: () {},
+          choosers: <Widget>[
+            SoftChoiceChip(
+              label: 'Changes to your record at the office',
+              selected: true,
+              chooser: true,
+              onTap: () {},
+            ),
+            SoftChoiceChip(
+              label: '28 Nov 2026',
+              selected: true,
+              chooser: true,
+              onTap: () {},
+            ),
+          ],
+          onClearFilters: () {},
+        ),
+        scrollable: false,
+      );
+    });
+
+    testWidgets('the centre lays out its nothing-matches answer', (
+      tester,
+    ) async {
+      await expectCleanLayouts(
+        tester,
+        () => NotificationCentre(
+          sections: const <NoticeSection>[],
+          allCount: 12,
+          unreadCount: 0,
+          unreadOnly: false,
+          onShowUnread: (_) {},
+          onMarkAllRead: () {},
+          choosers: <Widget>[
+            SoftChoiceChip(
+              label: 'Office replies',
+              selected: true,
+              chooser: true,
+              onTap: () {},
+            ),
+          ],
+          onClearFilters: () {},
+          empty: const EmptyState(
+            title: 'No notifications match',
+            message:
+                'Try other words, another category or a longer time, or '
+                'clear the filters.',
+            boxed: true,
+            actionLabel: 'Clear filters',
+            onAction: _noop,
+          ),
         ),
         scrollable: false,
       );

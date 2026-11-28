@@ -7034,7 +7034,7 @@
       }
     }
   },
-  "inboxMarkAllRead": "Mark all read",
+  "inboxMarkAllRead": "Mark all as read",
   "@inboxMarkAllRead": {
     "description": "Notifications: link that marks every notice read."
   },
@@ -8163,5 +8163,118 @@
   "sharedConfigStopIconLabel": "Configuration",
   "@sharedConfigStopIconLabel": {
     "description": "Screen-reader name of the settings icon on the startup stop screen."
+  },
+  "inboxFilterAllCount": "All · {count}",
+  "@inboxFilterAllCount": {
+    "description": "Notifications: chip showing every notice, with how many there are. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "inboxSearchHint": "Search notifications",
+  "@inboxSearchHint": {
+    "description": "Notifications: hint of the search field in the header; it finds words in a notice. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxCategoryTitle": "Category",
+  "@inboxCategoryTitle": {
+    "description": "Notifications: title of the Category picker. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxCategoryAll": "All categories",
+  "@inboxCategoryAll": {
+    "description": "Notifications: Category chip and picker row showing every kind of notice. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxCategoryOther": "Other updates",
+  "@inboxCategoryOther": {
+    "description": "Notifications: Category for notices of a kind this app version does not know. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxCategoryValue": "Category: {value}",
+  "@inboxCategoryValue": {
+    "description": "Notifications: screen-reader label of the Category chip with its current choice. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxWhenTitle": "When",
+  "@inboxWhenTitle": {
+    "description": "Notifications: title of the When picker. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxWhenValue": "When: {value}",
+  "@inboxWhenValue": {
+    "description": "Notifications: screen-reader label of the When chip with its current choice. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxWhenAnyTime": "Any time",
+  "@inboxWhenAnyTime": {
+    "description": "Notifications: When choice showing notices from any date. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxWhenToday": "Today",
+  "@inboxWhenToday": {
+    "description": "Notifications: When choice showing notices from today (Manila time). Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxWhenLastWeek": "Last 7 days",
+  "@inboxWhenLastWeek": {
+    "description": "Notifications: When choice showing notices from the last 7 days. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxWhenLastMonth": "Last 30 days",
+  "@inboxWhenLastMonth": {
+    "description": "Notifications: When choice showing notices from the last 30 days. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxWhenOnDay": "On a date…",
+  "@inboxWhenOnDay": {
+    "description": "Notifications: When choice that opens a calendar to pick one day. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxWhenPickDay": "Pick a day",
+  "@inboxWhenPickDay": {
+    "description": "Notifications: heading of the calendar opened by 'On a date…'. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxClearFilters": "Clear filters",
+  "@inboxClearFilters": {
+    "description": "Notifications: link and button clearing Category, When and the search; shown only while one of them is set. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxNoMatchTitle": "No notifications match",
+  "@inboxNoMatchTitle": {
+    "description": "Notifications: title when the filters leave nothing to show. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxNoMatchBody": "Try other words, another category or a longer time, or clear the filters.",
+  "@inboxNoMatchBody": {
+    "description": "Notifications: message when the filters leave nothing to show. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxNoUnreadTitle": "No unread notifications",
+  "@inboxNoUnreadTitle": {
+    "description": "Notifications: title when Unread is chosen and everything has been read. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxNoUnreadBody": "You have read everything here. Choose All to see them again.",
+  "@inboxNoUnreadBody": {
+    "description": "Notifications: message when Unread is chosen and everything has been read. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxShowAll": "Show all",
+  "@inboxShowAll": {
+    "description": "Notifications: button that goes back from Unread to All. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it."
+  },
+  "inboxMarkReadOne": "Mark as read: {title}",
+  "@inboxMarkReadOne": {
+    "description": "Notifications: screen-reader name of an unread notice's blue dot, the button that marks that notice read. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxUnreadTitle": "Unread: {title}",
+  "@inboxUnreadTitle": {
+    "description": "Notifications: what a screen reader says for an unread notice's title. Filipino drafted by Claude for D-238 in everyday Taglish; a native speaker should still read it.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
   }
 }
